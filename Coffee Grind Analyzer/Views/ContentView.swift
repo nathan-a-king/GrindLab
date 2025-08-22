@@ -27,14 +27,30 @@ struct ContentView: View {
     @State private var showingError = false
     
     var body: some View {
-        NavigationView {
-            Group {
-                if showingCamera, let grindType = selectedGrindType {
-                    cameraView(for: grindType)
-                } else {
-                    grindSelectionView
+        TabView {
+            // Main Analysis Tab
+            NavigationView {
+                Group {
+                    if showingCamera, let grindType = selectedGrindType {
+                        cameraView(for: grindType)
+                    } else {
+                        grindSelectionView
+                    }
                 }
             }
+            .tabItem {
+                Image(systemName: "camera.fill")
+                Text("Analyze")
+            }
+            
+            // History Tab
+            HistoryView()
+                .environmentObject(historyManager)
+                .tabItem {
+                    Image(systemName: "clock.arrow.circlepath")
+                    Text("History")
+                }
+                .badge(historyManager.totalAnalyses > 0 ? historyManager.totalAnalyses : 0)
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(settings: $settings)
