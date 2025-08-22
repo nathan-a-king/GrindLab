@@ -80,6 +80,55 @@ struct CoffeeParticle {
     let brightness: Double
 }
 
+// MARK: - Tasting Notes
+
+struct TastingNotes: Equatable, Codable {
+    let brewMethod: BrewMethod
+    let overallRating: Int // 1-5 stars
+    let tastingTags: [String] // ["Balanced", "Fruity", "Bright"]
+    let extractionNotes: String?
+    let extractionTime: TimeInterval? // For espresso shots
+    let waterTemp: Double? // Brewing temperature in celsius
+    let doseIn: Double? // Coffee dose in grams
+    let yieldOut: Double? // Output weight in grams
+    
+    enum BrewMethod: String, CaseIterable, Codable {
+        case espresso = "Espresso"
+        case pourOver = "Pour Over"
+        case frenchPress = "French Press"
+        case aeropress = "Aeropress"
+        case moka = "Moka Pot"
+        case coldBrew = "Cold Brew"
+        case drip = "Drip Coffee"
+        
+        var icon: String {
+            switch self {
+            case .espresso: return "cup.and.saucer.fill"
+            case .pourOver: return "drop.circle"
+            case .frenchPress: return "cylinder.fill"
+            case .aeropress: return "circle.and.line.horizontal"
+            case .moka: return "triangle.fill"
+            case .coldBrew: return "snowflake.circle"
+            case .drip: return "drop.fill"
+            }
+        }
+    }
+    
+    static let availableTags = [
+        // Positive
+        "Balanced", "Sweet", "Smooth", "Bright", "Clean", "Complex",
+        "Fruity", "Floral", "Nutty", "Chocolatey", "Caramel", "Vanilla",
+        
+        // Neutral/Descriptive
+        "Full Body", "Light Body", "Medium Body", "Acidic", "Low Acid",
+        "Earthy", "Spicy", "Herbal", "Wine-like", "Tea-like",
+        
+        // Issues
+        "Bitter", "Sour", "Astringent", "Muddy", "Weak", "Over-extracted",
+        "Under-extracted", "Chalky", "Harsh", "Flat"
+    ]
+}
+
 // MARK: - Analysis Results
 
 struct CoffeeAnalysisResults {
@@ -96,14 +145,16 @@ struct CoffeeAnalysisResults {
     let processedImage: UIImage?
     let grindType: CoffeeGrindType
     let timestamp: Date
+    let tastingNotes: TastingNotes? // Add tasting notes
     
-    // Store size distribution separately for saved results
-    private let _sizeDistribution: [String: Double]?
+    // Store size distribution as computed property with backing storage
+    let sizeDistribution: [String: Double]
     
     // Standard initializer (from fresh analysis)
     init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
          finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
-         confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType, timestamp: Date) {
+         confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType,
+         timestamp: Date, tastingNotes: TastingNotes? = nil) {
         self.uniformityScore = uniformityScore
         self.averageSize = averageSize
         self.medianSize = medianSize
@@ -117,14 +168,17 @@ struct CoffeeAnalysisResults {
         self.processedImage = processedImage
         self.grindType = grindType
         self.timestamp = timestamp
-        self._sizeDistribution = nil // Will be computed from particles
+        self.tastingNotes = tastingNotes
+        
+        // Compute distribution from particles immediately
+        self.sizeDistribution = Self.computeSizeDistribution(from: particles, particleCount: particleCount, finesPercentage: finesPercentage, bouldersPercentage: bouldersPercentage)
     }
     
     // Initializer for loaded results (with pre-computed distribution)
     init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
          finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
-         confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType, timestamp: Date,
-         sizeDistribution: [String: Double]) {
+         confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType,
+         timestamp: Date, sizeDistribution: [String: Double], tastingNotes: TastingNotes? = nil) {
         self.uniformityScore = uniformityScore
         self.averageSize = averageSize
         self.medianSize = medianSize
@@ -138,7 +192,8 @@ struct CoffeeAnalysisResults {
         self.processedImage = processedImage
         self.grindType = grindType
         self.timestamp = timestamp
-        self._sizeDistribution = sizeDistribution
+        self.sizeDistribution = sizeDistribution
+        self.tastingNotes = tastingNotes
     }
     
     var uniformityColor: Color {
@@ -159,51 +214,6 @@ struct CoffeeAnalysisResults {
         case 50..<60: return "Poor"
         default: return "Very Poor"
         }
-    }
-    
-    var sizeDistribution: [String: Double] {
-        // Use stored distribution if available (for loaded results)
-        if let stored = _sizeDistribution, !stored.isEmpty {
-            return stored
-        }
-        
-        // Otherwise compute from particles (for fresh analysis)
-        let totalParticles = Double(particleCount)
-        guard totalParticles > 0 else {
-            // Return a default distribution if we have no particles
-            return [
-                "Fines (<400μm)": finesPercentage,
-                "Fine (400-600μm)": max(0, 20.0),
-                "Medium (600-1000μm)": max(0, 100.0 - finesPercentage - bouldersPercentage - 20.0),
-                "Coarse (1000-1400μm)": max(0, 10.0),
-                "Boulders (>1400μm)": bouldersPercentage
-            ]
-        }
-        
-        var distribution: [String: Int] = [
-            "Fines (<400μm)": 0,
-            "Fine (400-600μm)": 0,
-            "Medium (600-1000μm)": 0,
-            "Coarse (1000-1400μm)": 0,
-            "Boulders (>1400μm)": 0
-        ]
-        
-        for particle in particles {
-            switch particle.size {
-            case 0..<400:
-                distribution["Fines (<400μm)"]! += 1
-            case 400..<600:
-                distribution["Fine (400-600μm)"]! += 1
-            case 600..<1000:
-                distribution["Medium (600-1000μm)"]! += 1
-            case 1000..<1400:
-                distribution["Coarse (1000-1400μm)"]! += 1
-            default:
-                distribution["Boulders (>1400μm)"]! += 1
-            }
-        }
-        
-        return distribution.mapValues { Double($0) / totalParticles * 100 }
     }
     
     var recommendations: [String] {
@@ -241,6 +251,52 @@ struct CoffeeAnalysisResults {
         }
         
         return recs
+    }
+    
+    // Static method to compute size distribution
+    private static func computeSizeDistribution(from particles: [CoffeeParticle], particleCount: Int, finesPercentage: Double, bouldersPercentage: Double) -> [String: Double] {
+        // If we have particles, compute from them
+        if !particles.isEmpty {
+            let totalParticles = Double(particles.count)
+            var distribution: [String: Int] = [
+                "Fines (<400μm)": 0,
+                "Fine (400-600μm)": 0,
+                "Medium (600-1000μm)": 0,
+                "Coarse (1000-1400μm)": 0,
+                "Boulders (>1400μm)": 0
+            ]
+            
+            for particle in particles {
+                switch particle.size {
+                case 0..<400:
+                    distribution["Fines (<400μm)"]! += 1
+                case 400..<600:
+                    distribution["Fine (400-600μm)"]! += 1
+                case 600..<1000:
+                    distribution["Medium (600-1000μm)"]! += 1
+                case 1000..<1400:
+                    distribution["Coarse (1000-1400μm)"]! += 1
+                default:
+                    distribution["Boulders (>1400μm)"]! += 1
+                }
+            }
+            
+            return distribution.mapValues { Double($0) / totalParticles * 100 }
+        }
+        
+        // Otherwise, generate reasonable distribution from known percentages
+        let mediumPercentage = max(0, 100 - finesPercentage - bouldersPercentage)
+        let finePercentage = mediumPercentage * 0.3 // 30% of remaining
+        let adjustedMedium = mediumPercentage * 0.5 // 50% of remaining
+        let coarsePercentage = mediumPercentage * 0.2 // 20% of remaining
+        
+        return [
+            "Fines (<400μm)": finesPercentage,
+            "Fine (400-600μm)": finePercentage,
+            "Medium (600-1000μm)": adjustedMedium,
+            "Coarse (1000-1400μm)": coarsePercentage,
+            "Boulders (>1400μm)": bouldersPercentage
+        ]
     }
 }
 

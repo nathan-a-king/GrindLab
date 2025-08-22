@@ -84,8 +84,27 @@ struct ResultsView: View {
                 results: results,
                 saveName: $saveName,
                 saveNotes: $saveNotes,
-                onSave: { name, notes in
-                    historyManager.saveAnalysis(results, name: name, notes: notes)
+                onSave: { name, notes, tastingNotes in
+                    // Create new results with tasting notes
+                    let updatedResults = CoffeeAnalysisResults(
+                        uniformityScore: results.uniformityScore,
+                        averageSize: results.averageSize,
+                        medianSize: results.medianSize,
+                        standardDeviation: results.standardDeviation,
+                        finesPercentage: results.finesPercentage,
+                        bouldersPercentage: results.bouldersPercentage,
+                        particleCount: results.particleCount,
+                        particles: results.particles,
+                        confidence: results.confidence,
+                        image: results.image,
+                        processedImage: results.processedImage,
+                        grindType: results.grindType,
+                        timestamp: results.timestamp,
+                        sizeDistribution: results.sizeDistribution,
+                        tastingNotes: tastingNotes
+                    )
+                    
+                    historyManager.saveAnalysis(updatedResults, name: name, notes: notes)
                     saveSuccess = true
                     showingSaveDialog = false
                 }
@@ -696,8 +715,18 @@ struct SaveAnalysisDialog: View {
     let results: CoffeeAnalysisResults
     @Binding var saveName: String
     @Binding var saveNotes: String
-    let onSave: (String?, String?) -> Void
+    let onSave: (String?, String?, TastingNotes?) -> Void
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var brewMethod: TastingNotes.BrewMethod = .espresso
+    @State private var overallRating: Int = 3
+    @State private var selectedTags: Set<String> = []
+    @State private var extractionNotes: String = ""
+    @State private var extractionTime: String = ""
+    @State private var waterTemp: String = ""
+    @State private var doseIn: String = ""
+    @State private var yieldOut: String = ""
+    @State private var includeTastingNotes: Bool = false
     
     var body: some View {
         NavigationView {
@@ -746,6 +775,19 @@ struct SaveAnalysisDialog: View {
                             .lineLimit(3...6)
                     }
                 }
+                
+                Section {
+                    Toggle("Add Tasting Notes", isOn: $includeTastingNotes)
+                        .font(.subheadline)
+                } header: {
+                    Text("Brewing Results")
+                } footer: {
+                    Text("Track how this grind performed when brewing")
+                }
+                
+                if includeTastingNotes {
+                    tastingNotesSection
+                }
             }
             .navigationTitle("Save Analysis")
             .navigationBarTitleDisplayMode(.inline)
@@ -758,22 +800,131 @@ struct SaveAnalysisDialog: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        let name = saveName.isEmpty ? nil : saveName
-                        let notes = saveNotes.isEmpty ? nil : saveNotes
-                        onSave(name, notes)
+                        saveAnalysis()
                     }
                     .fontWeight(.semibold)
                 }
             }
         }
         .onAppear {
-            // Pre-populate with suggested name
-            if saveName.isEmpty {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "MMM d"
-                let dateString = formatter.string(from: results.timestamp)
-                saveName = "\(results.grindType.displayName) - \(dateString)"
+            setupDefaults()
+        }
+    }
+    
+    private var tastingNotesSection: some View {
+        Group {
+            Section("Brew Method") {
+                Picker("Method", selection: $brewMethod) {
+                    ForEach(TastingNotes.BrewMethod.allCases, id: \.self) { method in
+                        HStack {
+                            Image(systemName: method.icon)
+                            Text(method.rawValue)
+                        }.tag(method)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+            }
+            
+            Section("Overall Rating") {
+                HStack {
+                    Text("How was it?")
+                    Spacer()
+                    StarRatingView(rating: $overallRating)
+                }
+            }
+            
+            Section("Tasting Profile") {
+                TastingTagsView(selectedTags: $selectedTags)
+            }
+            
+            Section("Brewing Details") {
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("Extraction Time")
+                        Spacer()
+                        TextField("30s", text: $extractionTime)
+                            .frame(width: 60)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.decimalPad)
+                    }
+                    
+                    HStack {
+                        Text("Water Temp")
+                        Spacer()
+                        TextField("93°C", text: $waterTemp)
+                            .frame(width: 60)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.decimalPad)
+                    }
+                    
+                    HStack {
+                        Text("Dose In")
+                        Spacer()
+                        TextField("18g", text: $doseIn)
+                            .frame(width: 60)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.decimalPad)
+                    }
+                    
+                    HStack {
+                        Text("Yield Out")
+                        Spacer()
+                        TextField("36g", text: $yieldOut)
+                            .frame(width: 60)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.decimalPad)
+                    }
+                }
+            }
+            
+            Section("Extraction Notes") {
+                TextField("How did it taste? Any issues?", text: $extractionNotes, axis: .vertical)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .lineLimit(2...4)
             }
         }
+    }
+    
+    private func setupDefaults() {
+        if saveName.isEmpty {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            let dateString = formatter.string(from: results.timestamp)
+            saveName = "\(results.grindType.displayName) - \(dateString)"
+        }
+        
+        // Set default brew method based on grind type
+        switch results.grindType {
+        case .espresso:
+            brewMethod = .espresso
+        case .filter:
+            brewMethod = .pourOver
+        case .frenchPress:
+            brewMethod = .frenchPress
+        case .coldBrew:
+            brewMethod = .coldBrew
+        }
+    }
+    
+    private func saveAnalysis() {
+        let name = saveName.isEmpty ? nil : saveName
+        let notes = saveNotes.isEmpty ? nil : saveNotes
+        
+        var tastingNotes: TastingNotes? = nil
+        
+        if includeTastingNotes {
+            tastingNotes = TastingNotes(
+                brewMethod: brewMethod,
+                overallRating: overallRating,
+                tastingTags: Array(selectedTags),
+                extractionNotes: extractionNotes.isEmpty ? nil : extractionNotes,
+                extractionTime: Double(extractionTime),
+                waterTemp: Double(waterTemp),
+                doseIn: Double(doseIn),
+                yieldOut: Double(yieldOut)
+            )
+        }
+        
+        onSave(name, notes, tastingNotes)
     }
 }

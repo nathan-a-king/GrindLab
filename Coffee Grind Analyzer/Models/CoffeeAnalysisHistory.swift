@@ -116,7 +116,10 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
         do {
             // Convert to data that can be stored
             let analysesToStore = savedAnalyses.map { analysis in
-                StorableAnalysis(
+                print("🔍 Saving analysis: \(analysis.name)")
+                print("🔍 Has tasting notes: \(analysis.results.tastingNotes != nil)")
+                
+                return StorableAnalysis(
                     id: analysis.id,
                     name: analysis.name,
                     grindType: analysis.results.grindType,
@@ -131,7 +134,8 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     timestamp: analysis.results.timestamp,
                     savedDate: analysis.savedDate,
                     notes: analysis.notes,
-                    sizeDistribution: analysis.results.sizeDistribution // Save the distribution
+                    sizeDistribution: analysis.results.sizeDistribution,
+                    tastingNotes: analysis.results.tastingNotes
                 )
             }
             
@@ -231,9 +235,10 @@ private struct StorableAnalysis: Codable {
     let timestamp: Date
     let savedDate: Date
     let notes: String?
-    let sizeDistribution: [String: Double] // Add this for the graph
+    let sizeDistribution: [String: Double]
+    let tastingNotes: TastingNotes? // Add tasting notes
     
-    // Custom decoder to handle legacy data without sizeDistribution
+    // Custom decoder to handle legacy data without sizeDistribution or tastingNotes
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
@@ -254,13 +259,16 @@ private struct StorableAnalysis: Codable {
         
         // Try to decode sizeDistribution, fallback to empty if not present (legacy data)
         sizeDistribution = try container.decodeIfPresent([String: Double].self, forKey: .sizeDistribution) ?? [:]
+        
+        // Try to decode tastingNotes, fallback to nil if not present (legacy data)
+        tastingNotes = try container.decodeIfPresent(TastingNotes.self, forKey: .tastingNotes)
     }
     
     // Standard initializer for encoding
     init(id: UUID, name: String, grindType: CoffeeGrindType, uniformityScore: Double, averageSize: Double,
          medianSize: Double, standardDeviation: Double, finesPercentage: Double, bouldersPercentage: Double,
          particleCount: Int, confidence: Double, timestamp: Date, savedDate: Date, notes: String?,
-         sizeDistribution: [String: Double]) {
+         sizeDistribution: [String: Double], tastingNotes: TastingNotes?) {
         self.id = id
         self.name = name
         self.grindType = grindType
@@ -276,10 +284,11 @@ private struct StorableAnalysis: Codable {
         self.savedDate = savedDate
         self.notes = notes
         self.sizeDistribution = sizeDistribution
+        self.tastingNotes = tastingNotes
     }
     
     private enum CodingKeys: String, CodingKey {
         case id, name, grindType, uniformityScore, averageSize, medianSize, standardDeviation
-        case finesPercentage, bouldersPercentage, particleCount, confidence, timestamp, savedDate, notes, sizeDistribution
+        case finesPercentage, bouldersPercentage, particleCount, confidence, timestamp, savedDate, notes, sizeDistribution, tastingNotes
     }
 }
