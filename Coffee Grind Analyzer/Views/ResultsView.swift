@@ -405,20 +405,24 @@ struct ResultsView: View {
             Text("Size Categories")
                 .font(.headline)
             
-            ForEach(Array(results.sizeDistribution.sorted(by: { $0.key < $1.key })), id: \.key) { category, percentage in
-                HStack {
-                    Circle()
-                        .fill(colorForCategory(category))
-                        .frame(width: 12, height: 12)
-                    
-                    Text(category)
-                        .font(.subheadline)
-                    
-                    Spacer()
-                    
-                    Text(String(format: "%.1f%%", percentage))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+            let orderedCategories = ["Fines (<400μm)", "Fine (400-600μm)", "Medium (600-1000μm)", "Coarse (1000-1400μm)", "Boulders (>1400μm)"]
+            
+            ForEach(orderedCategories, id: \.self) { category in
+                if let percentage = results.sizeDistribution[category] {
+                    HStack {
+                        Circle()
+                            .fill(colorForCategory(category))
+                            .frame(width: 12, height: 12)
+                        
+                        Text(category)
+                            .font(.subheadline)
+                        
+                        Spacer()
+                        
+                        Text(String(format: "%.1f%%", percentage))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
                 }
             }
         }
