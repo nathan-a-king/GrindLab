@@ -11,10 +11,15 @@ import Charts
 struct ResultsView: View {
     let results: CoffeeAnalysisResults
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var historyManager: CoffeeAnalysisHistoryManager
     
     @State private var selectedTab = 0
     @State private var showingShareSheet = false
     @State private var showingImageComparison = false
+    @State private var showingSaveDialog = false
+    @State private var saveName = ""
+    @State private var saveNotes = ""
+    @State private var saveSuccess = false
     
     var body: some View {
         NavigationView {
@@ -57,8 +62,14 @@ struct ResultsView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingShareSheet = true }) {
-                        Image(systemName: "square.and.arrow.up")
+                    HStack {
+                        Button(action: { showingSaveDialog = true }) {
+                            Image(systemName: "square.and.arrow.down")
+                        }
+                        
+                        Button(action: { showingShareSheet = true }) {
+                            Image(systemName: "square.and.arrow.up")
+                        }
                     }
                 }
             }
@@ -68,6 +79,23 @@ struct ResultsView: View {
         }
         .sheet(isPresented: $showingImageComparison) {
             ImageComparisonView(results: results)
+        }
+        .sheet(isPresented: $showingSaveDialog) {
+            SaveAnalysisDialog(
+                results: results,
+                saveName: $saveName,
+                saveNotes: $saveNotes,
+                onSave: { name, notes in
+                    historyManager.saveAnalysis(results, name: name, notes: notes)
+                    saveSuccess = true
+                    showingSaveDialog = false
+                }
+            )
+        }
+        .alert("Analysis Saved!", isPresented: $saveSuccess) {
+            Button("OK") { }
+        } message: {
+            Text("Your coffee grind analysis has been saved successfully.")
         }
     }
     
@@ -620,28 +648,90 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Preview
+// MARK: - Save Analysis Dialog
 
-#if DEBUG
-struct ResultsView_Previews: PreviewProvider {
-    static var previews: some View {
-        let sampleResults = CoffeeAnalysisResults(
-            uniformityScore: 82.5,
-            averageSize: 850.0,
-            medianSize: 820.0,
-            standardDeviation: 145.0,
-            finesPercentage: 12.3,
-            bouldersPercentage: 8.7,
-            particleCount: 287,
-            particles: [],
-            confidence: 89.2,
-            image: nil,
-            processedImage: nil,
-            grindType: .filter,
-            timestamp: Date()
-        )
-        
-        ResultsView(results: sampleResults)
+struct SaveAnalysisDialog: View {
+    let results: CoffeeAnalysisResults
+    @Binding var saveName: String
+    @Binding var saveNotes: String
+    let onSave: (String?, String?) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Analysis Info") {
+                    HStack {
+                        Text("Grind Type")
+                        Spacer()
+                        Text(results.grindType.displayName)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack {
+                        Text("Uniformity Score")
+                        Spacer()
+                        Text("\(Int(results.uniformityScore))%")
+                            .foregroundColor(results.uniformityColor)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    HStack {
+                        Text("Date")
+                        Spacer()
+                        Text(results.timestamp, style: .date)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section("Save Details") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Name (Optional)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        TextField("Auto-generated if empty", text: $saveName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Notes (Optional)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        TextField("Add notes about grinder, beans, etc.", text: $saveNotes, axis: .vertical)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .lineLimit(3...6)
+                    }
+                }
+            }
+            .navigationTitle("Save Analysis")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        let name = saveName.isEmpty ? nil : saveName
+                        let notes = saveNotes.isEmpty ? nil : saveNotes
+                        onSave(name, notes)
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .onAppear {
+            // Pre-populate with suggested name
+            if saveName.isEmpty {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MMM d"
+                let dateString = formatter.string(from: results.timestamp)
+                saveName = "\(results.grindType.displayName) - \(dateString)"
+            }
+        }
     }
 }
-#endif

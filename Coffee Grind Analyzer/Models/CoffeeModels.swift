@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - Coffee Grind Types
 
-enum CoffeeGrindType: CaseIterable {
+enum CoffeeGrindType: CaseIterable, Codable {
     case filter
     case espresso
     case frenchPress
@@ -174,7 +174,7 @@ struct CoffeeAnalysisResults {
         
         // Boulder recommendations
         if bouldersPercentage > 10 {
-            recs.append("High percentage of boulders detected - check grinder burrs misalignment or wear")
+            recs.append("High percentage of boulders detected - check grinder burrs for wear")
         }
         
         if recs.isEmpty {

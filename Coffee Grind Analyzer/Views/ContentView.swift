@@ -12,6 +12,7 @@ import AVFoundation
 
 struct ContentView: View {
     @StateObject private var camera = CoffeeCamera()
+    @StateObject private var historyManager = CoffeeAnalysisHistoryManager()
     @State private var analysisEngine = CoffeeAnalysisEngine()
     @State private var settings = AnalysisSettings()
     
@@ -41,6 +42,7 @@ struct ContentView: View {
         .sheet(isPresented: $showingResults) {
             if let results = analysisResults {
                 ResultsView(results: results)
+                    .environmentObject(historyManager)
             }
         }
         .sheet(isPresented: $showingGallery) {
@@ -200,29 +202,103 @@ struct ContentView: View {
     }
     
     private var bottomControls: some View {
-        HStack {
-            Button(action: { showingSettings = true }) {
-                HStack {
-                    Image(systemName: "gearshape.fill")
-                    Text("Settings")
-                }
-                .foregroundColor(.white.opacity(0.8))
-                .font(.subheadline)
+        VStack(spacing: 20) {
+            // Recent results section
+            if !historyManager.savedAnalyses.isEmpty {
+                recentResultsSection
             }
             
-            Spacer()
-            
-            if let results = analysisResults {
-                Button(action: { showingResults = true }) {
+            // Settings and navigation
+            HStack {
+                Button(action: { showingSettings = true }) {
                     HStack {
-                        Image(systemName: "chart.bar.fill")
-                        Text("Last Results")
+                        Image(systemName: "gearshape.fill")
+                        Text("Settings")
                     }
-                    .foregroundColor(.blue)
+                    .foregroundColor(.white.opacity(0.8))
                     .font(.subheadline)
+                }
+                
+                Spacer()
+                
+                if let results = analysisResults {
+                    Button(action: { showingResults = true }) {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                            Text("Last Results")
+                        }
+                        .foregroundColor(.blue)
+                        .font(.subheadline)
+                    }
                 }
             }
         }
+    }
+    
+    private var recentResultsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Recent Analyses")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Text("\(historyManager.totalAnalyses) saved")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(historyManager.recentAnalyses(limit: 3)) { analysis in
+                        recentResultCard(analysis)
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(12)
+    }
+    
+    private func recentResultCard(_ analysis: SavedCoffeeAnalysis) -> some View {
+        Button(action: {
+            analysisResults = analysis.results
+            showingResults = true
+        }) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(analysis.results.grindType.displayName)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    Spacer()
+                    
+                    Text("\(Int(analysis.results.uniformityScore))%")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(analysis.results.uniformityColor)
+                }
+                
+                Text(analysis.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                
+                Text(analysis.savedDate, style: .relative)
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .frame(width: 140, alignment: .leading)
+            .padding(12)
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(8)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     // MARK: - Camera View
