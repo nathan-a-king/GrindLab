@@ -174,7 +174,7 @@ struct CoffeeAnalysisResults {
         
         // Boulder recommendations
         if bouldersPercentage > 10 {
-            recs.append("High percentage of boulders detected - check grinder burrs for wear")
+            recs.append("High percentage of boulders detected - check grinder burrs misalignment or wear")
         }
         
         if recs.isEmpty {
