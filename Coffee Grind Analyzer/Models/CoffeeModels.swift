@@ -32,26 +32,26 @@ enum CoffeeGrindType: CaseIterable {
     var targetSizeRange: String {
         switch self {
         case .filter:
-            return "0.7-1.2mm"
+            return "600-900μm"
         case .espresso:
-            return "0.2-0.5mm"
+            return "200-400μm"
         case .frenchPress:
-            return "1.0-1.5mm"
+            return "750-1000μm"
         case .coldBrew:
-            return "1.2-1.8mm"
+            return "1000-1200μm"
         }
     }
     
     var targetSizeMicrons: ClosedRange<Double> {
         switch self {
         case .filter:
-            return 700...1200
+            return 600...900
         case .espresso:
-            return 200...500
+            return 200...400
         case .frenchPress:
-            return 1000...1500
+            return 750...1000
         case .coldBrew:
-            return 1200...1800
+            return 1000...1200
         }
     }
     
