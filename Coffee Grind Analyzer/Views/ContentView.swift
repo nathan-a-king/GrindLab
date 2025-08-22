@@ -111,22 +111,27 @@ struct ContentView: View {
     
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "magnifyingglass.circle.fill")
-                .font(.system(size: 84))
-                .foregroundColor(.white)
+            Image("coffee_magnifier")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 84, height: 84)
                 .shadow(radius: 8)
             
             Text("Coffee Grind Analyzer")
-                .font(.largeTitle)
+                .font(.title)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
             
             Text("Select your grind type to begin analysis")
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
         }
+        .padding(.horizontal, 16)
     }
     
     private var grindTypeCards: some View {
@@ -256,24 +261,36 @@ struct ContentView: View {
     }
     
     private func cameraHeader(grindType: CoffeeGrindType) -> some View {
-        HStack {
-            Button(action: {
-                showingCamera = false
-                selectedGrindType = nil
-                analysisResults = nil
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "chevron.left")
-                        .font(.title2)
-                    Text("Back")
-                        .font(.headline)
+        VStack(spacing: 16) {
+            // Top navigation bar
+            HStack {
+                Button(action: {
+                    showingCamera = false
+                    selectedGrindType = nil
+                    analysisResults = nil
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "chevron.left")
+                            .font(.title2)
+                        Text("Back")
+                            .font(.headline)
+                    }
+                    .foregroundColor(.white)
                 }
-                .foregroundColor(.white)
+                
+                Spacer()
+                
+                Button(action: { showingSettings = true }) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
             
-            Spacer()
-            
-            VStack(spacing: 2) {
+            // Analyzing label centered above camera
+            VStack(spacing: 4) {
                 Text("Analyzing")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
@@ -282,17 +299,7 @@ struct ContentView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
             }
-            
-            Spacer()
-            
-            Button(action: { showingSettings = true }) {
-                Image(systemName: "gearshape.fill")
-                    .font(.title2)
-                    .foregroundColor(.white)
-            }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
     }
     
     private var cameraPreviewSection: some View {

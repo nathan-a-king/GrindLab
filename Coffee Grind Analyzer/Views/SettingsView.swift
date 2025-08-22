@@ -19,7 +19,7 @@ struct SettingsView: View {
             Form {
                 analysisSection
                 
-                if settings.analysisMode != .basic {
+                if settings.analysisMode == .advanced {
                     advancedSection
                 }
                 
@@ -54,6 +54,13 @@ struct SettingsView: View {
             .pickerStyle(SegmentedPickerStyle())
             
             VStack(alignment: .leading, spacing: 8) {
+                Text(modeDescription)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Contrast Threshold")
                     Spacer()
@@ -68,6 +75,17 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+        }
+    }
+    
+    private var modeDescription: String {
+        switch settings.analysisMode {
+        case .basic:
+            return "Quick analysis with essential metrics only. Good for casual users."
+        case .standard:
+            return "Balanced analysis with comprehensive particle detection and statistics."
+        case .advanced:
+            return "Detailed analysis with fine-tuned controls for particle filtering and detection."
         }
     }
     
