@@ -16,7 +16,7 @@ struct HistoryView: View {
     @State private var analysisToDelete: SavedCoffeeAnalysis?
     @State private var showingClearAllAlert = false
     @State private var selectedAnalysis: SavedCoffeeAnalysis?
-    @State private var showingResults = false
+    @State private var analysisToPresent: SavedCoffeeAnalysis?
     
     enum SortOption: String, CaseIterable {
         case dateNewest = "Date (Newest)"
@@ -107,11 +107,15 @@ struct HistoryView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Search analyses...")
-        .sheet(isPresented: $showingResults) {
-            if let analysis = selectedAnalysis {
-                ResultsView(results: analysis.results, isFromHistory: true)
-                    .environmentObject(historyManager)
-            }
+        .sheet(item: $analysisToPresent) { analysis in
+            ResultsView(results: analysis.results, isFromHistory: true)
+                .environmentObject(historyManager)
+                .onAppear {
+                    print("✅ History sheet appeared successfully for: \(analysis.name)")
+                }
+                .onDisappear {
+                    print("👋 History sheet dismissed")
+                }
         }
         .alert("Delete Analysis", isPresented: $showingDeleteAlert) {
             Button("Delete", role: .destructive) {
@@ -171,8 +175,9 @@ struct HistoryView: View {
                     HistoryRowView(
                         analysis: analysis,
                         onTap: {
-                            selectedAnalysis = analysis
-                            showingResults = true
+                            print("🎯 User tapped analysis: \(analysis.name)")
+                            analysisToPresent = analysis
+                            print("🎯 Set analysisToPresent to: \(analysis.name)")
                         },
                         onDelete: {
                             analysisToDelete = analysis

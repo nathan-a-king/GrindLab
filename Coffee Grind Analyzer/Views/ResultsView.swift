@@ -20,6 +20,7 @@ struct ResultsView: View {
     @State private var saveName = ""
     @State private var saveNotes = ""
     @State private var saveSuccess = false
+    @State private var chartRefreshTrigger = false
     
     init(results: CoffeeAnalysisResults, isFromHistory: Bool = false) {
         self.results = results
@@ -95,6 +96,22 @@ struct ResultsView: View {
         } message: {
             Text("Your coffee grind analysis has been saved successfully.")
         }
+        .onAppear {
+            print("🔍 ResultsView body appeared - isFromHistory: \(isFromHistory)")
+            
+            // Force refresh for first-load issues
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                chartRefreshTrigger.toggle()
+                print("🔄 Chart refresh triggered")
+            }
+            
+            // Debug logging
+            print("🔍 ResultsView data check:")
+            print("   - From History: \(isFromHistory)")
+            print("   - Uniformity: \(Int(results.uniformityScore))%")
+            print("   - Distribution keys: \(results.sizeDistribution.keys.sorted())")
+            print("   - Distribution values: \(results.sizeDistribution.values.map { String(format: "%.1f", $0) })")
+        }
     }
     
     // MARK: - Overview Tab
@@ -103,11 +120,24 @@ struct ResultsView: View {
         ScrollView {
             VStack(spacing: 24) {
                 summaryCard
+                    .onAppear { print("📊 Summary card appeared") }
+                
                 metricsGrid
+                    .onAppear { print("📊 Metrics grid appeared") }
+                
                 gradeSection
+                    .onAppear { print("📊 Grade section appeared") }
+                
                 recommendationsSection
+                    .onAppear { print("📊 Recommendations section appeared") }
             }
             .padding()
+            .onAppear {
+                print("📊 Overview tab content appeared")
+            }
+        }
+        .onAppear {
+            print("📊 Overview tab ScrollView appeared")
         }
     }
     
@@ -349,54 +379,68 @@ struct ResultsView: View {
                 return firstIndex < secondIndex
             })
             
-            Chart(sortedData, id: \.key) { category, percentage in
-                LineMark(
-                    x: .value("Category", categoryShortName(category)),
-                    y: .value("Percentage", percentage / 100.0)
-                )
-                .foregroundStyle(colorForCategory(category))
-                .interpolationMethod(.catmullRom)
-                .symbol(Circle().strokeBorder(lineWidth: 2))
-                .symbolSize(60)
-                
-                AreaMark(
-                    x: .value("Category", categoryShortName(category)),
-                    y: .value("Percentage", percentage / 100.0)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [colorForCategory(category).opacity(0.3), colorForCategory(category).opacity(0.1)],
-                        startPoint: .top,
-                        endPoint: .bottom
+            // Debug logging
+            let _ = print("🎨 Rendering chart for analysis with \(sortedData.count) data points: \(sortedData.map { "\($0.key): \($0.value)%" })")
+            
+            if sortedData.isEmpty {
+                Text("No distribution data available")
+                    .foregroundColor(.secondary)
+                    .frame(height: 200)
+            } else {
+                Chart(sortedData, id: \.key) { category, percentage in
+                    LineMark(
+                        x: .value("Category", categoryShortName(category)),
+                        y: .value("Percentage", percentage / 100.0)
                     )
-                )
-                .interpolationMethod(.catmullRom)
-            }
-            .frame(height: 200)
-            .chartXAxis {
-                AxisMarks { value in
-                    AxisGridLine()
-                    AxisTick()
-                    AxisValueLabel {
-                        if let category = value.as(String.self) {
-                            Text(category)
-                                .font(.caption2)
-                                .multilineTextAlignment(.center)
+                    .foregroundStyle(colorForCategory(category))
+                    .interpolationMethod(.catmullRom)
+                    .symbol(Circle().strokeBorder(lineWidth: 2))
+                    .symbolSize(60)
+                    
+                    AreaMark(
+                        x: .value("Category", categoryShortName(category)),
+                        y: .value("Percentage", percentage / 100.0)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [colorForCategory(category).opacity(0.3), colorForCategory(category).opacity(0.1)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+                }
+                .frame(height: 200)
+                .chartXAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let category = value.as(String.self) {
+                                Text(category)
+                                    .font(.caption2)
+                                    .multilineTextAlignment(.center)
+                            }
                         }
                     }
                 }
-            }
-            .chartYAxis {
-                AxisMarks { value in
-                    AxisGridLine()
-                    AxisTick()
-                    AxisValueLabel {
-                        if let doubleValue = value.as(Double.self) {
-                            Text("\(Int(doubleValue * 100))%")
-                                .font(.caption2)
+                .chartYAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let doubleValue = value.as(Double.self) {
+                                Text("\(Int(doubleValue * 100))%")
+                                    .font(.caption2)
+                            }
                         }
                     }
                 }
+                .onAppear {
+                    // Force a small delay to ensure Charts framework is ready
+                    print("📊 Chart appeared for analysis")
+                }
+                .id(chartRefreshTrigger) // Force re-render when trigger changes
             }
         }
         .padding()
