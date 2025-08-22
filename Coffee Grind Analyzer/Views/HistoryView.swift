@@ -352,7 +352,7 @@ struct HistoryRowView: View {
                 
                 // Date and delete button
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text(analysis.savedDate, style: .relative)
+                    Text(analysis.savedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
                         .font(.caption2)
                         .foregroundColor(.secondary)
                     
