@@ -289,6 +289,19 @@ struct ResultsView: View {
             VStack(spacing: 24) {
                 if #available(iOS 16.0, *) {
                     distributionChart
+                } else {
+                    // Fallback for older iOS versions
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Particle Size Distribution")
+                            .font(.headline)
+                        
+                        Text("Chart view requires iOS 16+")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
                 }
                 
                 sizeDistributionList
@@ -303,20 +316,77 @@ struct ResultsView: View {
             Text("Particle Size Distribution")
                 .font(.headline)
             
-            Chart {
-                ForEach(Array(results.sizeDistribution.sorted(by: { $0.key < $1.key })), id: \.key) { category, percentage in
-                    BarMark(
-                        x: .value("Category", category),
-                        y: .value("Percentage", percentage)
+            let sortedData = Array(results.sizeDistribution.sorted { first, second in
+                let order = ["Fines (<400μm)", "Fine (400-600μm)", "Medium (600-1000μm)", "Coarse (1000-1400μm)", "Boulders (>1400μm)"]
+                let firstIndex = order.firstIndex(of: first.key) ?? 999
+                let secondIndex = order.firstIndex(of: second.key) ?? 999
+                return firstIndex < secondIndex
+            })
+            
+            Chart(sortedData, id: \.key) { category, percentage in
+                LineMark(
+                    x: .value("Category", categoryShortName(category)),
+                    y: .value("Percentage", percentage / 100.0)
+                )
+                .foregroundStyle(colorForCategory(category))
+                .interpolationMethod(.catmullRom)
+                .symbol(Circle().strokeBorder(lineWidth: 2))
+                .symbolSize(60)
+                
+                AreaMark(
+                    x: .value("Category", categoryShortName(category)),
+                    y: .value("Percentage", percentage / 100.0)
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [colorForCategory(category).opacity(0.3), colorForCategory(category).opacity(0.1)],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                    .foregroundStyle(colorForCategory(category))
-                }
+                )
+                .interpolationMethod(.catmullRom)
             }
             .frame(height: 200)
+            .chartXAxis {
+                AxisMarks { value in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel {
+                        if let category = value.as(String.self) {
+                            Text(category)
+                                .font(.caption2)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                }
+            }
+            .chartYAxis {
+                AxisMarks { value in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel {
+                        if let doubleValue = value.as(Double.self) {
+                            Text("\(Int(doubleValue * 100))%")
+                                .font(.caption2)
+                        }
+                    }
+                }
+            }
         }
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+    }
+    
+    private func categoryShortName(_ category: String) -> String {
+        switch category {
+        case "Fines (<400μm)": return "Fines"
+        case "Fine (400-600μm)": return "Fine"
+        case "Medium (600-1000μm)": return "Medium"
+        case "Coarse (1000-1400μm)": return "Coarse"
+        case "Boulders (>1400μm)": return "Boulders"
+        default: return category
+        }
     }
     
     private func colorForCategory(_ category: String) -> Color {
