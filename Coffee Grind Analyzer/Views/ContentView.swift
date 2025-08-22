@@ -57,7 +57,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingResults) {
             if let results = analysisResults {
-                ResultsView(results: results)
+                ResultsView(results: results, isFromHistory: false)
                     .environmentObject(historyManager)
             }
         }

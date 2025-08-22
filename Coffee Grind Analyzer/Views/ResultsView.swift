@@ -10,16 +10,21 @@ import Charts
 
 struct ResultsView: View {
     let results: CoffeeAnalysisResults
+    let isFromHistory: Bool
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var historyManager: CoffeeAnalysisHistoryManager
     
     @State private var selectedTab = 0
-    @State private var showingShareSheet = false
     @State private var showingImageComparison = false
     @State private var showingSaveDialog = false
     @State private var saveName = ""
     @State private var saveNotes = ""
     @State private var saveSuccess = false
+    
+    init(results: CoffeeAnalysisResults, isFromHistory: Bool = false) {
+        self.results = results
+        self.isFromHistory = isFromHistory
+    }
     
     var body: some View {
         NavigationView {
@@ -61,21 +66,14 @@ struct ResultsView: View {
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack {
+                if !isFromHistory {
+                    ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: { showingSaveDialog = true }) {
                             Image(systemName: "square.and.arrow.down")
-                        }
-                        
-                        Button(action: { showingShareSheet = true }) {
-                            Image(systemName: "square.and.arrow.up")
                         }
                     }
                 }
             }
-        }
-        .sheet(isPresented: $showingShareSheet) {
-            ShareSheet(results: results)
         }
         .sheet(isPresented: $showingImageComparison) {
             ImageComparisonView(results: results)

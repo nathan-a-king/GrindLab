@@ -109,7 +109,7 @@ struct HistoryView: View {
         .searchable(text: $searchText, prompt: "Search analyses...")
         .sheet(isPresented: $showingResults) {
             if let analysis = selectedAnalysis {
-                ResultsView(results: analysis.results)
+                ResultsView(results: analysis.results, isFromHistory: true)
                     .environmentObject(historyManager)
             }
         }
