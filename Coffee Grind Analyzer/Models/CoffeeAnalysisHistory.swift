@@ -161,6 +161,8 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     generateDefaultSizeDistribution(finesPercentage: storable.finesPercentage, bouldersPercentage: storable.bouldersPercentage) :
                     storable.sizeDistribution
                 
+                print("📊 Loading analysis '\(storable.name)': distribution has \(distribution.count) categories")
+                
                 let results = CoffeeAnalysisResults(
                     uniformityScore: storable.uniformityScore,
                     averageSize: storable.averageSize,

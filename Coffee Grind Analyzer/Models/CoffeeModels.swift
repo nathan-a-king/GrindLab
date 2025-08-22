@@ -163,13 +163,22 @@ struct CoffeeAnalysisResults {
     
     var sizeDistribution: [String: Double] {
         // Use stored distribution if available (for loaded results)
-        if let stored = _sizeDistribution {
+        if let stored = _sizeDistribution, !stored.isEmpty {
             return stored
         }
         
         // Otherwise compute from particles (for fresh analysis)
         let totalParticles = Double(particleCount)
-        guard totalParticles > 0 else { return [:] }
+        guard totalParticles > 0 else {
+            // Return a default distribution if we have no particles
+            return [
+                "Fines (<400μm)": finesPercentage,
+                "Fine (400-600μm)": max(0, 20.0),
+                "Medium (600-1000μm)": max(0, 100.0 - finesPercentage - bouldersPercentage - 20.0),
+                "Coarse (1000-1400μm)": max(0, 10.0),
+                "Boulders (>1400μm)": bouldersPercentage
+            ]
+        }
         
         var distribution: [String: Int] = [
             "Fines (<400μm)": 0,
