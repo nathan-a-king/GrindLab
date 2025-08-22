@@ -97,6 +97,50 @@ struct CoffeeAnalysisResults {
     let grindType: CoffeeGrindType
     let timestamp: Date
     
+    // Store size distribution separately for saved results
+    private let _sizeDistribution: [String: Double]?
+    
+    // Standard initializer (from fresh analysis)
+    init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
+         finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
+         confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType, timestamp: Date) {
+        self.uniformityScore = uniformityScore
+        self.averageSize = averageSize
+        self.medianSize = medianSize
+        self.standardDeviation = standardDeviation
+        self.finesPercentage = finesPercentage
+        self.bouldersPercentage = bouldersPercentage
+        self.particleCount = particleCount
+        self.particles = particles
+        self.confidence = confidence
+        self.image = image
+        self.processedImage = processedImage
+        self.grindType = grindType
+        self.timestamp = timestamp
+        self._sizeDistribution = nil // Will be computed from particles
+    }
+    
+    // Initializer for loaded results (with pre-computed distribution)
+    init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
+         finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
+         confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType, timestamp: Date,
+         sizeDistribution: [String: Double]) {
+        self.uniformityScore = uniformityScore
+        self.averageSize = averageSize
+        self.medianSize = medianSize
+        self.standardDeviation = standardDeviation
+        self.finesPercentage = finesPercentage
+        self.bouldersPercentage = bouldersPercentage
+        self.particleCount = particleCount
+        self.particles = particles
+        self.confidence = confidence
+        self.image = image
+        self.processedImage = processedImage
+        self.grindType = grindType
+        self.timestamp = timestamp
+        self._sizeDistribution = sizeDistribution
+    }
+    
     var uniformityColor: Color {
         switch uniformityScore {
         case 85...: return .green
@@ -118,6 +162,12 @@ struct CoffeeAnalysisResults {
     }
     
     var sizeDistribution: [String: Double] {
+        // Use stored distribution if available (for loaded results)
+        if let stored = _sizeDistribution {
+            return stored
+        }
+        
+        // Otherwise compute from particles (for fresh analysis)
         let totalParticles = Double(particleCount)
         guard totalParticles > 0 else { return [:] }
         

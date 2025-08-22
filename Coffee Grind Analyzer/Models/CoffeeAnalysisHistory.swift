@@ -130,7 +130,8 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     confidence: analysis.results.confidence,
                     timestamp: analysis.results.timestamp,
                     savedDate: analysis.savedDate,
-                    notes: analysis.notes
+                    notes: analysis.notes,
+                    sizeDistribution: analysis.results.sizeDistribution // Save the distribution
                 )
             }
             
@@ -168,7 +169,8 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     image: nil, // Don't store images for space
                     processedImage: nil,
                     grindType: storable.grindType,
-                    timestamp: storable.timestamp
+                    timestamp: storable.timestamp,
+                    sizeDistribution: storable.sizeDistribution // Use stored distribution
                 )
                 
                 return SavedCoffeeAnalysis(
@@ -204,4 +206,5 @@ private struct StorableAnalysis: Codable {
     let timestamp: Date
     let savedDate: Date
     let notes: String?
+    let sizeDistribution: [String: Double] // Add this for the graph
 }

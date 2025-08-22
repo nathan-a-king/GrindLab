@@ -86,15 +86,24 @@ struct ContentView: View {
         ZStack {
             backgroundGradient
             
-            VStack(spacing: 40) {
-                headerSection
-                grindTypeCards
-                Spacer()
-                bottomControls
+            ScrollView {
+                VStack(spacing: 32) {
+                    headerSection
+                        .padding(.top, 20) // Add some top padding
+                    
+                    grindTypeCards
+                    
+                    // Recent results section
+                    if !historyManager.savedAnalyses.isEmpty {
+                        recentResultsSection
+                    }
+                    
+                    // Settings button at bottom
+                    settingsButton
+                }
+                .padding(.horizontal, 30)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 30)
-            .padding(.top, 60)
-            .padding(.bottom, 40)
         }
         .navigationBarHidden(true)
     }
@@ -201,66 +210,33 @@ struct ContentView: View {
             )
     }
     
-    private var bottomControls: some View {
-        VStack(spacing: 20) {
-            // Recent results section
-            if !historyManager.savedAnalyses.isEmpty {
-                recentResultsSection
-            }
-            
-            // Settings and navigation
-            HStack {
-                Button(action: { showingSettings = true }) {
-                    HStack {
-                        Image(systemName: "gearshape.fill")
-                        Text("Settings")
-                    }
-                    .foregroundColor(.white.opacity(0.8))
-                    .font(.subheadline)
-                }
-                
-                Spacer()
-                
-                if let results = analysisResults {
-                    Button(action: { showingResults = true }) {
-                        HStack {
-                            Image(systemName: "chart.bar.fill")
-                            Text("Last Results")
-                        }
-                        .foregroundColor(.blue)
-                        .font(.subheadline)
-                    }
-                }
-            }
-        }
-    }
-    
     private var recentResultsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Recent Analyses")
-                    .font(.headline)
+                    .font(.title2)
+                    .fontWeight(.semibold)
                     .foregroundColor(.white)
                 
                 Spacer()
                 
                 Text("\(historyManager.totalAnalyses) saved")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.6))
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
             }
             
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(historyManager.recentAnalyses(limit: 3)) { analysis in
+                HStack(spacing: 16) {
+                    ForEach(historyManager.recentAnalyses(limit: 5)) { analysis in
                         recentResultCard(analysis)
                     }
                 }
                 .padding(.horizontal, 4)
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(12)
+        .padding(20)
+        .background(Color.white.opacity(0.12))
+        .cornerRadius(16)
     }
     
     private func recentResultCard(_ analysis: SavedCoffeeAnalysis) -> some View {
@@ -268,7 +244,7 @@ struct ContentView: View {
             analysisResults = analysis.results
             showingResults = true
         }) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(analysis.results.grindType.displayName)
                         .font(.caption)
@@ -293,12 +269,44 @@ struct ContentView: View {
                     .font(.caption2)
                     .foregroundColor(.white.opacity(0.6))
             }
-            .frame(width: 140, alignment: .leading)
-            .padding(12)
-            .background(Color.white.opacity(0.1))
-            .cornerRadius(8)
+            .frame(width: 160, alignment: .leading)
+            .padding(16)
+            .background(Color.white.opacity(0.08))
+            .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var settingsButton: some View {
+        HStack {
+            Button(action: { showingSettings = true }) {
+                HStack {
+                    Image(systemName: "gearshape.fill")
+                    Text("Settings")
+                }
+                .foregroundColor(.white.opacity(0.8))
+                .font(.subheadline)
+            }
+            
+            Spacer()
+            
+            if !historyManager.savedAnalyses.isEmpty {
+                Button(action: {
+                    // Show the most recent saved result
+                    if let mostRecent = historyManager.savedAnalyses.first {
+                        analysisResults = mostRecent.results
+                        showingResults = true
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "chart.bar.fill")
+                        Text("Last Results")
+                    }
+                    .foregroundColor(.blue)
+                    .font(.subheadline)
+                }
+            }
+        }
     }
     
     // MARK: - Camera View
