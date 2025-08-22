@@ -109,11 +109,6 @@ struct ContentView: View {
                     
                     grindTypeCards
                     
-                    // Recent results section
-                    if !historyManager.savedAnalyses.isEmpty {
-                        recentResultsSection
-                    }
-                    
                     // Settings button at bottom
                     settingsButton
                 }
@@ -305,23 +300,6 @@ struct ContentView: View {
             }
             
             Spacer()
-            
-            if !historyManager.savedAnalyses.isEmpty {
-                Button(action: {
-                    // Show the most recent saved result
-                    if let mostRecent = historyManager.savedAnalyses.first {
-                        analysisResults = mostRecent.results
-                        showingResults = true
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "chart.bar.fill")
-                        Text("Last Results")
-                    }
-                    .foregroundColor(.blue)
-                    .font(.subheadline)
-                }
-            }
         }
     }
     

@@ -155,7 +155,12 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             let storableAnalyses = try JSONDecoder().decode([StorableAnalysis].self, from: data)
             
             // Convert back to full analysis objects
-            savedAnalyses = storableAnalyses.map { storable in
+            savedAnalyses = storableAnalyses.compactMap { storable in
+                // Ensure we have valid size distribution data
+                let distribution = storable.sizeDistribution.isEmpty ?
+                    generateDefaultSizeDistribution(finesPercentage: storable.finesPercentage, bouldersPercentage: storable.bouldersPercentage) :
+                    storable.sizeDistribution
+                
                 let results = CoffeeAnalysisResults(
                     uniformityScore: storable.uniformityScore,
                     averageSize: storable.averageSize,
@@ -170,7 +175,7 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     processedImage: nil,
                     grindType: storable.grindType,
                     timestamp: storable.timestamp,
-                    sizeDistribution: storable.sizeDistribution // Use stored distribution
+                    sizeDistribution: distribution // Use validated distribution
                 )
                 
                 return SavedCoffeeAnalysis(
@@ -185,7 +190,25 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             
         } catch {
             print("❌ Error loading analyses: \(error)")
+            // If loading fails, try to load legacy format or clear corrupted data
+            userDefaults.removeObject(forKey: savedAnalysesKey)
         }
+    }
+    
+    // Generate a reasonable size distribution when missing
+    private func generateDefaultSizeDistribution(finesPercentage: Double, bouldersPercentage: Double) -> [String: Double] {
+        let mediumPercentage = max(0, 100 - finesPercentage - bouldersPercentage)
+        let finePercentage = mediumPercentage * 0.3 // 30% of remaining
+        let adjustedMedium = mediumPercentage * 0.7 // 70% of remaining
+        let coarsePercentage = 0.0 // Minimal coarse if not specified
+        
+        return [
+            "Fines (<400μm)": finesPercentage,
+            "Fine (400-600μm)": finePercentage,
+            "Medium (600-1000μm)": adjustedMedium,
+            "Coarse (1000-1400μm)": coarsePercentage,
+            "Boulders (>1400μm)": bouldersPercentage
+        ]
     }
 }
 
@@ -207,4 +230,54 @@ private struct StorableAnalysis: Codable {
     let savedDate: Date
     let notes: String?
     let sizeDistribution: [String: Double] // Add this for the graph
+    
+    // Custom decoder to handle legacy data without sizeDistribution
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        grindType = try container.decode(CoffeeGrindType.self, forKey: .grindType)
+        uniformityScore = try container.decode(Double.self, forKey: .uniformityScore)
+        averageSize = try container.decode(Double.self, forKey: .averageSize)
+        medianSize = try container.decode(Double.self, forKey: .medianSize)
+        standardDeviation = try container.decode(Double.self, forKey: .standardDeviation)
+        finesPercentage = try container.decode(Double.self, forKey: .finesPercentage)
+        bouldersPercentage = try container.decode(Double.self, forKey: .bouldersPercentage)
+        particleCount = try container.decode(Int.self, forKey: .particleCount)
+        confidence = try container.decode(Double.self, forKey: .confidence)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        savedDate = try container.decode(Date.self, forKey: .savedDate)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        
+        // Try to decode sizeDistribution, fallback to empty if not present (legacy data)
+        sizeDistribution = try container.decodeIfPresent([String: Double].self, forKey: .sizeDistribution) ?? [:]
+    }
+    
+    // Standard initializer for encoding
+    init(id: UUID, name: String, grindType: CoffeeGrindType, uniformityScore: Double, averageSize: Double,
+         medianSize: Double, standardDeviation: Double, finesPercentage: Double, bouldersPercentage: Double,
+         particleCount: Int, confidence: Double, timestamp: Date, savedDate: Date, notes: String?,
+         sizeDistribution: [String: Double]) {
+        self.id = id
+        self.name = name
+        self.grindType = grindType
+        self.uniformityScore = uniformityScore
+        self.averageSize = averageSize
+        self.medianSize = medianSize
+        self.standardDeviation = standardDeviation
+        self.finesPercentage = finesPercentage
+        self.bouldersPercentage = bouldersPercentage
+        self.particleCount = particleCount
+        self.confidence = confidence
+        self.timestamp = timestamp
+        self.savedDate = savedDate
+        self.notes = notes
+        self.sizeDistribution = sizeDistribution
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, name, grindType, uniformityScore, averageSize, medianSize, standardDeviation
+        case finesPercentage, bouldersPercentage, particleCount, confidence, timestamp, savedDate, notes, sizeDistribution
+    }
 }
