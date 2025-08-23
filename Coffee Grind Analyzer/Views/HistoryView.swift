@@ -77,15 +77,24 @@ struct HistoryView: View {
                         
                         TextField("Search analyses...", text: $searchText)
                             .textFieldStyle(PlainTextFieldStyle())
+                            .submitLabel(.search)
+                            .onSubmit {
+                                // Dismiss keyboard when search is submitted
+                                hideKeyboard()
+                            }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Color(.systemGray6))
                     .cornerRadius(10)
+                    .onTapGesture {
+                        // Allow tapping in search field to focus
+                    }
                     
                     if !searchText.isEmpty {
                         Button("Cancel") {
                             searchText = ""
+                            hideKeyboard()
                         }
                         .foregroundColor(.blue)
                     }
@@ -98,6 +107,10 @@ struct HistoryView: View {
                     emptyHistoryView
                 } else {
                     historyContentWithFixedHeader
+                        .onTapGesture {
+                            // Dismiss keyboard when tapping outside search field
+                            hideKeyboard()
+                        }
                 }
             }
             .navigationTitle("Analysis History")
@@ -293,6 +306,13 @@ struct HistoryView: View {
             }
             .listStyle(PlainListStyle())
             .scrollContentBackground(.hidden)
+            .simultaneousGesture(
+                // Add drag gesture to dismiss keyboard on scroll
+                DragGesture()
+                    .onChanged { _ in
+                        hideKeyboard()
+                    }
+            )
         }
     }
     
@@ -430,9 +450,15 @@ struct HistoryView: View {
             historyManager.deleteAnalysis(withId: analysis.id)
         }
     }
+    
+    // Helper function to dismiss keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 }
 
 // MARK: - Comparison History Row View
+
 struct ComparisonHistoryRowView: View {
     let analysis: SavedCoffeeAnalysis
     let isSelected: Bool
@@ -444,7 +470,7 @@ struct ComparisonHistoryRowView: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 12) {
-                // Main row content with more vertical space
+                // Main row content
                 HStack(spacing: 16) {
                     // Selection indicator or grind type icon
                     VStack(spacing: 4) {
@@ -472,57 +498,31 @@ struct ComparisonHistoryRowView: View {
                     }
                     .frame(width: 50)
                     
-                    // Analysis details with better spacing
-                    VStack(alignment: .leading, spacing: 10) {
-                        // Title and grind type
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(analysis.name)
-                                .font(.headline)
-                                .foregroundColor(canSelect ? .primary : .secondary)
-                                .lineLimit(1)
-                            
-                            Text(analysis.results.grindType.displayName)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
+                    // Analysis details
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(analysis.name)
+                            .font(.headline)
+                            .foregroundColor(canSelect ? .primary : .secondary)
+                            .lineLimit(1)
                         
-                        // Metrics stacked vertically - each on its own line
-                        VStack(alignment: .leading, spacing: 6) {
-                            // Particles on first line
-                            HStack(spacing: 6) {
-                                Image(systemName: "circle.grid.3x3")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("\(analysis.results.particleCount) particles")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            // Average size on second line
-                            HStack(spacing: 6) {
-                                Image(systemName: "ruler")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("\(String(format: "%.0f", analysis.results.averageSize))μm average")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                        Text(analysis.results.grindType.displayName)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         
-                        // Notes if available
+                        HStack(spacing: 12) {
+                            Label("\(analysis.results.particleCount) particles", systemImage: "circle.grid.3x3")
+                            
+                            Label(String(format: "%.0fμm avg", analysis.results.averageSize), systemImage: "ruler")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        
                         if let notes = analysis.notes, !notes.isEmpty {
                             Text(notes)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                                 .italic()
-                        }
-                        
-                        // Tasting notes preview (moved inside main content - no divider)
-                        if let tastingNotes = analysis.results.tastingNotes, !isSelected {
-                            CompactTastingNotesView(tastingNotes: tastingNotes)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.top, 4) // Small spacing from metrics
                         }
                     }
                     
@@ -554,8 +554,15 @@ struct ComparisonHistoryRowView: View {
                         }
                     }
                 }
+                
+                // Tasting notes preview (if available and not in selection mode)
+                if let tastingNotes = analysis.results.tastingNotes, !isSelected {
+                    Divider()
+                    CompactTastingNotesView(tastingNotes: tastingNotes)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
-            .padding(.vertical, 12) // Increased padding for more breathing room
+            .padding(.vertical, 8)
         }
         .buttonStyle(PlainButtonStyle())
         .opacity(canSelect ? 1.0 : 0.6)
