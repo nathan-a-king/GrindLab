@@ -9,6 +9,8 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject private var historyManager: CoffeeAnalysisHistoryManager
+    @StateObject private var comparisonManager = ComparisonManager()
+    
     @State private var searchText = ""
     @State private var selectedGrindFilter: CoffeeGrindType?
     @State private var sortOption: SortOption = .dateNewest
@@ -19,6 +21,7 @@ struct HistoryView: View {
     @State private var analysisToPresent: SavedCoffeeAnalysis?
     @State private var showingEditTastingNotes = false
     @State private var analysisToEditTastingNotes: SavedCoffeeAnalysis?
+    @State private var showingComparison = false
     
     enum SortOption: String, CaseIterable {
         case dateNewest = "Date (Newest)"
@@ -75,38 +78,75 @@ struct HistoryView: View {
             .navigationTitle("Analysis History")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Section("Sort by") {
-                            Picker("Sort", selection: $sortOption) {
-                                ForEach(SortOption.allCases, id: \.self) { option in
-                                    Text(option.rawValue).tag(option)
-                                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if comparisonManager.selectedAnalyses.isEmpty {
+                        Button("Compare") {
+                            // Start comparison mode by adding the first analysis automatically
+                            // This puts us into selection mode
+                            if let firstAnalysis = filteredAndSortedAnalyses.first {
+                                comparisonManager.toggleSelection(firstAnalysis.id)
                             }
                         }
-                        
-                        Section("Filter by Grind Type") {
-                            Button(selectedGrindFilter == nil ? "✓ All Types" : "All Types") {
-                                selectedGrindFilter = nil
+                        .disabled(filteredAndSortedAnalyses.count < 2)
+                    } else {
+                        Button("Cancel") {
+                            comparisonManager.clearSelection()
+                        }
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if comparisonManager.canStartComparison {
+                        Button("Compare (\(comparisonManager.selectedAnalyses.count))") {
+                            if let comparison = comparisonManager.createComparison(from: historyManager) {
+                                showingComparison = true
+                            }
+                        }
+                        .fontWeight(.semibold)
+                    } else {
+                        Menu {
+                            Section("Sort by") {
+                                Picker("Sort", selection: $sortOption) {
+                                    ForEach(SortOption.allCases, id: \.self) { option in
+                                        Text(option.rawValue).tag(option)
+                                    }
+                                }
                             }
                             
-                            ForEach(CoffeeGrindType.allCases, id: \.self) { grindType in
-                                Button(selectedGrindFilter == grindType ? "✓ \(grindType.displayName)" : grindType.displayName) {
-                                    selectedGrindFilter = selectedGrindFilter == grindType ? nil : grindType
+                            Section("Filter by Grind Type") {
+                                Button(selectedGrindFilter == nil ? "✓ All Types" : "All Types") {
+                                    selectedGrindFilter = nil
+                                }
+                                
+                                ForEach(CoffeeGrindType.allCases, id: \.self) { grindType in
+                                    Button(selectedGrindFilter == grindType ? "✓ \(grindType.displayName)" : grindType.displayName) {
+                                        selectedGrindFilter = selectedGrindFilter == grindType ? nil : grindType
+                                    }
                                 }
                             }
-                        }
-                        
-                        Section {
-                            Button("Clear All History", role: .destructive) {
-                                showingClearAllAlert = true
+                            
+                            Section {
+                                Button("Clear All History", role: .destructive) {
+                                    showingClearAllAlert = true
+                                }
                             }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
                         }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
                     }
                 }
             }
+            .overlay(
+                Group {
+                    if !comparisonManager.selectedAnalyses.isEmpty {
+                        VStack {
+                            Spacer()
+                            comparisonInstructionsBar
+                        }
+                        .ignoresSafeArea(edges: .bottom)
+                    }
+                }
+            )
         }
         .searchable(text: $searchText, prompt: "Search analyses...")
         .sheet(item: $analysisToPresent) { analysis in
@@ -131,6 +171,14 @@ struct HistoryView: View {
                         analysisToEditTastingNotes = nil
                     }
                 )
+            }
+        }
+        .sheet(isPresented: $showingComparison) {
+            if let comparison = comparisonManager.createComparison(from: historyManager) {
+                ComparisonView(comparison: comparison)
+                    .onDisappear {
+                        comparisonManager.clearSelection()
+                    }
             }
         }
         .alert("Delete Analysis", isPresented: $showingDeleteAlert) {
@@ -188,12 +236,20 @@ struct HistoryView: View {
             // Analysis List
             List {
                 ForEach(filteredAndSortedAnalyses) { analysis in
-                    HistoryRowView(
+                    ComparisonHistoryRowView(
                         analysis: analysis,
+                        isSelected: comparisonManager.isSelected(analysis.id),
+                        canSelect: comparisonManager.canSelect(analysis.id),
                         onTap: {
-                            print("🎯 User tapped analysis: \(analysis.name)")
-                            analysisToPresent = analysis
-                            print("🎯 Set analysisToPresent to: \(analysis.name)")
+                            if !comparisonManager.selectedAnalyses.isEmpty {
+                                // In comparison mode - toggle selection
+                                comparisonManager.toggleSelection(analysis.id)
+                            } else {
+                                // Normal mode - show details
+                                print("🎯 User tapped analysis: \(analysis.name)")
+                                analysisToPresent = analysis
+                                print("🎯 Set analysisToPresent to: \(analysis.name)")
+                            }
                         },
                         onDelete: {
                             analysisToDelete = analysis
@@ -210,6 +266,37 @@ struct HistoryView: View {
             }
             .listStyle(PlainListStyle())
         }
+    }
+    
+    private var comparisonInstructionsBar: some View {
+        VStack(spacing: 8) {
+            if comparisonManager.selectedAnalyses.count < 2 {
+                Text("Select at least 2 analyses to compare")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            HStack {
+                Text("\(comparisonManager.selectedAnalyses.count) selected")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                if comparisonManager.canStartComparison {
+                    Button("Compare") {
+                        if let comparison = comparisonManager.createComparison(from: historyManager) {
+                            showingComparison = true
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .padding()
+        .background(.regularMaterial)
+        .cornerRadius(12)
+        .padding()
     }
     
     private var statisticsHeader: some View {
@@ -317,10 +404,12 @@ struct HistoryView: View {
     }
 }
 
-// MARK: - History Row View (Updated)
+// MARK: - Comparison History Row View
 
-struct HistoryRowView: View {
+struct ComparisonHistoryRowView: View {
     let analysis: SavedCoffeeAnalysis
+    let isSelected: Bool
+    let canSelect: Bool
     let onTap: () -> Void
     let onDelete: () -> Void
     let onEditTastingNotes: () -> Void
@@ -330,11 +419,24 @@ struct HistoryRowView: View {
             VStack(spacing: 12) {
                 // Main row content
                 HStack(spacing: 16) {
-                    // Grind type icon with score
+                    // Selection indicator or grind type icon
                     VStack(spacing: 4) {
-                        Image(systemName: iconForGrindType(analysis.results.grindType))
-                            .font(.title2)
-                            .foregroundColor(iconColorForGrindType(analysis.results.grindType))
+                        ZStack {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.blue)
+                                    .frame(width: 40, height: 40)
+                                
+                                Image(systemName: "checkmark")
+                                    .font(.title3)
+                                    .foregroundColor(.white)
+                                    .fontWeight(.bold)
+                            } else {
+                                Image(systemName: iconForGrindType(analysis.results.grindType))
+                                    .font(.title2)
+                                    .foregroundColor(canSelect ? iconColorForGrindType(analysis.results.grindType) : iconColorForGrindType(analysis.results.grindType).opacity(0.3))
+                            }
+                        }
                         
                         Text("\(Int(analysis.results.uniformityScore))%")
                             .font(.caption)
@@ -347,7 +449,7 @@ struct HistoryRowView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(analysis.name)
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .foregroundColor(canSelect ? .primary : .secondary)
                             .lineLimit(1)
                         
                         Text(analysis.results.grindType.displayName)
@@ -373,33 +475,35 @@ struct HistoryRowView: View {
                     
                     Spacer()
                     
-                    // Date and actions
-                    VStack(alignment: .trailing, spacing: 8) {
-                        Text(analysis.savedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        
-                        HStack(spacing: 12) {
-                            // Edit tasting notes button
-                            Button(action: onEditTastingNotes) {
-                                Image(systemName: analysis.results.tastingNotes != nil ? "star.fill" : "star")
-                                    .font(.caption)
-                                    .foregroundColor(analysis.results.tastingNotes != nil ? .yellow : .gray)
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                    // Date and actions (hidden during selection)
+                    if !isSelected {
+                        VStack(alignment: .trailing, spacing: 8) {
+                            Text(analysis.savedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                             
-                            Button(action: onDelete) {
-                                Image(systemName: "trash")
-                                    .font(.caption)
-                                    .foregroundColor(.red)
+                            HStack(spacing: 12) {
+                                // Edit tasting notes button
+                                Button(action: onEditTastingNotes) {
+                                    Image(systemName: analysis.results.tastingNotes != nil ? "star.fill" : "star")
+                                        .font(.caption)
+                                        .foregroundColor(analysis.results.tastingNotes != nil ? .yellow : .gray)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Button(action: onDelete) {
+                                    Image(systemName: "trash")
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(PlainButtonStyle())
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
                 
-                // Tasting notes preview (if available)
-                if let tastingNotes = analysis.results.tastingNotes {
+                // Tasting notes preview (if available and not in selection mode)
+                if let tastingNotes = analysis.results.tastingNotes, !isSelected {
                     Divider()
                     CompactTastingNotesView(tastingNotes: tastingNotes)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -408,6 +512,11 @@ struct HistoryRowView: View {
             .padding(.vertical, 8)
         }
         .buttonStyle(PlainButtonStyle())
+        .opacity(canSelect ? 1.0 : 0.6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.blue, lineWidth: isSelected ? 2 : 0)
+        )
     }
     
     private func iconForGrindType(_ grindType: CoffeeGrindType) -> String {
