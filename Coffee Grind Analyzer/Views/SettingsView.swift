@@ -33,6 +33,7 @@ struct SettingsView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .fontWeight(.semibold)
                 }
             }
         }
@@ -178,16 +179,32 @@ struct SettingsView: View {
             
             Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
             
-            Button("Reset All Settings") {
+            // Working reset button - replaced the problematic one
+            Button(action: {
+                print("🔄 Reset All Settings tapped")
                 AnalysisSettings.resetToDefaults()
-                settings = AnalysisSettings()
+                settings.analysisMode = .standard
+                settings.contrastThreshold = 0.3
+                settings.minParticleSize = 10
+                settings.maxParticleSize = 1000
+                settings.enableAdvancedFiltering = false
+                settings.calibrationFactor = 1.0
+                print("✅ Settings reset complete")
+            }) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundColor(.red)
+                    Text("Reset All Settings")
+                        .foregroundColor(.red)
+                }
             }
-            .foregroundColor(.red)
         }
     }
     
     private func saveSettings() {
+        print("💾 saveSettings() called")
         settings.save()
+        print("💾 settings.save() completed")
     }
 }
 

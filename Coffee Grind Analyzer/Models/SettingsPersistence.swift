@@ -14,10 +14,19 @@ extension AnalysisSettings {
     
     /// Save current settings to UserDefaults
     func save() {
+        print("💾 AnalysisSettings.save() called")
+        print("📊 Saving values:")
+        print("   Analysis Mode: \(analysisMode.displayName)")
+        print("   Contrast: \(contrastThreshold)")
+        print("   Min Particle: \(minParticleSize)")
+        print("   Calibration: \(calibrationFactor)")
+        
         let encoder = JSONEncoder()
         if let encoded = try? encoder.encode(self) {
             UserDefaults.standard.set(encoded, forKey: Self.settingsKey)
-            print("💾 Settings saved")
+            print("✅ Settings saved to UserDefaults")
+        } else {
+            print("❌ Failed to encode settings")
         }
     }
     
