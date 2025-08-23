@@ -55,6 +55,48 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
         persistAnalyses()
     }
     
+    // MARK: - Update Existing Analysis
+    
+    func updateAnalysisTastingNotes(analysisId: UUID, tastingNotes: TastingNotes?) {
+        guard let index = savedAnalyses.firstIndex(where: { $0.id == analysisId }) else { return }
+        
+        // Create updated results with new tasting notes
+        let oldResults = savedAnalyses[index].results
+        let updatedResults = CoffeeAnalysisResults(
+            uniformityScore: oldResults.uniformityScore,
+            averageSize: oldResults.averageSize,
+            medianSize: oldResults.medianSize,
+            standardDeviation: oldResults.standardDeviation,
+            finesPercentage: oldResults.finesPercentage,
+            bouldersPercentage: oldResults.bouldersPercentage,
+            particleCount: oldResults.particleCount,
+            particles: oldResults.particles,
+            confidence: oldResults.confidence,
+            image: oldResults.image,
+            processedImage: oldResults.processedImage,
+            grindType: oldResults.grindType,
+            timestamp: oldResults.timestamp,
+            sizeDistribution: oldResults.sizeDistribution,
+            tastingNotes: tastingNotes
+        )
+        
+        // Create updated saved analysis
+        let updatedAnalysis = SavedCoffeeAnalysis(
+            name: savedAnalyses[index].name,
+            results: updatedResults,
+            savedDate: savedAnalyses[index].savedDate,
+            notes: savedAnalyses[index].notes
+        )
+        
+        // Update the array
+        savedAnalyses[index] = updatedAnalysis
+        
+        // Persist changes
+        persistAnalyses()
+        
+        print("✅ Updated tasting notes for analysis: \(updatedAnalysis.name)")
+    }
+    
     // MARK: - Delete Analysis
     
     func deleteAnalysis(at index: Int) {
@@ -116,8 +158,8 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
         do {
             // Convert to data that can be stored
             let analysesToStore = savedAnalyses.map { analysis in
-                print("🔍 Saving analysis: \(analysis.name)")
-                print("🔍 Has tasting notes: \(analysis.results.tastingNotes != nil)")
+                print("📝 Saving analysis: \(analysis.name)")
+                print("📝 Has tasting notes: \(analysis.results.tastingNotes != nil)")
                 
                 return StorableAnalysis(
                     id: analysis.id,
@@ -151,7 +193,7 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
     
     private func loadSavedAnalyses() {
         guard let data = userDefaults.data(forKey: savedAnalysesKey) else {
-            print("📭 No saved analyses found")
+            print("🔭 No saved analyses found")
             return
         }
         
@@ -181,7 +223,8 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     processedImage: nil,
                     grindType: storable.grindType,
                     timestamp: storable.timestamp,
-                    sizeDistribution: distribution // Use validated distribution
+                    sizeDistribution: distribution, // Use validated distribution
+                    tastingNotes: storable.tastingNotes
                 )
                 
                 return SavedCoffeeAnalysis(

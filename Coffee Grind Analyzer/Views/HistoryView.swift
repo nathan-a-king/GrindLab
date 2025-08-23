@@ -17,6 +17,8 @@ struct HistoryView: View {
     @State private var showingClearAllAlert = false
     @State private var selectedAnalysis: SavedCoffeeAnalysis?
     @State private var analysisToPresent: SavedCoffeeAnalysis?
+    @State private var showingEditTastingNotes = false
+    @State private var analysisToEditTastingNotes: SavedCoffeeAnalysis?
     
     enum SortOption: String, CaseIterable {
         case dateNewest = "Date (Newest)"
@@ -117,6 +119,20 @@ struct HistoryView: View {
                     print("👋 History sheet dismissed")
                 }
         }
+        .sheet(isPresented: $showingEditTastingNotes) {
+            if let analysis = analysisToEditTastingNotes {
+                EditTastingNotesDialog(
+                    savedAnalysis: analysis,
+                    onSave: { updatedAnalysis, tastingNotes in
+                        historyManager.updateAnalysisTastingNotes(
+                            analysisId: updatedAnalysis.id,
+                            tastingNotes: tastingNotes
+                        )
+                        analysisToEditTastingNotes = nil
+                    }
+                )
+            }
+        }
         .alert("Delete Analysis", isPresented: $showingDeleteAlert) {
             Button("Delete", role: .destructive) {
                 if let analysis = analysisToDelete {
@@ -182,6 +198,10 @@ struct HistoryView: View {
                         onDelete: {
                             analysisToDelete = analysis
                             showingDeleteAlert = true
+                        },
+                        onEditTastingNotes: {
+                            analysisToEditTastingNotes = analysis
+                            showingEditTastingNotes = true
                         }
                     )
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -297,71 +317,92 @@ struct HistoryView: View {
     }
 }
 
-// MARK: - History Row View
+// MARK: - History Row View (Updated)
 
 struct HistoryRowView: View {
     let analysis: SavedCoffeeAnalysis
     let onTap: () -> Void
     let onDelete: () -> Void
+    let onEditTastingNotes: () -> Void
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
-                // Grind type icon with score
-                VStack(spacing: 4) {
-                    Image(systemName: iconForGrindType(analysis.results.grindType))
-                        .font(.title2)
-                        .foregroundColor(iconColorForGrindType(analysis.results.grindType))
-                    
-                    Text("\(Int(analysis.results.uniformityScore))%")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(analysis.results.uniformityColor)
-                }
-                .frame(width: 50)
-                
-                // Analysis details
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(analysis.name)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    Text(analysis.results.grindType.displayName)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    HStack(spacing: 12) {
-                        Label("\(analysis.results.particleCount) particles", systemImage: "circle.grid.3x3")
+            VStack(spacing: 12) {
+                // Main row content
+                HStack(spacing: 16) {
+                    // Grind type icon with score
+                    VStack(spacing: 4) {
+                        Image(systemName: iconForGrindType(analysis.results.grindType))
+                            .font(.title2)
+                            .foregroundColor(iconColorForGrindType(analysis.results.grindType))
                         
-                        Label(String(format: "%.0fμm avg", analysis.results.averageSize), systemImage: "ruler")
-                    }
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    
-                    if let notes = analysis.notes, !notes.isEmpty {
-                        Text(notes)
+                        Text("\(Int(analysis.results.uniformityScore))%")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .fontWeight(.bold)
+                            .foregroundColor(analysis.results.uniformityColor)
+                    }
+                    .frame(width: 50)
+                    
+                    // Analysis details
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(analysis.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
                             .lineLimit(1)
-                            .italic()
+                        
+                        Text(analysis.results.grindType.displayName)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 12) {
+                            Label("\(analysis.results.particleCount) particles", systemImage: "circle.grid.3x3")
+                            
+                            Label(String(format: "%.0fμm avg", analysis.results.averageSize), systemImage: "ruler")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        
+                        if let notes = analysis.notes, !notes.isEmpty {
+                            Text(notes)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .italic()
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Date and actions
+                    VStack(alignment: .trailing, spacing: 8) {
+                        Text(analysis.savedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 12) {
+                            // Edit tasting notes button
+                            Button(action: onEditTastingNotes) {
+                                Image(systemName: analysis.results.tastingNotes != nil ? "star.fill" : "star")
+                                    .font(.caption)
+                                    .foregroundColor(analysis.results.tastingNotes != nil ? .yellow : .gray)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            Button(action: onDelete) {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
                     }
                 }
                 
-                Spacer()
-                
-                // Date and delete button
-                VStack(alignment: .trailing, spacing: 8) {
-                    Text(analysis.savedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Tasting notes preview (if available)
+                if let tastingNotes = analysis.results.tastingNotes {
+                    Divider()
+                    CompactTastingNotesView(tastingNotes: tastingNotes)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(.vertical, 8)

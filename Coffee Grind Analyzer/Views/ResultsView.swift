@@ -21,6 +21,7 @@ struct ResultsView: View {
     @State private var saveNotes = ""
     @State private var saveSuccess = false
     @State private var chartRefreshTrigger = false
+    @State private var showingEditTastingNotes = false
     
     init(results: CoffeeAnalysisResults, isFromHistory: Bool = false) {
         self.results = results
@@ -73,6 +74,13 @@ struct ResultsView: View {
                             Image(systemName: "square.and.arrow.down")
                         }
                     }
+                } else {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: { showingEditTastingNotes = true }) {
+                            Image(systemName: results.tastingNotes != nil ? "star.fill" : "star")
+                                .foregroundColor(results.tastingNotes != nil ? .yellow : .gray)
+                        }
+                    }
                 }
             }
         }
@@ -110,13 +118,26 @@ struct ResultsView: View {
                 }
             )
         }
+        .sheet(isPresented: $showingEditTastingNotes) {
+            if isFromHistory, let savedAnalysis = historyManager.savedAnalyses.first(where: { $0.results.timestamp == results.timestamp }) {
+                EditTastingNotesDialog(
+                    savedAnalysis: savedAnalysis,
+                    onSave: { _, tastingNotes in
+                        historyManager.updateAnalysisTastingNotes(
+                            analysisId: savedAnalysis.id,
+                            tastingNotes: tastingNotes
+                        )
+                    }
+                )
+            }
+        }
         .alert("Analysis Saved!", isPresented: $saveSuccess) {
             Button("OK") { }
         } message: {
             Text("Your coffee grind analysis has been saved successfully.")
         }
         .onAppear {
-            print("🔍 ResultsView body appeared - isFromHistory: \(isFromHistory)")
+            print("📝 ResultsView body appeared - isFromHistory: \(isFromHistory)")
             
             // Force refresh for first-load issues
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -125,7 +146,7 @@ struct ResultsView: View {
             }
             
             // Debug logging
-            print("🔍 ResultsView data check:")
+            print("📝 ResultsView data check:")
             print("   - From History: \(isFromHistory)")
             print("   - Uniformity: \(Int(results.uniformityScore))%")
             print("   - Distribution keys: \(results.sizeDistribution.keys.sorted())")
@@ -146,6 +167,12 @@ struct ResultsView: View {
                 
                 gradeSection
                     .onAppear { print("📊 Grade section appeared") }
+                
+                // Add tasting notes display if available
+                if let tastingNotes = results.tastingNotes {
+                    TastingNotesDisplayView(tastingNotes: tastingNotes)
+                        .onAppear { print("📊 Tasting notes section appeared") }
+                }
                 
                 recommendationsSection
                     .onAppear { print("📊 Recommendations section appeared") }
@@ -928,3 +955,30 @@ struct SaveAnalysisDialog: View {
         onSave(name, notes, tastingNotes)
     }
 }
+
+// MARK: - Preview
+
+#if DEBUG
+struct ResultsView_Previews: PreviewProvider {
+    static var previews: some View {
+        let sampleResults = CoffeeAnalysisResults(
+            uniformityScore: 82.5,
+            averageSize: 850.0,
+            medianSize: 820.0,
+            standardDeviation: 145.0,
+            finesPercentage: 12.3,
+            bouldersPercentage: 8.7,
+            particleCount: 287,
+            particles: [],
+            confidence: 89.2,
+            image: nil,
+            processedImage: nil,
+            grindType: .filter,
+            timestamp: Date(),
+            sizeDistribution: ["Fines (<400μm)": 12.3, "Fine (400-600μm)": 25.1, "Medium (600-1000μm)": 45.2, "Coarse (1000-1400μm)": 12.7, "Boulders (>1400μm)": 4.7]
+        )
+        
+        return ResultsView(results: sampleResults)
+    }
+}
+#endif
