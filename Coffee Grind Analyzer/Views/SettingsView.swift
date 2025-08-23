@@ -209,7 +209,6 @@ struct SettingsView: View {
 }
 
 // MARK: - Calibration View
-
 struct CalibrationView: View {
     @Binding var calibrationFactor: Double
     @Environment(\.dismiss) private var dismiss
@@ -218,6 +217,19 @@ struct CalibrationView: View {
     @State private var calibrationImage: UIImage?
     @State private var knownDistance: Double = 10.0 // mm
     @State private var measuredPixels: Double = 100.0
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
+    
+    // Computed property for validation
+    private var isValidInput: Bool {
+        knownDistance > 0 && measuredPixels > 0
+    }
+    
+    // Computed property for calculated factor
+    private var calculatedFactor: Double {
+        guard isValidInput else { return 0.0 }
+        return (knownDistance * 1000) / measuredPixels
+    }
     
     var body: some View {
         NavigationView {
@@ -236,6 +248,9 @@ struct CalibrationView: View {
                 Spacer()
             }
             .padding()
+            .onTapGesture {
+                hideKeyboard()
+            }
             .navigationTitle("Calibration")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -247,11 +262,15 @@ struct CalibrationView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        calculateCalibration()
-                        dismiss()
+                        saveCalibration()
                     }
-                    .disabled(calibrationImage == nil)
+                    .disabled(calibrationImage == nil || !isValidInput)
                 }
+            }
+            .alert("Invalid Input", isPresented: $showingAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(alertMessage)
             }
         }
         .sheet(isPresented: $showingImagePicker) {
@@ -322,6 +341,16 @@ struct CalibrationView: View {
                 TextField("Distance", value: $knownDistance, format: .number)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.decimalPad)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        hideKeyboard()
+                    }
+                    .onChange(of: knownDistance) { newValue in
+                        // Ensure positive value
+                        if newValue < 0 {
+                            knownDistance = 0
+                        }
+                    }
             }
             
             VStack(alignment: .leading) {
@@ -331,6 +360,16 @@ struct CalibrationView: View {
                 TextField("Pixels", value: $measuredPixels, format: .number)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.decimalPad)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        hideKeyboard()
+                    }
+                    .onChange(of: measuredPixels) { newValue in
+                        // Ensure positive value
+                        if newValue < 0 {
+                            measuredPixels = 0
+                        }
+                    }
             }
         }
     }
@@ -340,25 +379,54 @@ struct CalibrationView: View {
             Text("Calculated Calibration")
                 .font(.headline)
             
-            let calculatedFactor = (knownDistance * 1000) / measuredPixels // Convert mm to μm
-            
-            Text(String(format: "%.2f μm/pixel", calculatedFactor))
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(.blue)
-            
-            Text("This will be your new calibration factor")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            if isValidInput {
+                Text(String(format: "%.2f μm/pixel", calculatedFactor))
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.blue)
+                
+                Text("This will be your new calibration factor")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("Enter valid measurements")
+                    .font(.subheadline)
+                    .foregroundColor(.orange)
+            }
         }
         .padding()
-        .background(Color.blue.opacity(0.1))
+        .background(isValidInput ? Color.blue.opacity(0.1) : Color.orange.opacity(0.1))
         .cornerRadius(12)
     }
     
-    private func calculateCalibration() {
-        let newFactor = (knownDistance * 1000) / measuredPixels // Convert mm to μm
+    private func saveCalibration() {
+        // Validate inputs
+        guard isValidInput else {
+            alertMessage = "Please enter valid positive values for both distance and pixels."
+            showingAlert = true
+            return
+        }
+        
+        // Calculate and validate the new factor
+        let newFactor = calculatedFactor
+        
+        // Sanity check - calibration factor should be reasonable
+        // Typical range is 0.1 to 100 μm/pixel for coffee analysis
+        guard newFactor > 0.01 && newFactor < 1000 else {
+            alertMessage = "Calculated calibration factor seems unreasonable. Please check your measurements."
+            showingAlert = true
+            return
+        }
+        
+        // Update the binding
         calibrationFactor = newFactor
+        
+        // Log for debugging
+        print("📏 Saving calibration factor: \(newFactor) μm/pixel")
+        print("📏 Known distance: \(knownDistance) mm, Measured pixels: \(measuredPixels)")
+        
+        // Dismiss the view
+        dismiss()
     }
 }
 
@@ -457,7 +525,15 @@ struct HelpView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Keyboard Dismiss Extension
+
+extension View {
+    func hideKeyboard() {
+        #if canImport(UIKit)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
+}
 
 #if DEBUG
 struct SettingsView_Previews: PreviewProvider {
