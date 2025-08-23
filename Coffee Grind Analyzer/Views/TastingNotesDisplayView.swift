@@ -183,57 +183,78 @@ struct CompactTastingNotesView: View {
     let tastingNotes: TastingNotes
     
     var body: some View {
-        HStack(spacing: 8) {
-            // Brew method icon
-            Image(systemName: tastingNotes.brewMethod.icon)
-                .foregroundColor(.blue)
-                .font(.caption)
-            
-            // Rating stars
-            HStack(spacing: 1) {
-                ForEach(1...tastingNotes.overallRating, id: \.self) { _ in
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                        .font(.caption2)
-                }
-            }
-            
-            // Top tags (limit to 2-3)
-            if !tastingNotes.tastingTags.isEmpty {
-                let topTags = Array(tastingNotes.tastingTags.sorted().prefix(2))
-                ForEach(topTags, id: \.self) { tag in
-                    Text(tag)
-                        .font(.caption2)
-                        .foregroundColor(colorForTag(tag))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(colorForTag(tag).opacity(0.15))
-                        )
+        VStack(alignment: .leading, spacing: 4) {
+            // First row: Brew method icon and rating stars
+            HStack(spacing: 8) {
+                // Brew method icon
+                Image(systemName: tastingNotes.brewMethod.icon)
+                    .foregroundColor(.blue)
+                    .font(.caption)
+                
+                // Rating stars
+                HStack(spacing: 1) {
+                    ForEach(1...tastingNotes.overallRating, id: \.self) { _ in
+                        Image(systemName: "star.fill")
+                            .foregroundColor(.yellow)
+                            .font(.caption2)
+                    }
                 }
                 
-                if tastingNotes.tastingTags.count > 2 {
-                    Text("+\(tastingNotes.tastingTags.count - 2)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Spacer()
+            }
+            
+            // Second row: Tags (limited and properly wrapped)
+            if !tastingNotes.tastingTags.isEmpty {
+                tagRow
             }
         }
     }
     
+    private var tagRow: some View {
+        HStack(alignment: .top, spacing: 6) {
+            // Show maximum 3 tags to prevent overcrowding
+            let displayTags = Array(tastingNotes.tastingTags.sorted().prefix(3))
+            
+            ForEach(displayTags, id: \.self) { tag in
+                Text(tag)
+                    .font(.caption2)
+                    .foregroundColor(colorForTag(tag))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(colorForTag(tag).opacity(0.15))
+                    )
+                    .lineLimit(1)
+            }
+            
+            // Show count for additional tags if there are more than 3
+            if tastingNotes.tastingTags.count > 3 {
+                Text("+\(tastingNotes.tastingTags.count - 3)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+            }
+            
+            Spacer()
+        }
+    }
+    
     private func colorForTag(_ tag: String) -> Color {
-        // Same color logic as main view
+        // Positive tags
         if ["Balanced", "Sweet", "Smooth", "Bright", "Clean", "Complex",
             "Fruity", "Floral", "Nutty", "Chocolatey", "Caramel", "Vanilla"].contains(tag) {
             return .green
         }
         
+        // Neutral/Descriptive tags
         if ["Full Body", "Light Body", "Medium Body", "Acidic", "Low Acid",
             "Earthy", "Spicy", "Herbal", "Wine-like", "Tea-like"].contains(tag) {
             return .blue
         }
         
+        // Issues
         if ["Bitter", "Sour", "Astringent", "Muddy", "Weak", "Over-extracted",
             "Under-extracted", "Chalky", "Harsh", "Flat"].contains(tag) {
             return .red

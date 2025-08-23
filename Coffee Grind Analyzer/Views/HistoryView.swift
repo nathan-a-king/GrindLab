@@ -69,10 +69,35 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
+                // Fixed search bar outside of scrollable content
+                HStack {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        
+                        TextField("Search analyses...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    
+                    if !searchText.isEmpty {
+                        Button("Cancel") {
+                            searchText = ""
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
+                
                 if historyManager.savedAnalyses.isEmpty {
                     emptyHistoryView
                 } else {
-                    historyContent
+                    historyContentWithFixedHeader
                 }
             }
             .navigationTitle("Analysis History")
@@ -148,7 +173,7 @@ struct HistoryView: View {
                 }
             )
         }
-        .searchable(text: $searchText, prompt: "Search analyses...")
+        // Remove the .searchable modifier since we have custom search bar now
         .sheet(item: $analysisToPresent) { analysis in
             ResultsView(results: analysis.results, isFromHistory: true)
                 .environmentObject(historyManager)
@@ -228,12 +253,12 @@ struct HistoryView: View {
         .padding(40)
     }
     
-    private var historyContent: some View {
+    private var historyContentWithFixedHeader: some View {
         VStack(spacing: 0) {
-            // Statistics Header
+            // Fixed Statistics Header (stays put when scrolling)
             statisticsHeader
             
-            // Analysis List
+            // Only the list scrolls
             List {
                 ForEach(filteredAndSortedAnalyses) { analysis in
                     ComparisonHistoryRowView(
@@ -261,10 +286,13 @@ struct HistoryView: View {
                         }
                     )
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
                 .onDelete(perform: deleteAnalyses)
             }
             .listStyle(PlainListStyle())
+            .scrollContentBackground(.hidden)
         }
     }
     
@@ -405,7 +433,6 @@ struct HistoryView: View {
 }
 
 // MARK: - Comparison History Row View
-
 struct ComparisonHistoryRowView: View {
     let analysis: SavedCoffeeAnalysis
     let isSelected: Bool
@@ -459,8 +486,9 @@ struct ComparisonHistoryRowView: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        // Metrics stacked vertically for more space
-                        VStack(alignment: .leading, spacing: 4) {
+                        // Metrics stacked vertically - each on its own line
+                        VStack(alignment: .leading, spacing: 6) {
+                            // Particles on first line
                             HStack(spacing: 6) {
                                 Image(systemName: "circle.grid.3x3")
                                     .font(.caption)
@@ -470,11 +498,12 @@ struct ComparisonHistoryRowView: View {
                                     .foregroundColor(.secondary)
                             }
                             
+                            // Average size on second line
                             HStack(spacing: 6) {
                                 Image(systemName: "ruler")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text(String(format: "%.0fμm average", analysis.results.averageSize))
+                                Text("\(String(format: "%.0f", analysis.results.averageSize))μm average")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -487,6 +516,13 @@ struct ComparisonHistoryRowView: View {
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                                 .italic()
+                        }
+                        
+                        // Tasting notes preview (moved inside main content - no divider)
+                        if let tastingNotes = analysis.results.tastingNotes, !isSelected {
+                            CompactTastingNotesView(tastingNotes: tastingNotes)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4) // Small spacing from metrics
                         }
                     }
                     
@@ -517,13 +553,6 @@ struct ComparisonHistoryRowView: View {
                             }
                         }
                     }
-                }
-                
-                // Tasting notes preview (if available and not in selection mode)
-                if let tastingNotes = analysis.results.tastingNotes, !isSelected {
-                    Divider()
-                    CompactTastingNotesView(tastingNotes: tastingNotes)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(.vertical, 12) // Increased padding for more breathing room
