@@ -148,11 +148,11 @@ struct FocusIndicator: View {
     var body: some View {
         if isVisible {
             ZStack {
-                Circle()
+                SwiftUI.Circle()
                     .stroke(Color.yellow, lineWidth: 2)
                     .frame(width: 80, height: 80)
                 
-                Circle()
+                SwiftUI.Circle()
                     .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
                     .frame(width: 120, height: 120)
             }

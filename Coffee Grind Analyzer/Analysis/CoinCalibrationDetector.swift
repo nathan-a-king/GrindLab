@@ -213,7 +213,7 @@ for obs in observations {
         let tooSmall = box.width < 0.03 || box.height < 0.03
 
         if !looksLikeFullFrame && !tooSmall {
-            if let c = self.circleFromPath(path, originalImage: originalImage) {
+            if let c = self.circleFromContour(contour, originalImage: originalImage) {
                 circles.append(c)
             }
         }
@@ -754,4 +754,69 @@ for obs in observations {
                               averageColor: avgColor,
                               edgeStrength: 1.0)
     }
+
+    // Helper: circle fit directly from VNContour points (more robust than using bounding boxes)
+    // Fit a circle directly from VNContour points.
+    // - Center = mean of points (normalized)
+    // - Radius = 55th percentile of distances (robust to shadows but not too small)
+    // - Converts to UIKit pixel coords, clamps for safe color sampling.
+    private func circleFromContour(_ contour: VNContour, originalImage: UIImage) -> DetectedCircle? {
+        // 1) Gather normalized points (robust across SDKs)
+        let pts = contour.normalizedPoints
+        guard pts.count >= 8 else { return nil }
+
+        var xs: [CGFloat] = []
+        var ys: [CGFloat] = []
+        xs.reserveCapacity(pts.count)
+        ys.reserveCapacity(pts.count)
+        for p in pts {
+            xs.append(CGFloat(p.x))
+            ys.append(CGFloat(p.y))
+        }
+
+        // 2) Center in normalized space
+        let meanX: CGFloat = xs.reduce(0, +) / CGFloat(xs.count)
+        let meanY: CGFloat = ys.reduce(0, +) / CGFloat(ys.count)
+
+        // 3) Distances from center (normalized)
+        var d = zip(xs, ys).map { hypot($0 - meanX, $1 - meanY) }
+        d.sort()
+
+        // 55th percentile (a touch larger than median to avoid undersizing)
+        let percentile: Double = 0.55
+        let idx = max(0, min(d.count - 1, Int(Double(d.count - 1) * percentile)))
+        let normR: CGFloat = d[idx]
+
+        // 4) Convert normalized → UIKit pixel coords (Y flip for UIKit)
+        let W = originalImage.size.width
+        let H = originalImage.size.height
+        var center = CGPoint(x: meanX * W, y: (1.0 - meanY) * H)
+        var radiusPx = Double(normR * min(W, H))
+
+        // 5) Clamp for safety before sampling color
+        center.x = min(max(center.x, 0), max(W - 1, 1))
+        center.y = min(max(center.y, 0), max(H - 1, 1))
+        radiusPx = max(radiusPx, 1.0)
+
+        // 6) Sanity checks
+        let circularity = estimateCircularityFromPath(contour.normalizedPath)
+        guard circularity > 0.6 else { return nil }
+
+        let minEdge = min(W, H)
+        // Skip tiny blobs (and avoid 0-height/width crops), and reject giant background rings
+        guard radiusPx > 20, radiusPx < Double(0.35 * minEdge) else { return nil }
+
+        // 7) Appearance features (optional but used by your scoring)
+        let avgColor = getAverageColor(at: center, radius: radiusPx, in: originalImage)
+
+        // 8) Emit result
+        return DetectedCircle(
+            center: center,
+            radius: radiusPx,
+            circularity: circularity,
+            averageColor: avgColor,
+            edgeStrength: 1.0
+        )
+    }
+
 }
