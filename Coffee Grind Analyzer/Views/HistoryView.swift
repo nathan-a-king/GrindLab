@@ -417,7 +417,7 @@ struct ComparisonHistoryRowView: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 12) {
-                // Main row content
+                // Main row content with more vertical space
                 HStack(spacing: 16) {
                     // Selection indicator or grind type icon
                     VStack(spacing: 4) {
@@ -445,25 +445,42 @@ struct ComparisonHistoryRowView: View {
                     }
                     .frame(width: 50)
                     
-                    // Analysis details
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(analysis.name)
-                            .font(.headline)
-                            .foregroundColor(canSelect ? .primary : .secondary)
-                            .lineLimit(1)
-                        
-                        Text(analysis.results.grindType.displayName)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        HStack(spacing: 12) {
-                            Label("\(analysis.results.particleCount) particles", systemImage: "circle.grid.3x3")
+                    // Analysis details with better spacing
+                    VStack(alignment: .leading, spacing: 10) {
+                        // Title and grind type
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(analysis.name)
+                                .font(.headline)
+                                .foregroundColor(canSelect ? .primary : .secondary)
+                                .lineLimit(1)
                             
-                            Label(String(format: "%.0fμm avg", analysis.results.averageSize), systemImage: "ruler")
+                            Text(analysis.results.grindType.displayName)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                         
+                        // Metrics stacked vertically for more space
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "circle.grid.3x3")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(analysis.results.particleCount) particles")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "ruler")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(String(format: "%.0fμm average", analysis.results.averageSize))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        // Notes if available
                         if let notes = analysis.notes, !notes.isEmpty {
                             Text(notes)
                                 .font(.caption)
@@ -509,7 +526,7 @@ struct ComparisonHistoryRowView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 12) // Increased padding for more breathing room
         }
         .buttonStyle(PlainButtonStyle())
         .opacity(canSelect ? 1.0 : 0.6)

@@ -50,7 +50,6 @@ struct ContentView: View {
                     Image(systemName: "clock.arrow.circlepath")
                     Text("History")
                 }
-                .badge(historyManager.totalAnalyses > 0 ? historyManager.totalAnalyses : 0)
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(settings: $settings)
