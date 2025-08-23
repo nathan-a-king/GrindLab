@@ -388,28 +388,29 @@ struct ContentView: View {
                         // Handle tap to focus
                         camera.focusAt(point: point, in: UIView())
                     }
+                    .aspectRatio(3/4, contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: 400)
                 } else {
                     CameraPermissionView {
                         camera.checkPermissions()
                     }
+                    .aspectRatio(3/4, contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: 400)
                 }
             }
-            .aspectRatio(4/3, contentMode: .fit)
             .cornerRadius(12)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                GridOverlay(isVisible: camera.showGrid)
+                    .aspectRatio(3/4, contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: 400)
+                    .cornerRadius(12)
             )
-            
-            GridOverlay(isVisible: camera.showGrid)
             
             FocusIndicator(
                 position: camera.focusPoint,
                 isVisible: camera.showFocusIndicator
             )
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
     }
     
     private func resultsPreview(results: CoffeeAnalysisResults) -> some View {
@@ -590,3 +591,4 @@ struct ContentView_Previews: PreviewProvider {
     }
 }
 #endif
+

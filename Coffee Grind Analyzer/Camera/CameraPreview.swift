@@ -87,6 +87,19 @@ class CameraPreviewView: UIView {
 
 // MARK: - Grid Overlay
 
+/// A grid overlay to be placed on top of the camera preview.
+/// 
+/// Usage should include the same `.aspectRatio` and `.frame` modifiers as the camera preview for perfect alignment.
+/// 
+/// Example:
+/// ```swift
+/// GridOverlay(isVisible: ...)
+///     .aspectRatio(3/4, contentMode: .fill)
+///     .frame(maxWidth: .infinity, maxHeight: 400)
+/// ```
+///
+/// This view does not apply any internal `.frame` or `.aspectRatio` modifiers itself.
+/// Instead, layout must be managed by the parent to exactly match the camera preview's size and aspect ratio.
 struct GridOverlay: View {
     let isVisible: Bool
     
@@ -310,3 +323,4 @@ struct CaptureButton: View {
         .disabled(!isEnabled)
     }
 }
+

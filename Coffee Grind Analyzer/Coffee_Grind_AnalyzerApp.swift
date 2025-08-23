@@ -12,7 +12,7 @@ struct Coffee_Grind_AnalyzerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .preferredColorScheme(.dark) // Coffee app looks better in dark mode
+                //.preferredColorScheme(.dark) // Coffee app looks better in dark mode
         }
     }
 }
