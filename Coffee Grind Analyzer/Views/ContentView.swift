@@ -14,7 +14,7 @@ struct ContentView: View {
     @StateObject private var camera = CoffeeCamera()
     @StateObject private var historyManager = CoffeeAnalysisHistoryManager()
     @State private var analysisEngine = CoffeeAnalysisEngine()
-    @State private var settings = AnalysisSettings()
+    @State private var settings = AnalysisSettings.load()
     
     @State private var showingResults = false
     @State private var analysisResults: CoffeeAnalysisResults?

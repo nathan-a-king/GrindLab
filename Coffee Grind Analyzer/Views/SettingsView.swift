@@ -42,6 +42,12 @@ struct SettingsView: View {
         .sheet(isPresented: $showingHelp) {
             HelpView()
         }
+        .onChange(of: settings.analysisMode) { _ in saveSettings() }
+        .onChange(of: settings.contrastThreshold) { _ in saveSettings() }
+        .onChange(of: settings.minParticleSize) { _ in saveSettings() }
+        .onChange(of: settings.maxParticleSize) { _ in saveSettings() }
+        .onChange(of: settings.enableAdvancedFiltering) { _ in saveSettings() }
+        .onChange(of: settings.calibrationFactor) { _ in saveSettings() }
     }
     
     private var analysisSection: some View {
@@ -173,10 +179,15 @@ struct SettingsView: View {
             Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
             
             Button("Reset All Settings") {
+                AnalysisSettings.resetToDefaults()
                 settings = AnalysisSettings()
             }
             .foregroundColor(.red)
         }
+    }
+    
+    private func saveSettings() {
+        settings.save()
     }
 }
 
