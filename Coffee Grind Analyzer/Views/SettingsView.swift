@@ -3,6 +3,7 @@
 //  Coffee Grind Analyzer
 //
 //  Created by Nathan King on 8/20/25.
+//  Patched: integrates CalibrationImageOverlay for correct circle drawing with .scaledToFit
 //
 
 import SwiftUI
@@ -239,6 +240,32 @@ struct CalibrationView: View {
         return (knownDistance * 1000) / measuredPixels
     }
     
+    // Circles to draw in overlay (image-pixel coords)
+    private var overlayDetections: [DetectedCircle] {
+        if let s = selectedCoin {
+            return [
+                DetectedCircle(
+                    center: s.center,
+                    radius: s.diameterPixels / 2.0,
+                    circularity: 1.0,
+                    averageColor: .clear,
+                    edgeStrength: 1.0
+                )
+            ]
+        } else {
+            // show a few top candidates when none selected
+            return detectedCoins.prefix(3).map { c in
+                DetectedCircle(
+                    center: c.center,
+                    radius: c.diameterPixels / 2.0,
+                    circularity: 1.0,
+                    averageColor: .clear,
+                    edgeStrength: 1.0
+                )
+            }
+        }
+    }
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -382,56 +409,17 @@ struct CalibrationView: View {
         }
     }
     
+    // Replaced to use CalibrationImageOverlay (handles scaledToFit & letterboxing)
     private func calibrationImageSection(image: UIImage) -> some View {
         VStack(spacing: 8) {
-            GeometryReader { geometry in
-                let imageAspect = image.size.width / image.size.height
-                let viewAspect = geometry.size.width / geometry.size.height
-                
-                let displayWidth: CGFloat = imageAspect > viewAspect ? geometry.size.width : geometry.size.height * imageAspect
-                let displayHeight: CGFloat = imageAspect > viewAspect ? geometry.size.width / imageAspect : geometry.size.height
-                let offsetX: CGFloat = imageAspect > viewAspect ? 0 : (geometry.size.width - displayWidth) / 2
-                let offsetY: CGFloat = imageAspect > viewAspect ? (geometry.size.height - displayHeight) / 2 : 0
-                
-                let scaleX = displayWidth / image.size.width
-                let scaleY = displayHeight / image.size.height
-                
-                ZStack {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .cornerRadius(12)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                    
-                    if let selected = selectedCoin {
-                        Circle()
-                            .stroke(Color.green, lineWidth: 3)
-                            .frame(
-                                width: selected.diameterPixels * scaleX,
-                                height: selected.diameterPixels * scaleY
-                            )
-                            .position(
-                                x: offsetX + selected.center.x * scaleX,
-                                y: offsetY + selected.center.y * scaleY
-                            )
-                        
-                        Text(selected.coinType.displayName)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(4)
-                            .position(
-                                x: offsetX + selected.center.x * scaleX,
-                                y: max(20, offsetY + selected.center.y * scaleY - (selected.diameterPixels * scaleY / 2) - 20)
-                            )
-                    }
-                }
-            }
+            CalibrationImageOverlay(
+                image: image,
+                detections: overlayDetections,
+                lineWidth: 3,
+                color: .green
+            )
             .frame(height: 300)
-            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             
             Button("Change Image") {
                 showingImagePicker = true
@@ -672,8 +660,8 @@ struct CalibrationView: View {
             }
         }
         
-        // Timeout after 20 seconds (increased from 10)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+        // Timeout after 30 seconds (increased from 20)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
             if self.isDetecting {
                 isCancelled = true
                 self.isDetecting = false

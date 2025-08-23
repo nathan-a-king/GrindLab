@@ -10,6 +10,22 @@ import Vision
 import CoreImage
 import Accelerate
 
+extension CGImagePropertyOrientation {
+    init(_ uiOrientation: UIImage.Orientation) {
+        switch uiOrientation {
+        case .up: self = .up
+        case .down: self = .down
+        case .left: self = .left
+        case .right: self = .right
+        case .upMirrored: self = .upMirrored
+        case .downMirrored: self = .downMirrored
+        case .leftMirrored: self = .leftMirrored
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
+        }
+    }
+}
+
 // MARK: - Reference Objects
 enum ReferenceObject: CaseIterable {
     case usQuarter
@@ -169,40 +185,63 @@ class CoinCalibrationDetector {
         
         var circles: [DetectedCircle] = []
         
+        print("🔎 Attempting Vision framework detection...")
+        
         // Try Vision framework for contour detection
-        let request = VNDetectContoursRequest { [weak self] request, error in
+        let request = VNDetectContoursRequest { [weak self] req, error in
             guard let self = self,
                   error == nil,
-                  let observations = request.results as? [VNContoursObservation] else { return }
+                  let observations = req.results as? [VNContoursObservation] else {
+                print("❌ Vision framework failed: \(error?.localizedDescription ?? "unknown error")")
+                return
+            }
             
-            // Process contours to find circular ones
-            for observation in observations {
-                if let detectedCircles = self.extractCirclesFromContour(
-                    observation,
-                    imageSize: processedImage.size,
-                    originalImage: originalImage
-                ) {
-                    circles.append(contentsOf: detectedCircles)
-                }
+            
+print("👁️ Vision found \(observations.count) contours")
+
+for obs in observations {
+    func visit(_ contour: VNContour) {
+        let path = contour.normalizedPath
+        let box = path.boundingBox
+
+        // Ignore a full-frame border but keep scanning others
+        let looksLikeFullFrame = box.origin.x <= 0.001 &&
+                                 box.origin.y <= 0.001 &&
+                                 box.width >= 0.998 &&
+                                 box.height >= 0.998
+
+        let tooSmall = box.width < 0.03 || box.height < 0.03
+
+        if !looksLikeFullFrame && !tooSmall {
+            if let c = self.circleFromPath(path, originalImage: originalImage) {
+                circles.append(c)
             }
         }
-        
-        // Configure request
+        for i in 0..<contour.childContourCount { if let child = try? contour.childContour(at: i) { visit(child) } }
+    }
+
+    for top in obs.topLevelContours { visit(top) }
+}
+}
+// Configure request
         request.contrastAdjustment = 2.0
         request.detectsDarkOnLight = true
         request.maximumImageDimension = 1024
         
         // Perform request
-        let handler = VNImageRequestHandler(cgImage: inputCGImage, options: [:])
+        let handler = VNImageRequestHandler(cgImage: (originalImage.cgImage ?? inputCGImage), orientation: CGImagePropertyOrientation(originalImage.imageOrientation), options: [:])
         do {
             try handler.perform([request])
         } catch {
-            print("Vision request failed: \(error)")
+            print("❌ Vision request failed: \(error)")
         }
         
         // If Vision doesn't find circles, use custom detection
         if circles.isEmpty {
+            print("🔧 Falling back to custom Hough transform detection...")
             circles = customCircleDetection(in: processedImage, originalImage: originalImage)
+        } else {
+            print("✅ Using Vision framework results: \(circles.count) circles")
         }
         
         return circles
@@ -225,12 +264,37 @@ class CoinCalibrationDetector {
         let aspectRatio = boundingBox.width / boundingBox.height
         guard abs(aspectRatio - 1.0) < 0.3 else { return nil }
         
-        // Convert to image coordinates
+        // IMPORTANT: Be more lenient about what we accept
+        // Some photos have the coin filling most of the frame
+        if boundingBox.width > 0.98 && boundingBox.height > 0.98 {
+            // Only reject if it's REALLY filling the entire image (> 98%)
+            print("⚠️ Rejecting contour that fills entire image: \(boundingBox)")
+            return nil
+        }
+        
+        // Also reject if the contour is too small (noise)
+        if boundingBox.width < 0.05 || boundingBox.height < 0.05 {
+            print("⚠️ Rejecting contour that's too small: \(boundingBox)")
+            return nil
+        }
+        
+        // Calculate the center from the bounding box
+        let normalizedCenterX = boundingBox.origin.x + (boundingBox.width / 2)
+        let normalizedCenterY = boundingBox.origin.y + (boundingBox.height / 2)
+        
+        // Convert normalized coordinates to image coordinates
+        // Use originalImage size for consistency
         let center = CGPoint(
-            x: boundingBox.midX * imageSize.width,
-            y: (1 - boundingBox.midY) * imageSize.height
+            x: normalizedCenterX * originalImage.size.width,
+            y: (1 - normalizedCenterY) * originalImage.size.height
         )
-        let radius = (min(boundingBox.width, boundingBox.height) * min(imageSize.width, imageSize.height)) / 2
+        let radius = (min(boundingBox.width, boundingBox.height) * min(originalImage.size.width, originalImage.size.height)) / 2
+        
+        print("🔵 Vision contour: normalized box = \(boundingBox)")
+        print("🔵 Normalized center: (\(normalizedCenterX), \(normalizedCenterY))")
+        print("🔵 processedImage size: \(imageSize)")
+        print("🔵 originalImage size: \(originalImage.size)")
+        print("🔵 Converted center: \(center), radius: \(radius)")
         
         // Estimate circularity based on contour properties
         let circularity = estimateCircularityFromPath(path)
@@ -238,7 +302,8 @@ class CoinCalibrationDetector {
         // Get color at center
         let averageColor = getAverageColor(at: center, radius: radius, in: originalImage)
         
-        if circularity > 0.7 {
+        // Lower threshold for accepting circles
+        if circularity > 0.6 {  // Lowered from 0.7
             circles.append(DetectedCircle(
                 center: center,
                 radius: radius,
@@ -246,6 +311,9 @@ class CoinCalibrationDetector {
                 averageColor: averageColor,
                 edgeStrength: 1.0
             ))
+            print("✅ Vision detected circle with circularity: \(circularity)")
+        } else {
+            print("❌ Vision circle rejected due to low circularity: \(circularity)")
         }
         
         return circles.isEmpty ? nil : circles
@@ -357,12 +425,13 @@ class CoinCalibrationDetector {
         
         print("🔍 Starting Hough transform for \(width)x\(height) image")
         
-        // Define search parameters - make them more aggressive
-        let minRadius = max(20, min(width, height) / 30)  // Minimum coin size
-        let maxRadius = min(width/4, height/4, 200)  // Maximum coin size, capped at 200px
-        let radiusStep = 10  // Larger steps for faster processing
+        // Define search parameters - adjust for typical coin sizes
+        // A coin typically ranges from 5% to 40% of the image dimension
+        let minRadius = max(50, min(width, height) / 40)  // At least 50px or 2.5% of image
+        let maxRadius = min(width/3, height/3, 800)  // Max 33% of image or 800px
+        let radiusStep = max(20, (maxRadius - minRadius) / 15)  // Adaptive step size
         
-        print("📏 Searching for circles with radius \(minRadius)-\(maxRadius)")
+        print("📏 Searching for circles with radius \(minRadius)-\(maxRadius), step: \(radiusStep)")
         
         var circles: [DetectedCircle] = []
         
@@ -370,12 +439,12 @@ class CoinCalibrationDetector {
         var accumulator: [String: Int] = [:]
         
         // Edge threshold
-        let edgeThreshold = 0.2  // Lower threshold to get more edge points
+        let edgeThreshold = 0.15  // Lower threshold for better detection
         
         // Find edge points
         var edgePoints: [(x: Int, y: Int)] = []
-        for y in stride(from: 0, to: height, by: 2) {  // Sample every other pixel
-            for x in stride(from: 0, to: width, by: 2) {
+        for y in stride(from: 0, to: height, by: 3) {  // Sample every 3rd pixel for speed
+            for x in stride(from: 0, to: width, by: 3) {
                 if edgeMap[y][x] > edgeThreshold {
                     edgePoints.append((x: x, y: y))
                 }
@@ -385,23 +454,27 @@ class CoinCalibrationDetector {
         print("📍 Found \(edgePoints.count) edge points")
         
         // Limit edge points to prevent excessive computation
-        let maxEdgePoints = 2000  // Reduced from 5000
+        let maxEdgePoints = 1500  // Reduced for faster processing
         if edgePoints.count > maxEdgePoints {
             edgePoints = Array(edgePoints.shuffled().prefix(maxEdgePoints))
             print("📍 Limited to \(maxEdgePoints) edge points")
         }
         
-        // Vote for circles - use fewer angle samples
-        for radius in stride(from: minRadius, to: maxRadius, by: radiusStep) {
+        // Vote for circles - simplified progress reporting
+        var lastProgress = -1
+        for (radiusIndex, radius) in stride(from: minRadius, to: maxRadius, by: radiusStep).enumerated() {
             for (index, point) in edgePoints.enumerated() {
-                // Show progress
-                if index % 100 == 0 {
-                    let progress = Float(index) / Float(edgePoints.count)
-                    print("⏳ Processing radius \(radius): \(Int(progress * 100))%")
+                // Show progress less frequently
+                if index % 500 == 0 {
+                    let progress = (radiusIndex * edgePoints.count + index) * 100 / ((maxRadius - minRadius) / radiusStep * edgePoints.count)
+                    if progress != lastProgress && progress % 10 == 0 {
+                        print("⏳ Overall progress: \(progress)%")
+                        lastProgress = progress
+                    }
                 }
                 
-                // Vote for possible circle centers - use fewer angles
-                for angle in stride(from: 0, to: 2 * Double.pi, by: Double.pi / 12) {  // Reduced from 18 to 12
+                // Vote for possible circle centers - use fewer angles for speed
+                for angle in stride(from: 0, to: 2 * Double.pi, by: Double.pi / 8) {  // Only 8 angles
                     let cx = Int(Double(point.x) - Double(radius) * cos(angle))
                     let cy = Int(Double(point.y) - Double(radius) * sin(angle))
                     
@@ -415,8 +488,8 @@ class CoinCalibrationDetector {
         
         print("🗳️ Voting complete, analyzing \(accumulator.count) candidates")
         
-        // Find peaks in accumulator - lower threshold
-        let threshold = max(10, edgePoints.count / 100)  // Dynamic threshold
+        // Find peaks in accumulator - use dynamic threshold
+        let threshold = max(8, edgePoints.count / 150)  // Lower threshold
         var detectedCircles: [(center: CGPoint, radius: Double, votes: Int)] = []
         
         for (key, votes) in accumulator where votes > threshold {
@@ -431,14 +504,14 @@ class CoinCalibrationDetector {
             }
         }
         
-        print("🎯 Found \(detectedCircles.count) circles above threshold")
+        print("🎯 Found \(detectedCircles.count) circles above threshold (\(threshold) votes)")
         
         // Sort by votes and take top candidates
         detectedCircles.sort { $0.votes > $1.votes }
         
         // Remove overlapping circles
         var finalCircles: [DetectedCircle] = []
-        for candidate in detectedCircles.prefix(10) {  // Reduced from 20
+        for candidate in detectedCircles.prefix(20) {  // Check more candidates
             // Check if this circle overlaps with already selected ones
             let isUnique = !finalCircles.contains { existing in
                 let dx = existing.center.x - candidate.center.x
@@ -448,7 +521,7 @@ class CoinCalibrationDetector {
             }
             
             if isUnique {
-                // Quick circularity check - don't be too strict
+                // Quick circularity check
                 let circularity = calculateCircularity(
                     center: candidate.center,
                     radius: candidate.radius,
@@ -462,16 +535,18 @@ class CoinCalibrationDetector {
                     in: originalImage
                 )
                 
-                print("⭕ Circle at (\(Int(candidate.center.x)), \(Int(candidate.center.y))), radius: \(Int(candidate.radius)), circularity: \(circularity)")
+                print("⭕ Circle at (\(Int(candidate.center.x)), \(Int(candidate.center.y))), radius: \(Int(candidate.radius)), votes: \(candidate.votes), circularity: \(circularity)")
                 
-                if circularity > 0.4 {  // Lowered from 0.6
-                    finalCircles.append(DetectedCircle(
+                if circularity > 0.3 {  // Very low threshold to catch more candidates
+                    let detectedCircle = DetectedCircle(
                         center: candidate.center,
                         radius: candidate.radius,
                         circularity: circularity,
                         averageColor: averageColor,
                         edgeStrength: Double(candidate.votes) / Double(threshold)
-                    ))
+                    )
+                    finalCircles.append(detectedCircle)
+                    print("🎯 Added circle: center=(\(Int(candidate.center.x)), \(Int(candidate.center.y))), radius=\(Int(candidate.radius))")
                 }
             }
         }
@@ -652,5 +727,31 @@ class CoinCalibrationDetector {
         print("✅ Detected \(match.coin.displayName) with confidence \(match.score)")
         
         return detection
+    }
+
+    // Helper: evaluate a single contour path as a coin candidate
+    private func circleFromPath(_ path: CGPath, originalImage: UIImage) -> DetectedCircle? {
+        let box = path.boundingBox
+        let aspect = box.width / max(box.height, 1e-6)
+        guard abs(aspect - 1.0) < 0.3 else { return nil }
+
+        // Convert normalized to pixel coordinates (UIKit Y-flip)
+        let nCenterX = box.origin.x + box.width / 2.0
+        let nCenterY = box.origin.y + box.height / 2.0
+
+        let w = originalImage.size.width
+        let h = originalImage.size.height
+        let center = CGPoint(x: nCenterX * w, y: (1.0 - nCenterY) * h)
+        let radius = Double((min(box.width, box.height) * min(w, h)) / 2.0)
+
+        let circularity = estimateCircularityFromPath(path)
+        let avgColor = getAverageColor(at: center, radius: radius, in: originalImage)
+
+        guard circularity > 0.6 else { return nil }
+        return DetectedCircle(center: center,
+                              radius: radius,
+                              circularity: circularity,
+                              averageColor: avgColor,
+                              edgeStrength: 1.0)
     }
 }
