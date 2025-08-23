@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// CGRect.area extension removed - already defined elsewhere in project
+
 struct SettingsView: View {
     @Binding var settings: AnalysisSettings
     @Environment(\.dismiss) private var dismiss
@@ -208,7 +210,7 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Calibration View
+// MARK: - Updated Calibration View with Auto-Detection
 struct CalibrationView: View {
     @Binding var calibrationFactor: Double
     @Environment(\.dismiss) private var dismiss
@@ -220,12 +222,18 @@ struct CalibrationView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     
-    // Computed property for validation
+    // Auto-detection states
+    @State private var isDetecting = false
+    @State private var detectedCoins: [CoinDetection] = []
+    @State private var selectedCoin: CoinDetection?
+    @State private var showManualInput = false
+    @State private var detectionProgress: Double = 0.0
+    
+    // Computed properties
     private var isValidInput: Bool {
         knownDistance > 0 && measuredPixels > 0
     }
     
-    // Computed property for calculated factor
     private var calculatedFactor: Double {
         guard isValidInput else { return 0.0 }
         return (knownDistance * 1000) / measuredPixels
@@ -233,21 +241,36 @@ struct CalibrationView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
-                instructionSection
-                
-                if let image = calibrationImage {
-                    calibrationImageSection(image: image)
-                } else {
-                    placeholderImageSection
+            ScrollView {
+                VStack(spacing: 24) {
+                    instructionSection
+                    
+                    if let image = calibrationImage {
+                        calibrationImageSection(image: image)
+                    } else {
+                        placeholderImageSection
+                    }
+                    
+                    if calibrationImage != nil {
+                        detectionSection
+                    }
+                    
+                    if !detectedCoins.isEmpty {
+                        detectedCoinsSection
+                    }
+                    
+                    if showManualInput || detectedCoins.isEmpty && calibrationImage != nil {
+                        manualMeasurementSection
+                    }
+                    
+                    if selectedCoin != nil || (showManualInput && isValidInput) {
+                        calculationResultSection
+                    }
+                    
+                    Spacer(minLength: 40)
                 }
-                
-                measurementSection
-                calculationSection
-                
-                Spacer()
+                .padding()
             }
-            .padding()
             .onTapGesture {
                 hideKeyboard()
             }
@@ -264,10 +287,11 @@ struct CalibrationView: View {
                     Button("Save") {
                         saveCalibration()
                     }
-                    .disabled(calibrationImage == nil || !isValidInput)
+                    .disabled(selectedCoin == nil && !isValidInput)
+                    .fontWeight(.semibold)
                 }
             }
-            .alert("Invalid Input", isPresented: $showingAlert) {
+            .alert("Calibration", isPresented: $showingAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(alertMessage)
@@ -276,23 +300,56 @@ struct CalibrationView: View {
         .sheet(isPresented: $showingImagePicker) {
             PhotoPickerView { image in
                 calibrationImage = image
+                // Reset detection state when new image is selected
+                detectedCoins = []
+                selectedCoin = nil
+                showManualInput = false
             }
         }
     }
     
+    // MARK: - View Components
+    
     private var instructionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Calibration Instructions")
+            Text("Automatic Calibration")
                 .font(.headline)
             
             VStack(alignment: .leading, spacing: 8) {
-                Label("Place a ruler or coin in your photo", systemImage: "1.circle.fill")
-                Label("Capture or select the calibration image", systemImage: "2.circle.fill")
-                Label("Measure the known object in pixels", systemImage: "3.circle.fill")
-                Label("Enter the real-world size", systemImage: "4.circle.fill")
+                Label("Place a coin next to your coffee grounds", systemImage: "1.circle.fill")
+                    .foregroundColor(.primary)
+                
+                Label("Take a photo with both visible", systemImage: "2.circle.fill")
+                    .foregroundColor(.primary)
+                
+                Label("Let the app detect and measure the coin", systemImage: "3.circle.fill")
+                    .foregroundColor(.primary)
+                
+                Label("Save the calibration", systemImage: "4.circle.fill")
+                    .foregroundColor(.primary)
             }
             .font(.subheadline)
             .foregroundColor(.secondary)
+            
+            // Supported coins info
+            DisclosureGroup("Supported Coins") {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(ReferenceObject.allCases, id: \.self) { coin in
+                        HStack {
+                            Text(coin.displayName)
+                                .font(.caption)
+                            Spacer()
+                            Text("\(String(format: "%.2f", coin.diameterMM)) mm")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -300,29 +357,81 @@ struct CalibrationView: View {
     private var placeholderImageSection: some View {
         Button(action: { showingImagePicker = true }) {
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.2))
+                .fill(Color.gray.opacity(0.1))
                 .frame(height: 200)
                 .overlay(
-                    VStack {
-                        Image(systemName: "photo.badge.plus")
+                    VStack(spacing: 12) {
+                        Image(systemName: "camera.badge.ellipsis")
                             .font(.system(size: 40))
                             .foregroundColor(.blue)
                         
                         Text("Select Calibration Image")
                             .font(.headline)
                             .foregroundColor(.blue)
+                        
+                        Text("Include a coin in the photo")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5]))
+                        .foregroundColor(.blue.opacity(0.3))
                 )
         }
     }
     
     private func calibrationImageSection(image: UIImage) -> some View {
-        VStack {
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(maxHeight: 200)
-                .cornerRadius(12)
+        VStack(spacing: 8) {
+            GeometryReader { geometry in
+                let imageAspect = image.size.width / image.size.height
+                let viewAspect = geometry.size.width / geometry.size.height
+                
+                let displayWidth: CGFloat = imageAspect > viewAspect ? geometry.size.width : geometry.size.height * imageAspect
+                let displayHeight: CGFloat = imageAspect > viewAspect ? geometry.size.width / imageAspect : geometry.size.height
+                let offsetX: CGFloat = imageAspect > viewAspect ? 0 : (geometry.size.width - displayWidth) / 2
+                let offsetY: CGFloat = imageAspect > viewAspect ? (geometry.size.height - displayHeight) / 2 : 0
+                
+                let scaleX = displayWidth / image.size.width
+                let scaleY = displayHeight / image.size.height
+                
+                ZStack {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .cornerRadius(12)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                    
+                    if let selected = selectedCoin {
+                        Circle()
+                            .stroke(Color.green, lineWidth: 3)
+                            .frame(
+                                width: selected.diameterPixels * scaleX,
+                                height: selected.diameterPixels * scaleY
+                            )
+                            .position(
+                                x: offsetX + selected.center.x * scaleX,
+                                y: offsetY + selected.center.y * scaleY
+                            )
+                        
+                        Text(selected.coinType.displayName)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+                            .position(
+                                x: offsetX + selected.center.x * scaleX,
+                                y: max(20, offsetY + selected.center.y * scaleY - (selected.diameterPixels * scaleY / 2) - 20)
+                            )
+                    }
+                }
+            }
+            .frame(height: 300)
+            .frame(maxWidth: .infinity)
             
             Button("Change Image") {
                 showingImagePicker = true
@@ -332,100 +441,428 @@ struct CalibrationView: View {
         }
     }
     
-    private var measurementSection: some View {
-        VStack(spacing: 16) {
-            VStack(alignment: .leading) {
-                Text("Known Distance (mm)")
-                    .font(.subheadline)
-                
-                TextField("Distance", value: $knownDistance, format: .number)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.decimalPad)
-                    .submitLabel(.done)
-                    .onSubmit {
-                        hideKeyboard()
-                    }
-                    .onChange(of: knownDistance) { newValue in
-                        // Ensure positive value
-                        if newValue < 0 {
-                            knownDistance = 0
-                        }
-                    }
+    private var detectionSection: some View {
+        detectionSectionView
+    }
+    
+    private var detectedCoinsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Detected Coins")
+                    .font(.headline)
+                Spacer()
+                Text("\(detectedCoins.count) found")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading) {
-                Text("Measured Pixels")
-                    .font(.subheadline)
-                
-                TextField("Pixels", value: $measuredPixels, format: .number)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.decimalPad)
-                    .submitLabel(.done)
-                    .onSubmit {
-                        hideKeyboard()
-                    }
-                    .onChange(of: measuredPixels) { newValue in
-                        // Ensure positive value
-                        if newValue < 0 {
-                            measuredPixels = 0
+            // Only show up to 3 best detections to avoid clutter
+            ForEach(Array(detectedCoins.prefix(3).enumerated()), id: \.offset) { index, detection in
+                Button(action: { selectCoin(detection) }) {
+                    HStack {
+                        Image(systemName: isSelected(detection) ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(isSelected(detection) ? .green : .gray)
+                        
+                        VStack(alignment: .leading) {
+                            Text(detection.coinType.displayName)
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                            
+                            HStack {
+                                Text("\(Int(detection.diameterPixels)) pixels")
+                                Text("•")
+                                Text("Confidence: \(Int(detection.confidence * 100))%")
+                            }
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing) {
+                            Text(String(format: "%.2f", detection.calibrationFactor))
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text("μm/pixel")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
                     }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isSelected(detection) ?
+                                  Color.green.opacity(0.1) : Color.gray.opacity(0.1))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            
+            // Show additional detections count if there are more than 3
+            if detectedCoins.count > 3 {
+                Text("+ \(detectedCoins.count - 3) more detection\(detectedCoins.count - 3 == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .italic()
+            }
+            
+            // Show manual measurement option
+            if !showManualInput {
+                Button("Use Manual Measurement Instead") {
+                    withAnimation {
+                        showManualInput = true
+                        selectedCoin = nil
+                    }
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
+                .padding(.top, 4)
             }
         }
     }
     
-    private var calculationSection: some View {
-        VStack(spacing: 12) {
-            Text("Calculated Calibration")
+    // Helper function to check if a detection is selected
+    private func isSelected(_ detection: CoinDetection) -> Bool {
+        guard let selected = selectedCoin else { return false }
+        
+        // Check if it's the same coin type and approximately the same position
+        return selected.coinType == detection.coinType &&
+               abs(selected.center.x - detection.center.x) < 10 &&
+               abs(selected.center.y - detection.center.y) < 10
+    }
+    
+    private var manualMeasurementSection: some View {
+        VStack(spacing: 16) {
+            Text("Manual Measurement")
                 .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
             
-            if isValidInput {
-                Text(String(format: "%.2f μm/pixel", calculatedFactor))
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.blue)
-                
-                Text("This will be your new calibration factor")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            } else {
-                Text("Enter valid measurements")
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Known Distance (mm)")
                     .font(.subheadline)
-                    .foregroundColor(.orange)
+                    .foregroundColor(.secondary)
+                
+                TextField("Distance in millimeters", value: $knownDistance, format: .number)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .keyboardType(.decimalPad)
+                    .submitLabel(.done)
+                    .onSubmit { hideKeyboard() }
             }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Measured Pixels")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                TextField("Number of pixels", value: $measuredPixels, format: .number)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .keyboardType(.decimalPad)
+                    .submitLabel(.done)
+                    .onSubmit { hideKeyboard() }
+            }
+            
+            Text("💡 Tip: Measure the diameter of a coin or the length of a ruler segment")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
         }
         .padding()
-        .background(isValidInput ? Color.blue.opacity(0.1) : Color.orange.opacity(0.1))
+        .background(Color.orange.opacity(0.1))
         .cornerRadius(12)
     }
     
+    private var calculationResultSection: some View {
+        VStack(spacing: 12) {
+            Text("Calibration Result")
+                .font(.headline)
+            
+            if let selected = selectedCoin {
+                VStack(spacing: 8) {
+                    Text(String(format: "%.2f μm/pixel", selected.calibrationFactor))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.blue)
+                    
+                    Text("Based on \(selected.coinType.displayName)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Confidence: \(Int(selected.confidence * 100))%")
+                        .font(.caption)
+                        .foregroundColor(selected.confidence > 0.8 ? .green : .orange)
+                }
+            } else if showManualInput && isValidInput {
+                VStack(spacing: 8) {
+                    Text(String(format: "%.2f μm/pixel", calculatedFactor))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.blue)
+                    
+                    Text("Manual measurement")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color.blue.opacity(0.1))
+        .cornerRadius(12)
+    }
+    
+    // MARK: - Perform Automatic Calibration
+    private func performAutomaticCalibration() {
+        guard let image = calibrationImage else { return }
+        
+        isDetecting = true
+        detectedCoins = []
+        selectedCoin = nil
+        detectionProgress = 0.0
+        
+        // Show progress
+        withAnimation {
+            detectionProgress = 0.2
+        }
+        
+        let detector = CoinCalibrationDetector()
+        
+        // Create a work item for cancellation
+        var isCancelled = false
+        
+        // Perform detection
+        detector.detectAndMeasureCoins(in: image) { coins in
+            guard !isCancelled else { return }
+            
+            DispatchQueue.main.async {
+                withAnimation {
+                    self.detectionProgress = 0.8
+                }
+                
+                // Filter out low confidence and deduplicate
+                let filteredCoins = coins.filter { $0.confidence > 0.3 }  // Lowered from 0.5
+                let deduplicatedCoins = self.deduplicateCoinsImproved(filteredCoins)
+                
+                self.detectedCoins = deduplicatedCoins
+                self.isDetecting = false
+                self.detectionProgress = 1.0
+                
+                if let bestCoin = deduplicatedCoins.first {
+                    // Auto-select only if confidence is high
+                    if bestCoin.confidence > 0.6 {  // Lowered from 0.7
+                        self.selectCoin(bestCoin)
+                        self.alertMessage = "✅ \(bestCoin.coinType.displayName) detected with \(Int(bestCoin.confidence * 100))% confidence!"
+                    } else {
+                        // Still show it but with a warning
+                        self.alertMessage = "⚠️ \(bestCoin.coinType.displayName) detected with moderate confidence (\(Int(bestCoin.confidence * 100))%). Please verify or use manual measurement."
+                        // Don't auto-select, let user choose
+                    }
+                    self.showingAlert = true
+                } else {
+                    self.alertMessage = "No coins detected. Please ensure:\n• Coin is clearly visible\n• Good lighting\n• Contrasting background\n\nYou can also use manual measurement."
+                    self.showingAlert = true
+                    self.showManualInput = true
+                }
+                
+                // Reset progress after delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        self.detectionProgress = 0.0
+                    }
+                }
+            }
+        }
+        
+        // Timeout after 20 seconds (increased from 10)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+            if self.isDetecting {
+                isCancelled = true
+                self.isDetecting = false
+                self.detectionProgress = 0.0
+                self.alertMessage = "Detection timeout. The image might be too large or complex. Try:\n• Taking a photo from further away\n• Using better lighting\n• Cropping the image\n• Using manual measurement"
+                self.showingAlert = true
+                self.showManualInput = true
+            }
+        }
+    }
+
+    // MARK: - Improved Deduplication (rename to avoid conflict)
+    private func deduplicateCoinsImproved(_ coins: [CoinDetection]) -> [CoinDetection] {
+        guard !coins.isEmpty else { return [] }
+        
+        print("🔍 Deduplicating \(coins.count) coins")
+        
+        var uniqueCoins: [CoinDetection] = []
+        
+        for coin in coins {
+            let isUnique = !uniqueCoins.contains { existing in
+                // Check spatial overlap
+                let dx = coin.center.x - existing.center.x
+                let dy = coin.center.y - existing.center.y
+                let distance = sqrt(dx * dx + dy * dy)
+                let avgRadius = (coin.diameterPixels + existing.diameterPixels) / 4
+                
+                // Check if centers are too close
+                if distance < avgRadius * 1.5 {
+                    return true
+                }
+                
+                // Check if bounding boxes overlap significantly
+                let intersection = coin.boundingBox.intersection(existing.boundingBox)
+                let unionArea = coin.boundingBox.union(existing.boundingBox).area
+                let overlapRatio = intersection.area / unionArea
+                
+                return overlapRatio > 0.3
+            }
+            
+            if isUnique {
+                uniqueCoins.append(coin)
+            } else {
+                // Replace with higher confidence detection
+                if let existingIndex = uniqueCoins.firstIndex(where: { existing in
+                    let dx = coin.center.x - existing.center.x
+                    let dy = coin.center.y - existing.center.y
+                    let distance = sqrt(dx * dx + dy * dy)
+                    let avgRadius = (coin.diameterPixels + existing.diameterPixels) / 4
+                    return distance < avgRadius * 1.5
+                }) {
+                    if coin.confidence > uniqueCoins[existingIndex].confidence {
+                        uniqueCoins[existingIndex] = coin
+                    }
+                }
+            }
+        }
+        
+        // Sort by confidence and limit results
+        uniqueCoins.sort { $0.confidence > $1.confidence }
+        
+        // Filter coins by reasonable size relative to image
+        let imageSize = calibrationImage?.size ?? CGSize(width: 1000, height: 1000)
+        let minDiameter = min(imageSize.width, imageSize.height) * 0.02  // At least 2% of image
+        let maxDiameter = min(imageSize.width, imageSize.height) * 1.2   // Allow up to 120% of smaller dimension
+        
+        print("📏 Image size: \(imageSize), diameter range: \(minDiameter)-\(maxDiameter)")
+        
+        let beforeFilterCount = uniqueCoins.count
+        uniqueCoins = uniqueCoins.filter { coin in
+            let valid = coin.diameterPixels > minDiameter
+            // For very large coins, just check they're not impossibly large
+            if coin.diameterPixels > maxDiameter {
+                // Allow it if it's less than both dimensions
+                let valid = coin.diameterPixels < imageSize.width && coin.diameterPixels < imageSize.height
+                if !valid {
+                    print("❌ Filtered out coin with diameter \(coin.diameterPixels) pixels (larger than image dimensions)")
+                } else {
+                    print("⚠️ Large coin detected with diameter \(coin.diameterPixels) pixels (larger than expected but keeping)")
+                }
+                return valid
+            } else if !valid {
+                print("❌ Filtered out coin with diameter \(coin.diameterPixels) pixels (too small)")
+            } else {
+                print("✅ Keeping coin with diameter \(coin.diameterPixels) pixels")
+            }
+            return valid
+        }
+        
+        print("📊 Filtered from \(beforeFilterCount) to \(uniqueCoins.count) coins")
+        
+        return Array(uniqueCoins.prefix(5))  // Maximum 5 detections
+    }
+
+    // MARK: - Updated Detection Section View
+    private var detectionSectionView: some View {
+        VStack(spacing: 16) {
+            Button {
+                performAutomaticCalibration()
+            } label: {
+                HStack(spacing: 12) {
+                    if isDetecting {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Image(systemName: "viewfinder.circle")
+                    }
+                    
+                    Text(isDetecting ? "Detecting..." : "Auto-Detect Coin")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(isDetecting ? Color.gray : Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .disabled(isDetecting)
+            
+            // Progress bar when detecting
+            if isDetecting && detectionProgress > 0 {
+                ProgressView(value: detectionProgress)
+                    .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                    .transition(.opacity)
+            }
+            
+            // Tips for better detection
+            if detectedCoins.isEmpty && !isDetecting && calibrationImage != nil {
+                VStack(spacing: 8) {
+                    Text("Tips for better detection:")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Use good lighting", systemImage: "light.max")
+                        Label("Place coin on contrasting surface", systemImage: "circle.square")
+                        Label("Keep coin fully visible", systemImage: "eye")
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+                
+                Button("Enter Measurements Manually") {
+                    withAnimation {
+                        showManualInput = true
+                    }
+                }
+                .font(.subheadline)
+                .foregroundColor(.blue)
+            }
+        }
+    }
+    
+    private func selectCoin(_ detection: CoinDetection) {
+        selectedCoin = detection
+        knownDistance = detection.coinType.diameterMM
+        measuredPixels = detection.diameterPixels
+        showManualInput = false
+    }
+    
     private func saveCalibration() {
-        // Validate inputs
-        guard isValidInput else {
-            alertMessage = "Please enter valid positive values for both distance and pixels."
+        let newFactor: Double
+        
+        if let selected = selectedCoin {
+            newFactor = selected.calibrationFactor
+            print("📏 Saving auto-detected calibration: \(newFactor) μm/pixel")
+            print("📏 Coin: \(selected.coinType.displayName), Confidence: \(selected.confidence)")
+        } else if isValidInput {
+            newFactor = calculatedFactor
+            print("📏 Saving manual calibration: \(newFactor) μm/pixel")
+            print("📏 Known distance: \(knownDistance) mm, Measured pixels: \(measuredPixels)")
+        } else {
+            alertMessage = "Please complete the calibration first."
             showingAlert = true
             return
         }
         
-        // Calculate and validate the new factor
-        let newFactor = calculatedFactor
-        
-        // Sanity check - calibration factor should be reasonable
-        // Typical range is 0.1 to 100 μm/pixel for coffee analysis
+        // Sanity check
         guard newFactor > 0.01 && newFactor < 1000 else {
-            alertMessage = "Calculated calibration factor seems unreasonable. Please check your measurements."
+            alertMessage = "Calibration factor seems unreasonable. Please check your measurements."
             showingAlert = true
             return
         }
         
-        // Update the binding
         calibrationFactor = newFactor
-        
-        // Log for debugging
-        print("📏 Saving calibration factor: \(newFactor) μm/pixel")
-        print("📏 Known distance: \(knownDistance) mm, Measured pixels: \(measuredPixels)")
-        
-        // Dismiss the view
         dismiss()
     }
 }
