@@ -565,29 +565,12 @@ struct ComparisonHistoryRowView: View {
                     
                     Spacer()
                     
-                    // Date and actions (hidden during selection)
+                    // Date only (hidden during selection)
                     if !isSelected {
                         VStack(alignment: .trailing, spacing: 8) {
                             Text(analysis.savedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
-                            
-                            HStack(spacing: 12) {
-                                // Edit tasting notes button
-                                Button(action: onEditTastingNotes) {
-                                    Image(systemName: analysis.results.tastingNotes != nil ? "star.fill" : "star")
-                                        .font(.caption)
-                                        .foregroundColor(analysis.results.tastingNotes != nil ? .yellow : .gray)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                Button(action: onDelete) {
-                                    Image(systemName: "trash")
-                                        .font(.caption)
-                                        .foregroundColor(.red)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
                         }
                     }
                 }
