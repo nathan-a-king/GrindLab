@@ -330,10 +330,15 @@ enum CoffeeAnalysisError: Error, LocalizedError {
 struct AnalysisSettings: Equatable {
     var analysisMode: AnalysisMode = .standard
     var contrastThreshold: Double = 0.3
-    var minParticleSize: Int = 10 // pixels
-    var maxParticleSize: Int = 1000 // pixels
-    var enableAdvancedFiltering: Bool = false
-    var calibrationFactor: Double = 1.0 // microns per pixel
+    var minParticleSize: Int = 5 // diameter in pixels - minimum particle diameter
+    var maxParticleSize: Int = 500 // diameter in pixels - maximum particle diameter  
+    var enableAdvancedFiltering: Bool = true // enabled by default for better quality
+    var calibrationFactor: Double = 150.0 // improved default microns per pixel
+    var adaptiveThresholdWindow: Int = 15 // window size for adaptive thresholding
+    var morphologyKernelSize: Int = 3 // kernel size for noise reduction
+    var minCircularity: Double = 0.1 // minimum circularity for valid particles (lower for more tolerance)
+    var maxAspectRatio: Double = 5.0 // maximum aspect ratio for valid particles (higher for elongated shapes)
+    var minSolidity: Double = 0.3 // minimum solidity (filled-ness) for valid particles (lower for more tolerance)
     
     enum AnalysisMode: Int, CaseIterable, Equatable {
         case basic = 0

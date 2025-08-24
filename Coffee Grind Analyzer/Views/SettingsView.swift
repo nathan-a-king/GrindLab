@@ -28,6 +28,10 @@ struct SettingsView: View {
                 
                 calibrationSection
                 aboutSection
+                
+                #if DEBUG
+                debugSection
+                #endif
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -159,6 +163,34 @@ struct SettingsView: View {
             .foregroundColor(.red)
         }
     }
+    
+    #if DEBUG
+    private var debugSection: some View {
+        Section("Debug Tools") {
+            Button("Run Analysis Validation Test") {
+                print("🧪 Running validation test...")
+                let engine = CoffeeAnalysisEngine()
+                engine.runValidationTest()
+            }
+            .foregroundColor(.blue)
+            
+            Button("Generate Test Image (Grid)") {
+                print("🎯 Generating grid test image...")
+                let (image, particles) = AnalysisValidation.createGridTestImage()
+                print("✅ Created test image with \(particles.count) particles")
+                // You could save this image or analyze it directly
+            }
+            .foregroundColor(.green)
+            
+            Button("Generate Test Image (Random)") {
+                print("🎲 Generating random test image...")
+                let (image, particles) = AnalysisValidation.createTestImage()
+                print("✅ Created test image with \(particles.count) particles")
+            }
+            .foregroundColor(.orange)
+        }
+    }
+    #endif
     
     private var aboutSection: some View {
         Section("About") {
