@@ -148,7 +148,8 @@ struct ResultsView: View {
             // Debug logging
             print("📝 ResultsView data check:")
             print("   - From History: \(isFromHistory)")
-            print("   - Uniformity: \(Int(results.uniformityScore))%")
+            let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+            print("   - Size Match: \(isInRange ? "In Range" : "Out of Range")")
             print("   - Distribution keys: \(results.sizeDistribution.keys.sorted())")
             print("   - Distribution values: \(results.sizeDistribution.values.map { String(format: "%.1f", $0) })")
         }
@@ -165,8 +166,6 @@ struct ResultsView: View {
                 metricsGrid
                     .onAppear { print("📊 Metrics grid appeared") }
                 
-                gradeSection
-                    .onAppear { print("📊 Grade section appeared") }
                 
                 // Add tasting notes display if available
                 if let tastingNotes = results.tastingNotes {
@@ -174,8 +173,6 @@ struct ResultsView: View {
                         .onAppear { print("📊 Tasting notes section appeared") }
                 }
                 
-                recommendationsSection
-                    .onAppear { print("📊 Recommendations section appeared") }
             }
             .padding()
             .onAppear {
@@ -203,19 +200,21 @@ struct ResultsView: View {
                 Spacer()
                 
                 VStack {
-                    Text("\(Int(results.uniformityScore))%")
-                        .font(.title)
+                    let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                    Text(isInRange ? "In Range" : "Out of Range")
+                        .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(results.uniformityColor)
+                        .foregroundColor(isInRange ? .green : .red)
                     
-                    Text("Uniformity")
+                    Text("Size Match")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
-            ProgressView(value: results.uniformityScore / 100)
-                .tint(results.uniformityColor)
+            let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+            ProgressView(value: isInRange ? 1.0 : 0.0)
+                .tint(isInRange ? .green : .red)
         }
         .padding()
         .background(Color(.systemGray6))
@@ -288,63 +287,7 @@ struct ResultsView: View {
         .shadow(radius: 2)
     }
     
-    private var gradeSection: some View {
-        VStack(spacing: 12) {
-            Text("Overall Grade")
-                .font(.headline)
-            
-            Text(results.uniformityGrade)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundColor(results.uniformityColor)
-            
-            HStack(spacing: 4) {
-                ForEach(0..<5) { index in
-                    Image(systemName: index < gradeStars ? "star.fill" : "star")
-                        .foregroundColor(.yellow)
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
     
-    private var gradeStars: Int {
-        switch results.uniformityScore {
-        case 90...: return 5
-        case 80..<90: return 4
-        case 70..<80: return 3
-        case 60..<70: return 2
-        case 50..<60: return 1
-        default: return 0
-        }
-    }
-    
-    private var recommendationsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recommendations")
-                .font(.headline)
-            
-            ForEach(Array(results.recommendations.enumerated()), id: \.offset) { index, recommendation in
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "lightbulb.fill")
-                        .foregroundColor(.yellow)
-                        .font(.caption)
-                    
-                    Text(recommendation)
-                        .font(.subheadline)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    Spacer()
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
     
     // MARK: - Details Tab
     
@@ -720,16 +663,13 @@ struct ShareSheet: UIViewControllerRepresentable {
         Date: \(formatter.string(from: results.timestamp))
         
         📊 Key Metrics:
-        • Uniformity Score: \(Int(results.uniformityScore))% (\(results.uniformityGrade))
+        • Size Match: \(results.grindType.targetSizeMicrons.contains(results.averageSize) ? "In Range" : "Out of Range")
         • Average Size: \(String(format: "%.1f", results.averageSize))μm
         • Particles Detected: \(results.particleCount)
         • Fines: \(String(format: "%.1f", results.finesPercentage))%
         • Confidence: \(Int(results.confidence))%
         
         🎯 Target Range: \(results.grindType.targetSizeRange)
-        
-        💡 Top Recommendation:
-        \(results.recommendations.first ?? "Great grind quality!")
         
         #CoffeeGrindAnalyzer #Coffee #Analysis
         """
@@ -767,10 +707,11 @@ struct SaveAnalysisDialog: View {
                     }
                     
                     HStack {
-                        Text("Uniformity Score")
+                        Text("Size Match")
                         Spacer()
-                        Text("\(Int(results.uniformityScore))%")
-                            .foregroundColor(results.uniformityColor)
+                        let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                        Text(isInRange ? "In Range" : "Out of Range")
+                            .foregroundColor(isInRange ? .green : .red)
                             .fontWeight(.semibold)
                     }
                     

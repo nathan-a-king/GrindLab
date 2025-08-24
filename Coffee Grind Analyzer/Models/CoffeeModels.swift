@@ -58,13 +58,13 @@ enum CoffeeGrindType: CaseIterable, Codable {
     var idealFinesPercentage: ClosedRange<Double> {
         switch self {
         case .filter:
-            return 5...15
+            return 10...25  // Increased to reflect real-world burr grinder performance
         case .espresso:
-            return 15...25
+            return 20...35  // Espresso naturally has more fines for extraction
         case .frenchPress:
-            return 0...8
+            return 5...15   // French press tolerates some fines 
         case .coldBrew:
-            return 0...5
+            return 3...12   // Cold brew more forgiving of fines
         }
     }
 }
@@ -198,30 +198,32 @@ struct CoffeeAnalysisResults {
     
     var uniformityColor: Color {
         switch uniformityScore {
-        case 85...: return .green
-        case 70..<85: return .yellow
-        case 50..<70: return .orange
-        default: return .red
+        case 70...: return .green           // Lowered from 85 - green for good performance
+        case 55..<70: return .yellow        // Lowered from 70 - yellow for acceptable
+        case 40..<55: return .orange        // Lowered from 50 - orange for needs improvement
+        default: return .red                // Red for poor performance
         }
     }
     
     var uniformityGrade: String {
         switch uniformityScore {
-        case 90...: return "Excellent"
-        case 80..<90: return "Very Good"
-        case 70..<80: return "Good"
-        case 60..<70: return "Fair"
-        case 50..<60: return "Poor"
-        default: return "Very Poor"
+        case 75...: return "Excellent"      // Lowered from 90 - even great grinders have variation
+        case 65..<75: return "Very Good"    // Lowered from 80 - good burr grinder performance
+        case 55..<65: return "Good"         // Lowered from 70 - acceptable for most brewing
+        case 45..<55: return "Fair"         // Lowered from 60 - needs improvement
+        case 35..<45: return "Poor"         // Lowered from 50 - blade grinder territory
+        default: return "Very Poor"         // Below 35 - very inconsistent grinding
         }
     }
     
     var recommendations: [String] {
         var recs: [String] = []
         
-        // Uniformity recommendations
-        if uniformityScore < 70 {
+        // Uniformity recommendations  
+        if uniformityScore < 45 {
             recs.append("Consider upgrading to a burr grinder for better uniformity")
+        } else if uniformityScore < 60 {
+            recs.append("Grind consistency could be improved - check burr alignment or wear")
         }
         
         // Fines recommendations

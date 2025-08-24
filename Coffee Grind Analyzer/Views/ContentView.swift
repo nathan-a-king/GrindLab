@@ -262,10 +262,11 @@ struct ContentView: View {
                     
                     Spacer()
                     
-                    Text("\(Int(analysis.results.uniformityScore))%")
+                    let isInRange = analysis.results.grindType.targetSizeMicrons.contains(analysis.results.averageSize)
+                    Text(isInRange ? "In Range" : "Out of Range")
                         .font(.caption)
                         .fontWeight(.bold)
-                        .foregroundColor(analysis.results.uniformityColor)
+                        .foregroundColor(isInRange ? .green : .red)
                 }
                 
                 Text(analysis.name)
@@ -429,10 +430,11 @@ struct ContentView: View {
             }
             
             HStack(spacing: 16) {
+                let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
                 resultCard(
-                    title: "Uniformity",
-                    value: "\(Int(results.uniformityScore))%",
-                    color: results.uniformityColor
+                    title: "Size Match",
+                    value: isInRange ? "In Range" : "Out of Range",
+                    color: isInRange ? .green : .red
                 )
                 
                 resultCard(
@@ -448,9 +450,9 @@ struct ContentView: View {
                 )
                 
                 resultCard(
-                    title: "Grade",
-                    value: results.uniformityGrade,
-                    color: results.uniformityColor
+                    title: "Particles",
+                    value: "\(results.particleCount)",
+                    color: .purple
                 )
             }
         }
