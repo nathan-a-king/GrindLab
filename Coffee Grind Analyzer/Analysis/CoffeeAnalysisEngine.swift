@@ -103,6 +103,11 @@ class CoffeeAnalysisEngine {
         print("🔬 Starting simplified coffee analysis for \(grindType.displayName)...")
         print("📐 Image size: \(Int(image.size.width))x\(Int(image.size.height))")
         
+        // Get CGImage for consistent coordinate system
+        guard let originalCGImage = image.cgImage else {
+            throw CoffeeAnalysisError.imageProcessingFailed
+        }
+        
         // Step 1: Convert to grayscale
         let step1Start = CFAbsoluteTimeGetCurrent()
         print("⚫ Step 1: Converting to grayscale...")
@@ -139,7 +144,7 @@ class CoffeeAnalysisEngine {
         // Step 5: Create processed image for visualization
         let step5Start = CFAbsoluteTimeGetCurrent()
         print("🎨 Step 5: Creating processed image...")
-        let processedImage = createProcessedImage(originalImage: image, particles: particles)
+        let processedImage = createProcessedImage(originalImage: image, cgImage: originalCGImage, particles: particles)
         print("✅ Step 5 complete in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - step5Start))s")
         
         let totalTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -529,19 +534,13 @@ class CoffeeAnalysisEngine {
             return nil
         }
         
-        // Transform coordinates from CGImage space to UIImage display space
-        let transformedPosition = transformCGImageToUIImageCoordinates(
-            cgPoint: CGPoint(x: centroidX, y: centroidY),
-            cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
-            uiImage: originalImage
-        )
-        
-        // Create particle with position in UIImage display coordinates
+        // Keep particle position in original CGImage coordinates for now
+        // We'll transform during overlay rendering to ensure proper alignment
         let particle = CoffeeParticle(
             size: sizeMicrons,
             area: area,
             circularity: min(circularity, 1.0),
-            position: transformedPosition,
+            position: CGPoint(x: centroidX, y: centroidY),
             brightness: avgBrightness
         )
         
@@ -551,27 +550,45 @@ class CoffeeAnalysisEngine {
     private func transformCGImageToUIImageCoordinates(cgPoint: CGPoint, cgImageSize: CGSize, uiImage: UIImage) -> CGPoint {
         let cgWidth = cgImageSize.width
         let cgHeight = cgImageSize.height
-        let uiWidth = uiImage.size.width
+        let uiWidth = uiImage.size.width  
         let uiHeight = uiImage.size.height
         
-        // Handle different orientations
+        print("🔄 Transforming point (\(Int(cgPoint.x)), \(Int(cgPoint.y))) from CGImage \(Int(cgWidth))x\(Int(cgHeight)) to UIImage \(Int(uiWidth))x\(Int(uiHeight)), orientation: \(uiImage.imageOrientation.rawValue)")
+        
+        // Handle different orientations properly
+        let transformedPoint: CGPoint
         switch uiImage.imageOrientation {
-        case .up, .upMirrored:
-            // No rotation needed - coordinates match
-            return cgPoint
-        case .down, .downMirrored:
+        case .up:
+            // No rotation needed
+            transformedPoint = cgPoint
+        case .down:
             // 180° rotation
-            return CGPoint(x: cgWidth - cgPoint.x, y: cgHeight - cgPoint.y)
-        case .left, .leftMirrored:
+            transformedPoint = CGPoint(x: cgWidth - cgPoint.x, y: cgHeight - cgPoint.y)
+        case .left:
             // 90° counterclockwise rotation: (x,y) -> (y, width-x)
-            return CGPoint(x: cgPoint.y, y: cgWidth - cgPoint.x)
-        case .right, .rightMirrored:
-            // 90° clockwise rotation: (x,y) -> (height-y, x)
-            return CGPoint(x: cgHeight - cgPoint.y, y: cgPoint.x)
+            transformedPoint = CGPoint(x: cgPoint.y, y: cgWidth - cgPoint.x)
+        case .right:
+            // 90° clockwise rotation: (x,y) -> (height-y, x) 
+            transformedPoint = CGPoint(x: cgHeight - cgPoint.y, y: cgPoint.x)
+        case .upMirrored:
+            // Horizontal flip
+            transformedPoint = CGPoint(x: cgWidth - cgPoint.x, y: cgPoint.y)
+        case .downMirrored:
+            // Horizontal flip + 180° rotation
+            transformedPoint = CGPoint(x: cgPoint.x, y: cgHeight - cgPoint.y)
+        case .leftMirrored:
+            // Horizontal flip + 90° counterclockwise rotation
+            transformedPoint = CGPoint(x: cgPoint.y, y: cgPoint.x)
+        case .rightMirrored:
+            // Horizontal flip + 90° clockwise rotation
+            transformedPoint = CGPoint(x: cgHeight - cgPoint.y, y: cgWidth - cgPoint.x)
         @unknown default:
             // Fallback to no transformation
-            return cgPoint
+            transformedPoint = cgPoint
         }
+        
+        print("🎯 Transformed to (\(Int(transformedPoint.x)), \(Int(transformedPoint.y)))")
+        return transformedPoint
     }
     
     private func calculatePerimeter(component: [(x: Int, y: Int, brightness: UInt8)]) -> Double {
@@ -679,56 +696,68 @@ class CoffeeAnalysisEngine {
         )
     }
     
-    private func createProcessedImage(originalImage: UIImage, particles: [CoffeeParticle]) -> UIImage? {
+    private func createProcessedImage(originalImage: UIImage, cgImage: CGImage, particles: [CoffeeParticle]) -> UIImage? {
         print("🎨 Creating overlay for \(particles.count) particles on \(Int(originalImage.size.width))x\(Int(originalImage.size.height)) image")
+        print("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height)), orientation: \(originalImage.imageOrientation.rawValue)")
+        print("🔍 UIImage scale: \(originalImage.scale)")
         
         // Verify we have valid particles
         if !particles.isEmpty {
             let firstParticle = particles[0]
-            print("📍 Sample particle position: (\(Int(firstParticle.position.x)), \(Int(firstParticle.position.y))) in image of size \(Int(originalImage.size.width))x\(Int(originalImage.size.height))")
+            print("📍 Sample particle CGImage position: (\(Int(firstParticle.position.x)), \(Int(firstParticle.position.y)))")
         }
         
+        // Use UIImage size to match how it will be displayed
         let renderer = UIGraphicsImageRenderer(size: originalImage.size)
         
         return renderer.image { context in
-            // Draw original image
+            // Draw original image with proper orientation handling
             originalImage.draw(at: .zero)
             
-            // Draw particle overlays in same coordinate space (pixel-to-pixel mapping)
-            context.cgContext.setLineWidth(2.0)
+            // Draw particle overlays with coordinate transformation
+            context.cgContext.setLineWidth(3.0)
             
             for particle in particles {
                 let color: UIColor
                 switch particle.size {
                 case 0..<400:
-                    color = UIColor.red.withAlphaComponent(0.6)
+                    color = UIColor.red.withAlphaComponent(0.8)
                 case 400..<800:
-                    color = UIColor.yellow.withAlphaComponent(0.6)
+                    color = UIColor.yellow.withAlphaComponent(0.8)
                 case 800..<1200:
-                    color = UIColor.green.withAlphaComponent(0.6)
+                    color = UIColor.green.withAlphaComponent(0.8)
                 default:
-                    color = UIColor.blue.withAlphaComponent(0.6)
+                    color = UIColor.blue.withAlphaComponent(0.8)
                 }
                 
                 context.cgContext.setStrokeColor(color.cgColor)
                 
+                // Transform particle position from CGImage coordinates to UIImage display coordinates
+                let transformedPosition = transformCGImageToUIImageCoordinates(
+                    cgPoint: particle.position,
+                    cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
+                    uiImage: originalImage
+                )
+                
                 // Calculate radius in pixels from particle area (area is in pixels²)
                 let radius = sqrt(particle.area / .pi)
                 
-                // Verify particle is within image bounds
-                let isInBounds = particle.position.x >= 0 && 
-                                particle.position.x < originalImage.size.width &&
-                                particle.position.y >= 0 && 
-                                particle.position.y < originalImage.size.height
+                // Verify transformed particle is within display bounds
+                let isInBounds = transformedPosition.x >= 0 && 
+                                transformedPosition.x < originalImage.size.width &&
+                                transformedPosition.y >= 0 && 
+                                transformedPosition.y < originalImage.size.height
                 
                 if !isInBounds {
-                    print("⚠️ Particle out of bounds: position=(\(particle.position.x), \(particle.position.y)), image=\(originalImage.size)")
+                    print("⚠️ Transformed particle out of bounds: CGImage=(\(Int(particle.position.x)), \(Int(particle.position.y))) -> UIImage=(\(Int(transformedPosition.x)), \(Int(transformedPosition.y))), image=\(originalImage.size)")
+                } else {
+                    print("✅ Drawing particle at CGImage(\(Int(particle.position.x)), \(Int(particle.position.y))) -> UIImage(\(Int(transformedPosition.x)), \(Int(transformedPosition.y))) with radius \(String(format: "%.1f", radius))px")
                 }
                 
-                // Draw directly at particle position (pixel coordinates)
+                // Draw at transformed position
                 let rect = CGRect(
-                    x: particle.position.x - radius,
-                    y: particle.position.y - radius,
+                    x: transformedPosition.x - radius,
+                    y: transformedPosition.y - radius,
                     width: radius * 2,
                     height: radius * 2
                 )
