@@ -357,23 +357,21 @@ struct HistoryView: View {
                     color: .blue
                 )
                 
-                if let avgScore = averageUniformityScore {
+                if let percentInRange = percentInTargetRange {
                     statCard(
-                        title: "Avg Score",
-                        value: "\(Int(avgScore))%",
-                        subtitle: "uniformity",
-                        color: colorForScore(avgScore)
+                        title: "In Range",
+                        value: "\(Int(percentInRange))%",
+                        subtitle: "on target",
+                        color: colorForScore(percentInRange)
                     )
                 }
                 
-                if let bestScore = bestUniformityScore {
-                    statCard(
-                        title: "Best Score",
-                        value: "\(Int(bestScore))%",
-                        subtitle: "uniformity",
-                        color: colorForScore(bestScore)
-                    )
-                }
+                statCard(
+                    title: "This Week",
+                    value: "\(analysesThisWeek)",
+                    subtitle: "analyses",
+                    color: .purple
+                )
             }
             
             if selectedGrindFilter != nil || !searchText.isEmpty {
@@ -425,14 +423,35 @@ struct HistoryView: View {
         .shadow(radius: 1)
     }
     
-    private var averageUniformityScore: Double? {
+    private var percentInTargetRange: Double? {
         guard !filteredAndSortedAnalyses.isEmpty else { return nil }
-        let total = filteredAndSortedAnalyses.reduce(0) { $0 + $1.results.uniformityScore }
-        return total / Double(filteredAndSortedAnalyses.count)
+        
+        let inRangeCount = filteredAndSortedAnalyses.filter { analysis in
+            let grindType = analysis.results.grindType
+            let avgSize = analysis.results.averageSize
+            
+            switch grindType {
+            case .filter:
+                return avgSize >= 600 && avgSize <= 900
+            case .espresso:
+                return avgSize >= 200 && avgSize <= 400
+            case .frenchPress:
+                return avgSize >= 750 && avgSize <= 1000
+            case .coldBrew:
+                return avgSize >= 1000 && avgSize <= 1200
+            }
+        }.count
+        
+        return (Double(inRangeCount) / Double(filteredAndSortedAnalyses.count)) * 100
     }
     
-    private var bestUniformityScore: Double? {
-        return filteredAndSortedAnalyses.max { $0.results.uniformityScore < $1.results.uniformityScore }?.results.uniformityScore
+    private var analysesThisWeek: Int {
+        let calendar = Calendar.current
+        let oneWeekAgo = calendar.date(byAdding: .weekOfYear, value: -1, to: Date()) ?? Date()
+        
+        return filteredAndSortedAnalyses.filter { analysis in
+            analysis.savedDate >= oneWeekAgo
+        }.count
     }
     
     private func colorForScore(_ score: Double) -> Color {
