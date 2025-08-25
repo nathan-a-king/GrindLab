@@ -307,7 +307,16 @@ struct ContentView: View {
     
     private func cameraView(for grindType: CoffeeGrindType) -> some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Modern gradient background instead of black
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 0.15, green: 0.12, blue: 0.10), // Dark coffee brown
+                    Color(red: 0.08, green: 0.06, blue: 0.05)  // Almost black brown
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 cameraHeader(grindType: grindType)
@@ -398,12 +407,24 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: 400)
                 }
             }
-            .cornerRadius(12)
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.3), radius: 15, x: 0, y: 5)
             .overlay(
                 GridOverlay(isVisible: camera.showGrid)
                     .aspectRatio(3/4, contentMode: .fill)
                     .frame(maxWidth: .infinity, maxHeight: 400)
-                    .cornerRadius(12)
+                    .cornerRadius(20)
             )
             
             FocusIndicator(
@@ -411,6 +432,7 @@ struct ContentView: View {
                 isVisible: camera.showFocusIndicator
             )
         }
+        .padding(.horizontal, 16)
     }
     
     private func resultsPreview(results: CoffeeAnalysisResults) -> some View {
@@ -458,8 +480,25 @@ struct ContentView: View {
         }
         .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.8))
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.12),
+                            Color.white.opacity(0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.ultraThinMaterial)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
         .padding(.horizontal, 20)
     }

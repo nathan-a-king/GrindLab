@@ -68,49 +68,66 @@ struct HistoryView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Fixed search bar outside of scrollable content
-                HStack {
+            ZStack {
+                // Modern gradient background
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.97, green: 0.96, blue: 0.95), // Light cream
+                        Color(red: 0.94, green: 0.92, blue: 0.90)  // Warm gray
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Fixed search bar outside of scrollable content
                     HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.secondary)
+                            
+                            TextField("Search analyses...", text: $searchText)
+                                .textFieldStyle(PlainTextFieldStyle())
+                                .submitLabel(.search)
+                                .onSubmit {
+                                    // Dismiss keyboard when search is submitted
+                                    hideKeyboard()
+                                }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white.opacity(0.9))
+                                .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+                        )
+                        .onTapGesture {
+                            // Allow tapping in search field to focus
+                        }
                         
-                        TextField("Search analyses...", text: $searchText)
-                            .textFieldStyle(PlainTextFieldStyle())
-                            .submitLabel(.search)
-                            .onSubmit {
-                                // Dismiss keyboard when search is submitted
+                        if !searchText.isEmpty {
+                            Button("Cancel") {
+                                searchText = ""
+                                hideKeyboard()
+                            }
+                            .foregroundColor(.brown)
+                            .fontWeight(.medium)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.clear)
+                    
+                    if historyManager.savedAnalyses.isEmpty {
+                        emptyHistoryView
+                    } else {
+                        historyContentWithFixedHeader
+                            .onTapGesture {
+                                // Dismiss keyboard when tapping outside search field
                                 hideKeyboard()
                             }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    .onTapGesture {
-                        // Allow tapping in search field to focus
-                    }
-                    
-                    if !searchText.isEmpty {
-                        Button("Cancel") {
-                            searchText = ""
-                            hideKeyboard()
-                        }
-                        .foregroundColor(.blue)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(.systemBackground))
-                
-                if historyManager.savedAnalyses.isEmpty {
-                    emptyHistoryView
-                } else {
-                    historyContentWithFixedHeader
-                        .onTapGesture {
-                            // Dismiss keyboard when tapping outside search field
-                            hideKeyboard()
-                        }
                 }
             }
             .navigationTitle("Analysis History")
@@ -298,14 +315,20 @@ struct HistoryView: View {
                             showingEditTastingNotes = true
                         }
                     )
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.9))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 4)
+                    )
                 }
                 .onDelete(perform: deleteAnalyses)
             }
             .listStyle(PlainListStyle())
             .scrollContentBackground(.hidden)
+            .background(Color.clear)
             .simultaneousGesture(
                 // Add drag gesture to dismiss keyboard on scroll
                 DragGesture()
@@ -349,12 +372,12 @@ struct HistoryView: View {
     
     private var statisticsHeader: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 20) {
+            HStack(spacing: 12) {
                 statCard(
                     title: "Total",
                     value: "\(filteredAndSortedAnalyses.count)",
                     subtitle: filteredAndSortedAnalyses.count == historyManager.totalAnalyses ? "analyses" : "filtered",
-                    color: .blue
+                    color: Color.brown
                 )
                 
                 if let percentInRange = percentInTargetRange {
@@ -370,7 +393,7 @@ struct HistoryView: View {
                     title: "This Week",
                     value: "\(analysesThisWeek)",
                     subtitle: "analyses",
-                    color: .purple
+                    color: Color.indigo
                 )
             }
             
@@ -397,7 +420,18 @@ struct HistoryView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(
+            LinearGradient(
+                colors: [Color.white.opacity(0.95), Color.white.opacity(0.85)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 0)
+                .stroke(Color.brown.opacity(0.1), lineWidth: 0.5)
+                .padding(.top, -1)
+        )
     }
     
     private func statCard(title: String, value: String, subtitle: String, color: Color) -> some View {
@@ -409,7 +443,7 @@ struct HistoryView: View {
             
             Text(title)
                 .font(.caption)
-                .fontWeight(.medium)
+                .fontWeight(.semibold)
                 .foregroundColor(.primary)
             
             Text(subtitle)
@@ -417,10 +451,13 @@ struct HistoryView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 1)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
+        )
     }
     
     private var percentInTargetRange: Double? {
@@ -633,18 +670,25 @@ struct FilterTag: View {
         HStack(spacing: 6) {
             Text(text)
                 .font(.caption)
-                .foregroundColor(.blue)
+                .fontWeight(.medium)
+                .foregroundColor(.brown)
             
             Button(action: onRemove) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.caption)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.brown.opacity(0.7))
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(16)
+        .background(
+            Capsule()
+                .fill(Color.brown.opacity(0.12))
+                .overlay(
+                    Capsule()
+                        .stroke(Color.brown.opacity(0.2), lineWidth: 0.5)
+                )
+        )
     }
 }
 

@@ -84,19 +84,32 @@ struct ComparisonView: View {
     // MARK: - Side-by-Side View
     
     private var sideBySide: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                comparisonSummaryCard
-                
-                if comparison.analyses.count == 2 {
-                    twoWayComparison
-                } else {
-                    multiWayComparison
+        ZStack {
+            // Modern gradient background matching history view
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 0.97, green: 0.96, blue: 0.95), // Light cream
+                    Color(red: 0.94, green: 0.92, blue: 0.90)  // Warm gray
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    comparisonSummaryCard
+                    
+                    if comparison.analyses.count == 2 {
+                        twoWayComparison
+                    } else {
+                        multiWayComparison
+                    }
+                    
+                    tastingNotesComparison
                 }
-                
-                tastingNotesComparison
+                .padding()
             }
-            .padding()
         }
     }
     
@@ -128,8 +141,11 @@ struct ComparisonView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.95))
+                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
+        )
     }
     
     private func analysisChip(analysis: SavedCoffeeAnalysis, color: Color, isBaseline: Bool) -> some View {
@@ -159,9 +175,11 @@ struct ComparisonView: View {
         }
         .frame(width: 80)
         .padding(8)
-        .background(Color(.systemBackground))
-        .cornerRadius(8)
-        .shadow(radius: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        )
     }
     
     private var twoWayComparison: some View {
@@ -429,17 +447,30 @@ struct ComparisonView: View {
     // MARK: - Overlay Charts
     
     private var overlayCharts: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                if #available(iOS 16.0, *) {
-                    distributionOverlayChart
-                    metricsComparisonChart
-                } else {
-                    Text("Charts require iOS 16+")
-                        .foregroundColor(.secondary)
+        ZStack {
+            // Modern gradient background matching history view
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 0.97, green: 0.96, blue: 0.95), // Light cream
+                    Color(red: 0.94, green: 0.92, blue: 0.90)  // Warm gray
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 24) {
+                    if #available(iOS 16.0, *) {
+                        distributionOverlayChart
+                        metricsComparisonChart
+                    } else {
+                        Text("Charts require iOS 16+")
+                            .foregroundColor(.secondary)
+                    }
                 }
+                .padding()
             }
-            .padding()
         }
     }
     
