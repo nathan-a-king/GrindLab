@@ -202,10 +202,22 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             
             // Convert back to full analysis objects
             savedAnalyses = storableAnalyses.compactMap { storable in
-                // Ensure we have valid size distribution data
-                let distribution = storable.sizeDistribution.isEmpty ?
-                    generateDefaultSizeDistribution(finesPercentage: storable.finesPercentage, bouldersPercentage: storable.bouldersPercentage) :
-                    storable.sizeDistribution
+                // Check if distribution needs to be regenerated for new category system
+                // Old system had fixed categories like "Fines (<400μm)", new system is dynamic
+                let needsNewDistribution = storable.sizeDistribution.isEmpty ||
+                    storable.sizeDistribution.keys.contains("Fines (<400μm)") // Old format detection
+                
+                let distribution: [String: Double]
+                if needsNewDistribution {
+                    // Generate distribution using new grind-specific categories
+                    distribution = generateGrindSpecificDistribution(
+                        grindType: storable.grindType,
+                        finesPercentage: storable.finesPercentage,
+                        bouldersPercentage: storable.bouldersPercentage
+                    )
+                } else {
+                    distribution = storable.sizeDistribution
+                }
                 
                 print("📊 Loading analysis '\(storable.name)': distribution has \(distribution.count) categories")
                 
@@ -244,20 +256,32 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
         }
     }
     
-    // Generate a reasonable size distribution when missing
-    private func generateDefaultSizeDistribution(finesPercentage: Double, bouldersPercentage: Double) -> [String: Double] {
-        let mediumPercentage = max(0, 100 - finesPercentage - bouldersPercentage)
-        let finePercentage = mediumPercentage * 0.3 // 30% of remaining
-        let adjustedMedium = mediumPercentage * 0.7 // 70% of remaining
-        let coarsePercentage = 0.0 // Minimal coarse if not specified
+    // Generate a reasonable size distribution using grind-specific categories
+    private func generateGrindSpecificDistribution(grindType: CoffeeGrindType, finesPercentage: Double, bouldersPercentage: Double) -> [String: Double] {
+        let categories = grindType.distributionCategories
+        var distribution: [String: Double] = [:]
         
-        return [
-            "Fines (<400μm)": finesPercentage,
-            "Fine (400-600μm)": finePercentage,
-            "Medium (600-1000μm)": adjustedMedium,
-            "Coarse (1000-1400μm)": coarsePercentage,
-            "Boulders (>1400μm)": bouldersPercentage
-        ]
+        let middlePercentage = max(0, 100 - finesPercentage - bouldersPercentage)
+        
+        // Distribute across categories
+        for (index, category) in categories.enumerated() {
+            switch index {
+            case 0:
+                // First category gets most of the fines
+                distribution[category.label] = finesPercentage * 0.8
+            case categories.count - 1:
+                // Last category gets most of the boulders
+                distribution[category.label] = bouldersPercentage * 0.8
+            case 2:
+                // Middle/target category gets the most
+                distribution[category.label] = middlePercentage * 0.5
+            default:
+                // Other categories share the rest
+                distribution[category.label] = middlePercentage * 0.25
+            }
+        }
+        
+        return distribution
     }
 }
 

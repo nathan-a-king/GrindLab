@@ -67,6 +67,43 @@ enum CoffeeGrindType: CaseIterable, Codable {
             return 3...12   // Cold brew more forgiving of fines
         }
     }
+    
+    var distributionCategories: [(range: Range<Double>, label: String)] {
+        switch self {
+        case .espresso:
+            return [
+                (0..<150, "Extra Fine (<150μm)"),
+                (150..<250, "Fine (150-250μm)"),
+                (250..<350, "Target (250-350μm)"),
+                (350..<450, "Medium (350-450μm)"),
+                (450..<Double.infinity, "Coarse (>450μm)")
+            ]
+        case .filter:
+            return [
+                (0..<400, "Fine (<400μm)"),
+                (400..<600, "Medium-Fine (400-600μm)"),
+                (600..<900, "Target (600-900μm)"),
+                (900..<1200, "Coarse (900-1200μm)"),
+                (1200..<Double.infinity, "Extra Coarse (>1200μm)")
+            ]
+        case .frenchPress:
+            return [
+                (0..<500, "Fine (<500μm)"),
+                (500..<750, "Medium (500-750μm)"),
+                (750..<1000, "Target (750-1000μm)"),
+                (1000..<1300, "Coarse (1000-1300μm)"),
+                (1300..<Double.infinity, "Extra Coarse (>1300μm)")
+            ]
+        case .coldBrew:
+            return [
+                (0..<700, "Fine (<700μm)"),
+                (700..<1000, "Medium (700-1000μm)"),
+                (1000..<1200, "Target (1000-1200μm)"),
+                (1200..<1500, "Coarse (1200-1500μm)"),
+                (1500..<Double.infinity, "Extra Coarse (>1500μm)")
+            ]
+        }
+    }
 }
 
 // MARK: - Particle Data
@@ -171,7 +208,7 @@ struct CoffeeAnalysisResults {
         self.tastingNotes = tastingNotes
         
         // Compute distribution from particles immediately
-        self.sizeDistribution = Self.computeSizeDistribution(from: particles, particleCount: particleCount, finesPercentage: finesPercentage, bouldersPercentage: bouldersPercentage)
+        self.sizeDistribution = Self.computeSizeDistribution(from: particles, grindType: grindType, particleCount: particleCount, finesPercentage: finesPercentage, bouldersPercentage: bouldersPercentage)
     }
     
     // Initializer for loaded results (with pre-computed distribution)
@@ -256,30 +293,26 @@ struct CoffeeAnalysisResults {
     }
     
     // Static method to compute size distribution
-    private static func computeSizeDistribution(from particles: [CoffeeParticle], particleCount: Int, finesPercentage: Double, bouldersPercentage: Double) -> [String: Double] {
+    private static func computeSizeDistribution(from particles: [CoffeeParticle], grindType: CoffeeGrindType, particleCount: Int, finesPercentage: Double, bouldersPercentage: Double) -> [String: Double] {
+        let categories = grindType.distributionCategories
+        
         // If we have particles, compute from them
         if !particles.isEmpty {
             let totalParticles = Double(particles.count)
-            var distribution: [String: Int] = [
-                "Fines (<400μm)": 0,
-                "Fine (400-600μm)": 0,
-                "Medium (600-1000μm)": 0,
-                "Coarse (1000-1400μm)": 0,
-                "Boulders (>1400μm)": 0
-            ]
+            var distribution: [String: Int] = [:]
             
+            // Initialize all categories
+            for category in categories {
+                distribution[category.label] = 0
+            }
+            
+            // Count particles in each category
             for particle in particles {
-                switch particle.size {
-                case 0..<400:
-                    distribution["Fines (<400μm)"]! += 1
-                case 400..<600:
-                    distribution["Fine (400-600μm)"]! += 1
-                case 600..<1000:
-                    distribution["Medium (600-1000μm)"]! += 1
-                case 1000..<1400:
-                    distribution["Coarse (1000-1400μm)"]! += 1
-                default:
-                    distribution["Boulders (>1400μm)"]! += 1
+                for category in categories {
+                    if category.range.contains(particle.size) {
+                        distribution[category.label]! += 1
+                        break
+                    }
                 }
             }
             
@@ -287,18 +320,28 @@ struct CoffeeAnalysisResults {
         }
         
         // Otherwise, generate reasonable distribution from known percentages
-        let mediumPercentage = max(0, 100 - finesPercentage - bouldersPercentage)
-        let finePercentage = mediumPercentage * 0.3 // 30% of remaining
-        let adjustedMedium = mediumPercentage * 0.5 // 50% of remaining
-        let coarsePercentage = mediumPercentage * 0.2 // 20% of remaining
+        // This is a fallback when we don't have particle data
+        var distribution: [String: Double] = [:]
+        let categoryCount = Double(categories.count)
         
-        return [
-            "Fines (<400μm)": finesPercentage,
-            "Fine (400-600μm)": finePercentage,
-            "Medium (600-1000μm)": adjustedMedium,
-            "Coarse (1000-1400μm)": coarsePercentage,
-            "Boulders (>1400μm)": bouldersPercentage
-        ]
+        // Simple distribution based on available data
+        // Put more weight in the middle categories
+        for (index, category) in categories.enumerated() {
+            switch index {
+            case 0:
+                // First category gets most of the fines
+                distribution[category.label] = finesPercentage * 0.8
+            case categories.count - 1:
+                // Last category gets most of the boulders
+                distribution[category.label] = bouldersPercentage * 0.8
+            default:
+                // Middle categories share the remaining percentage
+                let remaining = max(0, 100 - finesPercentage - bouldersPercentage)
+                distribution[category.label] = remaining / (categoryCount - 2)
+            }
+        }
+        
+        return distribution
     }
 }
 

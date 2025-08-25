@@ -361,38 +361,47 @@ struct ResultsView: View {
             Text("Particle Size Distribution")
                 .font(.headline)
             
-            let sortedData = Array(results.sizeDistribution.sorted { first, second in
-                let order = ["Fines (<400μm)", "Fine (400-600μm)", "Medium (600-1000μm)", "Coarse (1000-1400μm)", "Boulders (>1400μm)"]
-                let firstIndex = order.firstIndex(of: first.key) ?? 999
-                let secondIndex = order.firstIndex(of: second.key) ?? 999
-                return firstIndex < secondIndex
-            })
+            // Prepare data with micron values for x-axis
+            let categories = results.grindType.distributionCategories
+            let chartData: [(microns: Double, percentage: Double, label: String)] = categories.compactMap { category in
+                guard let percentage = results.sizeDistribution[category.label] else { return nil }
+                
+                // Use the midpoint of the range for positioning (except for infinite ranges)
+                let micronValue: Double
+                if category.range.upperBound == Double.infinity {
+                    micronValue = category.range.lowerBound + 200 // Arbitrary offset for ">" categories
+                } else {
+                    micronValue = (category.range.lowerBound + category.range.upperBound) / 2
+                }
+                
+                return (microns: micronValue, percentage: percentage, label: category.label)
+            }
             
             // Debug logging
-            let _ = print("🎨 Rendering chart for analysis with \(sortedData.count) data points: \(sortedData.map { "\($0.key): \($0.value)%" })")
+            let _ = print("🎨 Rendering chart with \(chartData.count) data points")
             
-            if sortedData.isEmpty {
+            if chartData.isEmpty {
                 Text("No distribution data available")
                     .foregroundColor(.secondary)
                     .frame(height: 200)
             } else {
-                Chart(sortedData, id: \.key) { category, percentage in
+                Chart(chartData, id: \.label) { dataPoint in
                     LineMark(
-                        x: .value("Category", categoryShortName(category)),
-                        y: .value("Percentage", percentage / 100.0)
+                        x: .value("Size (μm)", dataPoint.microns),
+                        y: .value("Percentage", dataPoint.percentage / 100.0)
                     )
-                    .foregroundStyle(colorForCategory(category))
+                    .foregroundStyle(colorForCategory(dataPoint.label))
                     .interpolationMethod(.catmullRom)
                     .symbol(Circle().strokeBorder(lineWidth: 2))
                     .symbolSize(60)
                     
                     AreaMark(
-                        x: .value("Category", categoryShortName(category)),
-                        y: .value("Percentage", percentage / 100.0)
+                        x: .value("Size (μm)", dataPoint.microns),
+                        y: .value("Percentage", dataPoint.percentage / 100.0)
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [colorForCategory(category).opacity(0.3), colorForCategory(category).opacity(0.1)],
+                            colors: [colorForCategory(dataPoint.label).opacity(0.3), colorForCategory(dataPoint.label).opacity(0.1)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -401,14 +410,13 @@ struct ResultsView: View {
                 }
                 .frame(height: 200)
                 .chartXAxis {
-                    AxisMarks { value in
+                    AxisMarks(position: .bottom) { value in
                         AxisGridLine()
                         AxisTick()
                         AxisValueLabel {
-                            if let category = value.as(String.self) {
-                                Text(category)
+                            if let microns = value.as(Double.self) {
+                                Text("\(Int(microns))μm")
                                     .font(.caption2)
-                                    .multilineTextAlignment(.center)
                             }
                         }
                     }
@@ -438,56 +446,140 @@ struct ResultsView: View {
     }
     
     private func categoryShortName(_ category: String) -> String {
-        switch category {
-        case "Fines (<400μm)": return "Fines"
-        case "Fine (400-600μm)": return "Fine"
-        case "Medium (600-1000μm)": return "Medium"
-        case "Coarse (1000-1400μm)": return "Coarse"
-        case "Boulders (>1400μm)": return "Boulders"
-        default: return category
+        // Extract just the first word or two from the category label
+        // e.g., "Extra Fine (<150μm)" -> "Extra Fine"
+        // e.g., "Target (600-900μm)" -> "Target"
+        if let openParen = category.firstIndex(of: "(") {
+            let shortName = String(category[..<openParen]).trimmingCharacters(in: .whitespaces)
+            // Further shorten if needed
+            if shortName.count > 12 {
+                // Take just the first word for really long names
+                return shortName.split(separator: " ").first.map(String.init) ?? shortName
+            }
+            return shortName
         }
+        return category
     }
     
     private func colorForCategory(_ category: String) -> Color {
-        switch category {
-        case "Fines (<400μm)": return .red
-        case "Fine (400-600μm)": return .orange
-        case "Medium (600-1000μm)": return .green
-        case "Coarse (1000-1400μm)": return .blue
-        case "Boulders (>1400μm)": return .purple
-        default: return .gray
+        // Check if this is the target category (contains "Target")
+        if category.contains("Target") {
+            return .green
+        }
+        
+        // Get the index of this category in the distribution
+        let categories = results.grindType.distributionCategories.map { $0.label }
+        guard let index = categories.firstIndex(of: category) else { return .gray }
+        
+        // Color based on position relative to target
+        switch index {
+        case 0:
+            return .red      // Finest category
+        case 1:
+            return .orange   // Fine category
+        case 2:
+            return category.contains("Target") ? .green : .yellow  // Middle/Target
+        case 3:
+            return .blue     // Coarse category
+        case 4:
+            return .purple   // Coarsest category
+        default:
+            return .gray
         }
     }
     
     private var sizeDistributionList: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Size Categories")
-                .font(.headline)
+            HStack {
+                Text("Distribution Legend")
+                    .font(.headline)
+                
+                Spacer()
+                
+                // Add target range indicator
+                HStack(spacing: 4) {
+                    Image(systemName: "target")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    Text("\(results.grindType.targetSizeRange)")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+            }
             
-            let orderedCategories = ["Fines (<400μm)", "Fine (400-600μm)", "Medium (600-1000μm)", "Coarse (1000-1400μm)", "Boulders (>1400μm)"]
+            // Get categories from grind type
+            let categories = results.grindType.distributionCategories
             
-            ForEach(orderedCategories, id: \.self) { category in
-                if let percentage = results.sizeDistribution[category] {
+            ForEach(categories, id: \.label) { category in
+                if let percentage = results.sizeDistribution[category.label] {
                     HStack {
+                        // Color indicator
                         Circle()
-                            .fill(colorForCategory(category))
+                            .fill(colorForCategory(category.label))
                             .frame(width: 12, height: 12)
                         
-                        Text(category)
+                        // Category name without range (it's shown separately)
+                        Text(categoryShortName(category.label))
                             .font(.subheadline)
+                            .frame(minWidth: 80, alignment: .leading)
+                        
+                        // Range
+                        Text(formatRange(category.range))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(minWidth: 100, alignment: .leading)
                         
                         Spacer()
                         
-                        Text(String(format: "%.1f%%", percentage))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                        // Percentage with bar
+                        HStack(spacing: 4) {
+                            // Mini bar chart
+                            GeometryReader { geometry in
+                                Rectangle()
+                                    .fill(colorForCategory(category.label).opacity(0.3))
+                                    .frame(width: geometry.size.width * (percentage / 100))
+                            }
+                            .frame(width: 40, height: 8)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(4)
+                            
+                            Text(String(format: "%.1f%%", percentage))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .frame(minWidth: 45, alignment: .trailing)
+                        }
                     }
                 }
+            }
+            
+            // Add note about target range concentration
+            if let targetCategory = categories.first(where: { $0.label.contains("Target") }),
+               let targetPercentage = results.sizeDistribution[targetCategory.label] {
+                HStack {
+                    Image(systemName: targetPercentage > 30 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(targetPercentage > 30 ? .green : .orange)
+                        .font(.caption)
+                    
+                    Text(targetPercentage > 30 ? "Good concentration in target range" : "Low concentration in target range")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, 4)
             }
         }
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+    }
+    
+    private func formatRange(_ range: Range<Double>) -> String {
+        if range.upperBound == Double.infinity {
+            return ">\(Int(range.lowerBound))μm"
+        } else if range.lowerBound == 0 {
+            return "<\(Int(range.upperBound))μm"
+        } else {
+            return "\(Int(range.lowerBound))-\(Int(range.upperBound))μm"
+        }
     }
     
     // MARK: - Images Tab
