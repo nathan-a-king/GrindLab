@@ -230,7 +230,7 @@ struct ResultsView: View {
                 title: "Average Size",
                 value: String(format: "%.1f μm", results.averageSize),
                 subtitle: "Target: \(results.grindType.targetSizeRange)",
-                color: .blue,
+                color: .brown,
                 icon: "ruler"
             )
             
@@ -238,7 +238,7 @@ struct ResultsView: View {
                 title: "Particle Count",
                 value: "\(results.particleCount)",
                 subtitle: "Detected particles",
-                color: .green,
+                color: .brown,
                 icon: "number"
             )
             
@@ -246,7 +246,7 @@ struct ResultsView: View {
                 title: "Fines",
                 value: String(format: "%.1f%%", results.finesPercentage),
                 subtitle: "<400 μm particles",
-                color: .orange,
+                color: .brown,
                 icon: "sparkles"
             )
             
@@ -254,7 +254,7 @@ struct ResultsView: View {
                 title: "Confidence",
                 value: String(format: "%.0f%%", results.confidence),
                 subtitle: "Analysis reliability",
-                color: .purple,
+                color: .brown,
                 icon: "checkmark.seal"
             )
         }

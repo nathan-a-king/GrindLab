@@ -393,7 +393,7 @@ struct HistoryView: View {
                     title: "This Week",
                     value: "\(analysesThisWeek)",
                     subtitle: "analyses",
-                    color: Color.indigo
+                    color: Color.brown
                 )
             }
             
