@@ -92,19 +92,40 @@ class CoffeeCamera: NSObject, ObservableObject {
             print("Removed output: \(output)")
         }
         
-        // Configure camera device
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+        // Configure camera device - Try to get the best camera for macro photography
+        var device: AVCaptureDevice?
+        
+        // For iPhone 13 Pro and later, use ultra-wide with macro capability
+        if #available(iOS 15.0, *) {
+            // Try to get the ultra-wide camera which supports macro on newer devices
+            device = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back)
+            
+            // Check if this device supports macro (minimum focus distance < 5cm)
+            if let ultraWide = device, ultraWide.minimumFocusDistance < 50 {
+                print("✅ Using ultra-wide camera with macro capability")
+            } else {
+                // Fall back to wide angle camera if ultra-wide doesn't support macro
+                device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+                print("ℹ️ Using standard wide angle camera")
+            }
+        } else {
+            // For older devices, use the standard wide angle camera
+            device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+        }
+        
+        guard let cameraDevice = device else {
             print("❌ Failed to get camera device")
             session.commitConfiguration()
             return
         }
         
-        print("✅ Got camera device: \(device.localizedName)")
-        captureDevice = device
+        print("✅ Got camera device: \(cameraDevice.localizedName)")
+        print("📏 Minimum focus distance: \(cameraDevice.minimumFocusDistance)mm")
+        captureDevice = cameraDevice
         
         do {
             // Create and add input
-            let input = try AVCaptureDeviceInput(device: device)
+            let input = try AVCaptureDeviceInput(device: cameraDevice)
             
             guard session.canAddInput(input) else {
                 print("❌ Cannot add camera input")
@@ -136,21 +157,52 @@ class CoffeeCamera: NSObject, ObservableObject {
             }
             
             // Configure device settings while still in configuration
-            try device.lockForConfiguration()
+            try cameraDevice.lockForConfiguration()
             
-            if device.isFocusModeSupported(.continuousAutoFocus) {
-                device.focusMode = .continuousAutoFocus
+            // Optimize for macro/close-up photography
+            if cameraDevice.isFocusModeSupported(.continuousAutoFocus) {
+                cameraDevice.focusMode = .continuousAutoFocus
+                print("✅ Continuous autofocus enabled")
             }
             
-            if device.isExposureModeSupported(.continuousAutoExposure) {
-                device.exposureMode = .continuousAutoExposure
+            // Set focus range restriction for close-up shots if available (iOS 15+)
+            if #available(iOS 15.0, *) {
+                if cameraDevice.isAutoFocusRangeRestrictionSupported {
+                    // Restrict focus to near range for better macro performance
+                    cameraDevice.autoFocusRangeRestriction = .near
+                    print("✅ Focus range restricted to near (macro mode)")
+                }
             }
             
-            if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) {
-                device.whiteBalanceMode = .continuousAutoWhiteBalance
+            // Set the lens position for close focus if manual control is available
+            if cameraDevice.isFocusModeSupported(.locked) && cameraDevice.isLockingFocusWithCustomLensPositionSupported {
+                // Set a close focus position (0.0 = infinity, 1.0 = closest)
+                // We'll use auto-focus but this helps bias it toward close objects
+                let closeFocusPosition: Float = 0.8
+                cameraDevice.setFocusModeLocked(lensPosition: closeFocusPosition, completionHandler: nil)
+                print("✅ Initial focus position set for close-up: \(closeFocusPosition)")
+                
+                // Then switch back to auto for continuous adjustment
+                if cameraDevice.isFocusModeSupported(.continuousAutoFocus) {
+                    cameraDevice.focusMode = .continuousAutoFocus
+                }
             }
             
-            device.unlockForConfiguration()
+            if cameraDevice.isExposureModeSupported(.continuousAutoExposure) {
+                cameraDevice.exposureMode = .continuousAutoExposure
+            }
+            
+            if cameraDevice.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) {
+                cameraDevice.whiteBalanceMode = .continuousAutoWhiteBalance
+            }
+            
+            // Enable high-quality capture for better detail
+            if cameraDevice.activeFormat.isHighPhotoQualitySupported {
+                cameraDevice.automaticallyAdjustsVideoHDREnabled = false
+                print("✅ High photo quality supported")
+            }
+            
+            cameraDevice.unlockForConfiguration()
             print("✅ Device settings configured")
             
             // Commit all changes at once
@@ -277,7 +329,19 @@ class CoffeeCamera: NSObject, ObservableObject {
             
             if device.isFocusPointOfInterestSupported {
                 device.focusPointOfInterest = point
-                device.focusMode = .autoFocus
+                // Use continuousAutoFocus instead of autoFocus to maintain macro capability
+                if device.isFocusModeSupported(.continuousAutoFocus) {
+                    device.focusMode = .continuousAutoFocus
+                } else {
+                    device.focusMode = .autoFocus
+                }
+            }
+            
+            // Maintain focus range restriction for macro
+            if #available(iOS 15.0, *) {
+                if device.isAutoFocusRangeRestrictionSupported {
+                    device.autoFocusRangeRestriction = .near
+                }
             }
             
             if device.isExposurePointOfInterestSupported {
