@@ -18,6 +18,7 @@ struct ContentView: View {
     
     @State private var showingResults = false
     @State private var analysisResults: CoffeeAnalysisResults?
+    @State private var detailResults: CoffeeAnalysisResults?
     @State private var showingSettings = false
     @State private var selectedGrindType: CoffeeGrindType?
     @State private var showingCamera = false
@@ -25,6 +26,7 @@ struct ContentView: View {
     @State private var showingGallery = false
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var dragOffset: CGFloat = 0
     
     var body: some View {
         TabView {
@@ -55,9 +57,13 @@ struct ContentView: View {
             SettingsView(settings: $settings)
         }
         .sheet(isPresented: $showingResults) {
-            if let results = analysisResults {
+            if let results = detailResults {
                 ResultsView(results: results, isFromHistory: false)
                     .environmentObject(historyManager)
+                    .onDisappear {
+                        // Clear detail results when sheet is dismissed
+                        detailResults = nil
+                    }
             }
         }
         .sheet(isPresented: $showingGallery) {
@@ -318,7 +324,7 @@ struct ContentView: View {
             )
             .ignoresSafeArea()
             
-            VStack(spacing: 0) {
+            VStack(spacing: 24) {
                 cameraHeader(grindType: grindType)
                 cameraPreviewSection
                 
@@ -328,10 +334,48 @@ struct ContentView: View {
                     onGallery: { showingGallery = true }
                 )
                 
-                if let results = analysisResults {
+                // Add spacer to prevent results from affecting layout
+                Spacer(minLength: 0)
+            }
+            
+            // Results preview as overlay
+            if let results = analysisResults {
+                VStack {
+                    Spacer()
                     resultsPreview(results: results)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 50) // Position midway between camera preview and controls
+                        .offset(y: dragOffset)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { gesture in
+                                    // Only allow downward dragging
+                                    if gesture.translation.height > 0 {
+                                        dragOffset = gesture.translation.height
+                                    }
+                                }
+                                .onEnded { gesture in
+                                    // Swipe down to dismiss (threshold: 50 points downward)
+                                    if gesture.translation.height > 50 {
+                                        // Animate card sliding down before dismissing
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            dragOffset = 300 // Slide off screen
+                                        }
+                                        // Then dismiss after animation
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            analysisResults = nil
+                                            dragOffset = 0
+                                        }
+                                    } else {
+                                        // Snap back if not swiped far enough
+                                        withAnimation(.easeOut(duration: 0.2)) {
+                                            dragOffset = 0
+                                        }
+                                    }
+                                }
+                        )
                 }
+                .allowsHitTesting(true)
             }
             
             if isAnalyzing {
@@ -393,9 +437,10 @@ struct ContentView: View {
         ZStack {
             Group {
                 if camera.authorizationStatus == .authorized {
-                    CoffeeGrindCameraPreview(session: camera.session) { point in
-                        // Handle tap to focus
-                        camera.focusAt(point: point, in: UIView())
+                    CoffeeGrindCameraPreview(session: camera.session) { devicePoint in
+                        guard camera.isSessionRunning else { return }
+                        // Don't pass UIView(), handle the conversion differently
+                        camera.focusAt(point: devicePoint)
                     }
                     .aspectRatio(3/4, contentMode: .fill)
                     .frame(maxWidth: .infinity, maxHeight: 400)
@@ -405,6 +450,9 @@ struct ContentView: View {
                     }
                     .aspectRatio(3/4, contentMode: .fill)
                     .frame(maxWidth: .infinity, maxHeight: 400)
+                    .onTapGesture {
+                        // Prevent any unintended tap handling
+                    }
                 }
             }
             .cornerRadius(20)
@@ -425,11 +473,7 @@ struct ContentView: View {
                     .aspectRatio(3/4, contentMode: .fill)
                     .frame(maxWidth: .infinity, maxHeight: 400)
                     .cornerRadius(20)
-            )
-            
-            FocusIndicator(
-                position: camera.focusPoint,
-                isVisible: camera.showFocusIndicator
+                    .allowsHitTesting(false)
             )
         }
         .padding(.horizontal, 16)
@@ -445,7 +489,11 @@ struct ContentView: View {
                 Spacer()
                 
                 Button("View Details") {
+                    // Store results for detail view before clearing card
+                    detailResults = results
                     showingResults = true
+                    // Clear results so card doesn't appear when user returns
+                    analysisResults = nil
                 }
                 .foregroundColor(.blue)
                 .font(.subheadline)

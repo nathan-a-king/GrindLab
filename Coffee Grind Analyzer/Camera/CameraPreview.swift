@@ -66,12 +66,29 @@ class CameraPreviewView: UIView {
     private func setupView() {
         videoPreviewLayer.videoGravity = .resizeAspectFill
         
+        // Disable any system camera controls that might appear
+        if #available(iOS 13.0, *) {
+            videoPreviewLayer.connection?.isVideoMirrored = false
+        }
+        
         // Add tap gesture for focus
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        tapGesture.numberOfTapsRequired = 1
+        tapGesture.numberOfTouchesRequired = 1
         addGestureRecognizer(tapGesture)
+        
+        // Prevent any additional gestures or system controls
+        self.isExclusiveTouch = true
     }
     
     @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        // Only handle tap if we have a valid session and connection
+        guard let session = session,
+              session.isRunning,
+              videoPreviewLayer.connection?.isActive == true else {
+            return
+        }
+        
         let location = gesture.location(in: self)
         let devicePoint = videoPreviewLayer.captureDevicePointConverted(fromLayerPoint: location)
         onTap?(devicePoint)

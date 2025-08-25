@@ -321,7 +321,7 @@ class CoffeeCamera: NSObject, ObservableObject {
         showGrid.toggle()
     }
     
-    func focusAt(point: CGPoint, in view: UIView) {
+    func focusAt(point: CGPoint) {
         guard let device = captureDevice else { return }
         
         do {
@@ -351,19 +351,8 @@ class CoffeeCamera: NSObject, ObservableObject {
             
             device.unlockForConfiguration()
             
-            // Show focus indicator
-            DispatchQueue.main.async {
-                self.focusPoint = CGPoint(
-                    x: point.x * view.bounds.width,
-                    y: point.y * view.bounds.height
-                )
-                self.showFocusIndicator = true
-                
-                // Hide focus indicator after animation
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.showFocusIndicator = false
-                }
-            }
+            // Remove focus indicator animation that was causing layout issues
+            // iOS provides its own native focus feedback
             
         } catch {
             print("Focus error: \(error)")
