@@ -27,6 +27,7 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var dragOffset: CGFloat = 0
+    @State private var pressedCard: CoffeeGrindType? = nil
     
     var body: some View {
         TabView {
@@ -173,6 +174,7 @@ struct ContentView: View {
     
     private func grindTypeCard(for type: CoffeeGrindType) -> some View {
         let (icon, _) = iconAndColor(for: type)
+        let isPressed = pressedCard == type
 
         return ZStack {
             // Shadow layer (separate from the button)
@@ -182,39 +184,56 @@ struct ContentView: View {
                 .shadow(color: .black.opacity(0.22), radius: 8,  x: 0, y: 3)
                 .allowsHitTesting(false)            // so it doesn't steal taps
 
-            // Button with your translucent visual card
-            Button {
-                selectedGrindType = type
-                showingCamera = true
-            } label: {
-                VStack(spacing: 12) {
-                    Image(systemName: icon)
-                        .font(.system(size: 32))
-                        .foregroundColor(.white)
+            // Card content (no Button, just the visual)
+            VStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 32))
+                    .foregroundColor(.white)
 
-                    Text(type.displayName)
-                        .font(.headline).fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
+                Text(type.displayName)
+                    .font(.headline).fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
 
-                    Text("Target: \(type.targetSizeRange)")
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, minHeight: 140, alignment: .center)
-                .background(cardBackgroundView)
-                // Keep the visual rounded shape consistent for hit-testing/rasterization:
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                )
+                Text("Target: \(type.targetSizeRange)")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
             }
-            .buttonStyle(.plain)
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 140, alignment: .center)
+            .background(cardBackgroundView)
+            // Keep the visual rounded shape consistent for hit-testing/rasterization:
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+            )
         }
         .frame(maxWidth: .infinity, minHeight: 140)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .onTapGesture {
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+            impactFeedback.impactOccurred()
+            
+            // Quick bounce animation
+            withAnimation(.easeInOut(duration: 0.1)) {
+                pressedCard = type
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    pressedCard = nil
+                }
+            }
+            
+            // Navigate after animation completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                selectedGrindType = type
+                showingCamera = true
+            }
+        }
     }
 
     private func iconAndColor(for type: CoffeeGrindType) -> (String, Color) {
