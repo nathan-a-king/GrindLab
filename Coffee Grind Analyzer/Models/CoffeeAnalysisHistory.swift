@@ -77,6 +77,7 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             grindType: oldResults.grindType,
             timestamp: oldResults.timestamp,
             sizeDistribution: oldResults.sizeDistribution,
+            calibrationInfo: oldResults.calibrationInfo,
             tastingNotes: tastingNotes
         )
         
@@ -236,6 +237,12 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     grindType: storable.grindType,
                     timestamp: storable.timestamp,
                     sizeDistribution: distribution, // Use validated distribution
+                    calibrationInfo: CalibrationInfo(
+                        source: .defaultValue,
+                        factor: 150.0, // Default calibration factor
+                        coinType: nil,
+                        confidence: nil
+                    ), // Default calibration for older saved data
                     tastingNotes: storable.tastingNotes
                 )
                 

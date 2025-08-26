@@ -166,6 +166,44 @@ struct TastingNotes: Equatable, Codable {
     ]
 }
 
+// MARK: - Calibration Info
+
+struct CalibrationInfo {
+    let source: CalibrationSource
+    let factor: Double // microns per pixel
+    let coinType: String? // e.g., "US Quarter"
+    let confidence: Double? // for auto-detected coins
+    
+    enum CalibrationSource {
+        case automatic(coinDetected: Bool)
+        case manual
+        case defaultValue
+    }
+    
+    var description: String {
+        switch source {
+        case .automatic(let coinDetected):
+            if coinDetected, let coin = coinType {
+                return "Auto-calibrated using \(coin)"
+            } else {
+                return "Default calibration (no reference object found)"
+            }
+        case .manual:
+            return "Manual calibration"
+        case .defaultValue:
+            return "Default calibration"
+        }
+    }
+    
+    // Helper for sample/preview data
+    static let defaultPreview = CalibrationInfo(
+        source: .defaultValue,
+        factor: 150.0,
+        coinType: nil,
+        confidence: nil
+    )
+}
+
 // MARK: - Analysis Results
 
 struct CoffeeAnalysisResults {
@@ -183,6 +221,7 @@ struct CoffeeAnalysisResults {
     let grindType: CoffeeGrindType
     let timestamp: Date
     let tastingNotes: TastingNotes? // Add tasting notes
+    let calibrationInfo: CalibrationInfo // Calibration details
     
     // Store size distribution as computed property with backing storage
     let sizeDistribution: [String: Double]
@@ -191,7 +230,7 @@ struct CoffeeAnalysisResults {
     init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
          finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
          confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType,
-         timestamp: Date, tastingNotes: TastingNotes? = nil) {
+         timestamp: Date, calibrationInfo: CalibrationInfo, tastingNotes: TastingNotes? = nil) {
         self.uniformityScore = uniformityScore
         self.averageSize = averageSize
         self.medianSize = medianSize
@@ -205,6 +244,7 @@ struct CoffeeAnalysisResults {
         self.processedImage = processedImage
         self.grindType = grindType
         self.timestamp = timestamp
+        self.calibrationInfo = calibrationInfo
         self.tastingNotes = tastingNotes
         
         // Compute distribution from particles immediately
@@ -215,7 +255,7 @@ struct CoffeeAnalysisResults {
     init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
          finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
          confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType,
-         timestamp: Date, sizeDistribution: [String: Double], tastingNotes: TastingNotes? = nil) {
+         timestamp: Date, sizeDistribution: [String: Double], calibrationInfo: CalibrationInfo, tastingNotes: TastingNotes? = nil) {
         self.uniformityScore = uniformityScore
         self.averageSize = averageSize
         self.medianSize = medianSize
@@ -230,6 +270,7 @@ struct CoffeeAnalysisResults {
         self.grindType = grindType
         self.timestamp = timestamp
         self.sizeDistribution = sizeDistribution
+        self.calibrationInfo = calibrationInfo
         self.tastingNotes = tastingNotes
     }
     

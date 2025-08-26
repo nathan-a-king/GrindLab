@@ -17,14 +17,14 @@ struct TastingNotesDisplayView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Tasting Notes")
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(.white)
                     
                     HStack(spacing: 8) {
                         Image(systemName: tastingNotes.brewMethod.icon)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.white.opacity(0.8))
                         Text(tastingNotes.brewMethod.rawValue)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.8))
                     }
                 }
                 
@@ -40,7 +40,7 @@ struct TastingNotesDisplayView: View {
                     }
                     Text("\(tastingNotes.overallRating)/5")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.7))
                 }
             }
             
@@ -50,6 +50,7 @@ struct TastingNotesDisplayView: View {
                     Text("Flavor Profile")
                         .font(.subheadline)
                         .fontWeight(.medium)
+                        .foregroundColor(.white)
                     
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
@@ -81,6 +82,7 @@ struct TastingNotesDisplayView: View {
                     Text("Brewing Details")
                         .font(.subheadline)
                         .fontWeight(.medium)
+                        .foregroundColor(.white)
                     
                     VStack(spacing: 6) {
                         if let extractionTime = tastingNotes.extractionTime {
@@ -113,15 +115,16 @@ struct TastingNotesDisplayView: View {
                     Text("Notes")
                         .font(.subheadline)
                         .fontWeight(.medium)
+                        .foregroundColor(.white)
                     
                     Text(notes)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.8))
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(12)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(.systemGray6))
+                                .fill(Color.black.opacity(0.2))
                         )
                 }
             }
@@ -129,7 +132,7 @@ struct TastingNotesDisplayView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
+                .fill(Color.brown.opacity(0.7))
                 .shadow(radius: 2)
         )
     }
@@ -145,12 +148,12 @@ struct TastingNotesDisplayView: View {
         HStack {
             Text(label)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
             Spacer()
             Text(value)
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
         }
     }
     
@@ -190,14 +193,14 @@ struct CompactTastingNotesView: View {
                 HStack(spacing: 6) {
                     // Brew method icon
                     Image(systemName: tastingNotes.brewMethod.icon)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.white.opacity(0.8))
                         .font(.caption)
                     
                     // Rating stars
                     HStack(spacing: 1) {
                         ForEach(1...tastingNotes.overallRating, id: \.self) { _ in
                             Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.white)
                                 .font(.caption2)
                         }
                     }
@@ -215,12 +218,12 @@ struct CompactTastingNotesView: View {
                     ForEach(displayTags, id: \.self) { tag in
                         Text(tag)
                             .font(.caption2)
-                            .foregroundColor(colorForTag(tag))
+                            .foregroundColor(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(colorForTag(tag).opacity(0.15))
+                                    .fill(colorForTag(tag).opacity(0.4))
                             )
                             .lineLimit(1)
                     }
@@ -229,7 +232,7 @@ struct CompactTastingNotesView: View {
                     if tastingNotes.tastingTags.count > 3 {
                         Text("+\(tastingNotes.tastingTags.count - 3)")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.6))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                     }

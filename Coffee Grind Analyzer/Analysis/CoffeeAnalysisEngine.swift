@@ -186,10 +186,45 @@ class CoffeeAnalysisEngine {
         
         // Step 4: Convert clusters to particles with proper calibration
         print("📏 Step 4: Converting clusters to calibrated particles...")
-        let calibrationFactor = calculateCalibrationFactor(
-            referenceObjectDiameter: referenceObjectDiameter,
-            imageWidth: cgImage.width
-        )
+        
+        // Try automatic coin detection first
+        var calibrationFactor: Double
+        var calibrationInfo: CalibrationInfo
+        
+        if referenceObjectDiameter == nil {
+            print("🔍 Attempting automatic coin detection for calibration...")
+            if let coinDetection = detectCalibrationCoin(in: image) {
+                calibrationFactor = coinDetection.calibrationFactor
+                calibrationInfo = CalibrationInfo(
+                    source: .automatic(coinDetected: true),
+                    factor: calibrationFactor,
+                    coinType: coinDetection.coinType.displayName,
+                    confidence: coinDetection.confidence
+                )
+                print("✅ Using detected \(coinDetection.coinType.displayName) for calibration")
+            } else {
+                print("⚠️ No coin detected, using default calibration factor")
+                calibrationFactor = settings.calibrationFactor
+                calibrationInfo = CalibrationInfo(
+                    source: .automatic(coinDetected: false),
+                    factor: calibrationFactor,
+                    coinType: nil,
+                    confidence: nil
+                )
+            }
+        } else {
+            calibrationFactor = calculateCalibrationFactor(
+                referenceObjectDiameter: referenceObjectDiameter,
+                imageWidth: cgImage.width
+            )
+            calibrationInfo = CalibrationInfo(
+                source: .manual,
+                factor: calibrationFactor,
+                coinType: nil,
+                confidence: nil
+            )
+        }
+        
         let particles = convertClustersToParticles(
             clusters: clusters,
             calibrationFactor: calibrationFactor
@@ -225,7 +260,8 @@ class CoffeeAnalysisEngine {
             image: image,
             processedImage: processedImage,
             grindType: grindType,
-            timestamp: Date()
+            timestamp: Date(),
+            calibrationInfo: calibrationInfo
         )
     }
     
@@ -571,6 +607,30 @@ class CoffeeAnalysisEngine {
         
         // Default calibration based on typical smartphone photos
         return settings.calibrationFactor
+    }
+    
+    // MARK: - Automatic Coin Detection for Calibration
+    
+    private func detectCalibrationCoin(in image: UIImage) -> CoinDetection? {
+        let detector = CoinCalibrationDetector()
+        var detectedCoin: CoinDetection?
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        detector.detectAndMeasureCoins(in: image) { coins in
+            // Use the highest confidence coin detection
+            detectedCoin = coins.first
+            semaphore.signal()
+        }
+        
+        _ = semaphore.wait(timeout: .now() + 5.0) // 5 second timeout
+        
+        if let coin = detectedCoin {
+            print("🪙 Detected \(coin.coinType.displayName) with confidence: \(String(format: "%.2f", coin.confidence))")
+            print("📏 Calibration factor: \(String(format: "%.2f", coin.calibrationFactor)) microns/pixel")
+        }
+        
+        return detectedCoin
     }
     
     private func convertClustersToParticles(

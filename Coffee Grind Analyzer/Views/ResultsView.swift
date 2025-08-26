@@ -109,6 +109,7 @@ struct ResultsView: View {
                         grindType: results.grindType,
                         timestamp: results.timestamp,
                         sizeDistribution: results.sizeDistribution,
+                        calibrationInfo: results.calibrationInfo,
                         tastingNotes: tastingNotes
                     )
                     
@@ -179,6 +180,7 @@ struct ResultsView: View {
                 print("📊 Overview tab content appeared")
             }
         }
+        .background(Color.brown.opacity(0.25))
         .onAppear {
             print("📊 Overview tab ScrollView appeared")
         }
@@ -191,10 +193,11 @@ struct ResultsView: View {
                     Text(results.grindType.displayName)
                         .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundColor(.white)
                     
                     Text("Analyzed \(results.timestamp, style: .relative) ago")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.7))
                 }
                 
                 Spacer()
@@ -208,7 +211,7 @@ struct ResultsView: View {
                     
                     Text("Size Match")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.7))
                 }
             }
             
@@ -217,7 +220,7 @@ struct ResultsView: View {
                 .tint(isInRange ? .green : .red)
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.brown.opacity(0.7))
         .cornerRadius(12)
     }
     
@@ -264,25 +267,26 @@ struct ResultsView: View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(color)
+                .foregroundColor(.white)
             
             Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(color)
+                .foregroundColor(.white)
             
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
+                .foregroundColor(.white)
             
             Text(subtitle)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.brown.opacity(0.7))
         .cornerRadius(12)
         .shadow(radius: 2)
     }
@@ -292,38 +296,61 @@ struct ResultsView: View {
     // MARK: - Details Tab
     
     private var detailsTab: some View {
-        List {
-            Section("Particle Statistics") {
-                DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
-                DetailRow(label: "Median Size", value: String(format: "%.1f μm", results.medianSize))
-                DetailRow(label: "Standard Deviation", value: String(format: "%.1f μm", results.standardDeviation))
-                DetailRow(label: "Coefficient of Variation", value: String(format: "%.1f%%", (results.standardDeviation / results.averageSize) * 100))
-            }
-            
-            Section("Size Distribution") {
-                DetailRow(label: "Fines (<400μm)", value: String(format: "%.1f%%", results.finesPercentage))
-                DetailRow(label: "Boulders (>1400μm)", value: String(format: "%.1f%%", results.bouldersPercentage))
-                DetailRow(label: "Medium (400-1400μm)", value: String(format: "%.1f%%", 100 - results.finesPercentage - results.bouldersPercentage))
-            }
-            
-            Section("Target Ranges") {
-                DetailRow(label: "Target Size", value: results.grindType.targetSizeRange)
-                DetailRow(label: "Ideal Fines", value: "\(Int(results.grindType.idealFinesPercentage.lowerBound))-\(Int(results.grindType.idealFinesPercentage.upperBound))%")
+        ScrollView {
+            VStack(spacing: 24) {
+                detailSection("Particle Statistics") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
+                        DetailRow(label: "Median Size", value: String(format: "%.1f μm", results.medianSize))
+                        DetailRow(label: "Standard Deviation", value: String(format: "%.1f μm", results.standardDeviation))
+                        DetailRow(label: "Coefficient of Variation", value: String(format: "%.1f%%", (results.standardDeviation / results.averageSize) * 100))
+                    }
+                }
                 
-                let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
-                DetailRow(
-                    label: "Size Match",
-                    value: isInRange ? "✓ In Range" : "✗ Out of Range",
-                    valueColor: isInRange ? .green : .red
-                )
+                detailSection("Size Distribution") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Fines (<400μm)", value: String(format: "%.1f%%", results.finesPercentage))
+                        DetailRow(label: "Boulders (>1400μm)", value: String(format: "%.1f%%", results.bouldersPercentage))
+                        DetailRow(label: "Medium (400-1400μm)", value: String(format: "%.1f%%", 100 - results.finesPercentage - results.bouldersPercentage))
+                    }
+                }
+                
+                detailSection("Target Ranges") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Target Size", value: results.grindType.targetSizeRange)
+                        DetailRow(label: "Ideal Fines", value: "\(Int(results.grindType.idealFinesPercentage.lowerBound))-\(Int(results.grindType.idealFinesPercentage.upperBound))%")
+                        
+                        let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                        DetailRow(
+                            label: "Size Match",
+                            value: isInRange ? "✓ In Range" : "✗ Out of Range",
+                            valueColor: isInRange ? .green : .red
+                        )
+                    }
+                }
+                
+                detailSection("Analysis Info") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Particles Detected", value: "\(results.particleCount)")
+                        DetailRow(label: "Confidence Level", value: String(format: "%.0f%%", results.confidence))
+                        DetailRow(label: "Analysis Time", value: results.timestamp.formatted(date: .omitted, time: .shortened))
+                        DetailRow(label: "Grind Type", value: results.grindType.displayName)
+                    }
+                }
             }
+            .padding()
+        }
+        .background(Color.brown.opacity(0.25))
+    }
+    
+    private func detailSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 16)
             
-            Section("Analysis Info") {
-                DetailRow(label: "Particles Detected", value: "\(results.particleCount)")
-                DetailRow(label: "Confidence Level", value: String(format: "%.0f%%", results.confidence))
-                DetailRow(label: "Analysis Time", value: results.timestamp.formatted(date: .omitted, time: .shortened))
-                DetailRow(label: "Grind Type", value: results.grindType.displayName)
-            }
+            content()
         }
     }
     
@@ -339,13 +366,14 @@ struct ResultsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Particle Size Distribution")
                             .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("Chart view requires iOS 16+")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.7))
                     }
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(Color.brown.opacity(0.7))
                     .cornerRadius(12)
                 }
                 
@@ -353,6 +381,7 @@ struct ResultsView: View {
             }
             .padding()
         }
+        .background(Color.brown.opacity(0.25))
     }
     
     @available(iOS 16.0, *)
@@ -360,6 +389,7 @@ struct ResultsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Particle Size Distribution")
                 .font(.headline)
+                .foregroundColor(.white)
             
             // Prepare data with micron values for x-axis
             let categories = results.grindType.distributionCategories
@@ -382,7 +412,7 @@ struct ResultsView: View {
             
             if chartData.isEmpty {
                 Text("No distribution data available")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.7))
                     .frame(height: 200)
             } else {
                 Chart(chartData, id: \.label) { dataPoint in
@@ -441,7 +471,7 @@ struct ResultsView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.brown.opacity(0.7))
         .cornerRadius(12)
     }
     
@@ -493,6 +523,7 @@ struct ResultsView: View {
             HStack {
                 Text("Distribution Legend")
                     .font(.headline)
+                    .foregroundColor(.white)
                 
                 Spacer()
                 
@@ -521,12 +552,13 @@ struct ResultsView: View {
                         // Category name without range (it's shown separately)
                         Text(categoryShortName(category.label))
                             .font(.subheadline)
+                            .foregroundColor(.white)
                             .frame(minWidth: 80, alignment: .leading)
                         
                         // Range
                         Text(formatRange(category.range))
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.7))
                             .frame(minWidth: 100, alignment: .leading)
                         
                         Spacer()
@@ -546,6 +578,7 @@ struct ResultsView: View {
                             Text(String(format: "%.1f%%", percentage))
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
+                                .foregroundColor(.white)
                                 .frame(minWidth: 45, alignment: .trailing)
                         }
                     }
@@ -562,13 +595,13 @@ struct ResultsView: View {
                     
                     Text(targetPercentage > 30 ? "Good concentration in target range" : "Low concentration in target range")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.7))
                 }
                 .padding(.top, 4)
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.brown.opacity(0.7))
         .cornerRadius(12)
     }
     
@@ -610,6 +643,7 @@ struct ResultsView: View {
             }
             .padding()
         }
+        .background(Color.brown.opacity(0.25))
     }
     
     private func imageSection(title: String, image: UIImage, subtitle: String) -> some View {
@@ -638,12 +672,12 @@ struct ResultsView: View {
 struct DetailRow: View {
     let label: String
     let value: String
-    var valueColor: Color = .primary
+    var valueColor: Color = .white
     
     var body: some View {
         HStack {
             Text(label)
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
             
             Spacer()
             
@@ -651,6 +685,10 @@ struct DetailRow: View {
                 .foregroundColor(valueColor)
                 .fontWeight(.medium)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.brown.opacity(0.7))
+        .cornerRadius(8)
     }
 }
 
@@ -1008,7 +1046,8 @@ struct ResultsView_Previews: PreviewProvider {
             processedImage: nil,
             grindType: .filter,
             timestamp: Date(),
-            sizeDistribution: ["Fines (<400μm)": 12.3, "Fine (400-600μm)": 25.1, "Medium (600-1000μm)": 45.2, "Coarse (1000-1400μm)": 12.7, "Boulders (>1400μm)": 4.7]
+            sizeDistribution: ["Fines (<400μm)": 12.3, "Fine (400-600μm)": 25.1, "Medium (600-1000μm)": 45.2, "Coarse (1000-1400μm)": 12.7, "Boulders (>1400μm)": 4.7],
+            calibrationInfo: .defaultPreview
         )
         
         return ResultsView(results: sampleResults)

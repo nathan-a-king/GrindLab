@@ -70,16 +70,9 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Modern gradient background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.97, green: 0.96, blue: 0.95), // Light cream
-                        Color(red: 0.94, green: 0.92, blue: 0.90)  // Warm gray
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Light brown background
+                Color.brown.opacity(0.25)
+                    .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     // Fixed search bar outside of scrollable content
@@ -119,6 +112,31 @@ struct HistoryView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(Color.clear)
+                    
+                    // Filter tags
+                    if selectedGrindFilter != nil || !searchText.isEmpty {
+                        HStack {
+                            if let filter = selectedGrindFilter {
+                                FilterTag(text: filter.displayName) {
+                                    selectedGrindFilter = nil
+                                }
+                            }
+                            
+                            if !searchText.isEmpty {
+                                FilterTag(text: "\"\(searchText)\"") {
+                                    searchText = ""
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            Text("Showing \(filteredAndSortedAnalyses.count) of \(historyManager.totalAnalyses)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                    }
                     
                     if historyManager.savedAnalyses.isEmpty {
                         emptyHistoryView
@@ -285,9 +303,6 @@ struct HistoryView: View {
     
     private var historyContentWithFixedHeader: some View {
         VStack(spacing: 0) {
-            // Fixed Statistics Header (stays put when scrolling)
-            statisticsHeader
-            
             // Only the list scrolls
             List {
                 ForEach(filteredAndSortedAnalyses) { analysis in
@@ -319,7 +334,7 @@ struct HistoryView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white.opacity(0.9))
+                            .fill(Color.brown.opacity(0.7))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 4)
                     )
@@ -542,14 +557,14 @@ struct ComparisonHistoryRowView: View {
                             } else {
                                 Image(systemName: iconForGrindType(analysis.results.grindType))
                                     .font(.title2)
-                                    .foregroundColor(canSelect ? iconColorForGrindType(analysis.results.grindType) : iconColorForGrindType(analysis.results.grindType).opacity(0.3))
+                                    .foregroundColor(.white)
                             }
                         }
                         
                         Text("\(Int(analysis.results.uniformityScore))%")
                             .font(.caption)
                             .fontWeight(.bold)
-                            .foregroundColor(analysis.results.uniformityColor)
+                            .foregroundColor(.white)
                     }
                     .frame(width: 50)
                     
@@ -559,12 +574,12 @@ struct ComparisonHistoryRowView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(analysis.name)
                                 .font(.headline)
-                                .foregroundColor(canSelect ? .primary : .secondary)
+                                .foregroundColor(.white)
                                 .lineLimit(1)
                             
                             Text(analysis.results.grindType.displayName)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.white.opacity(0.8))
                         }
                         
                         // Metrics stacked vertically - each on its own line
@@ -573,20 +588,20 @@ struct ComparisonHistoryRowView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "circle.grid.3x3")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.white.opacity(0.7))
                                 Text("\(analysis.results.particleCount) particles")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.white.opacity(0.7))
                             }
                             
                             // Average size on second line
                             HStack(spacing: 6) {
                                 Image(systemName: "ruler")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.white.opacity(0.7))
                                 Text("\(String(format: "%.0f", analysis.results.averageSize))μm average")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.white.opacity(0.7))
                             }
                         }
                         
@@ -594,7 +609,7 @@ struct ComparisonHistoryRowView: View {
                         if let notes = analysis.notes, !notes.isEmpty {
                             Text(notes)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.white.opacity(0.7))
                                 .lineLimit(1)
                                 .italic()
                         }
@@ -626,7 +641,7 @@ struct ComparisonHistoryRowView: View {
                         VStack(alignment: .trailing, spacing: 8) {
                             Text(analysis.savedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.white.opacity(0.6))
                         }
                     }
                 }
@@ -709,7 +724,8 @@ struct HistoryView_Previews: PreviewProvider {
             processedImage: nil,
             grindType: .filter,
             timestamp: Date(),
-            sizeDistribution: ["Fines (<400μm)": 12.3, "Fine (400-600μm)": 25.1, "Medium (600-1000μm)": 45.2, "Coarse (1000-1400μm)": 12.7, "Boulders (>1400μm)": 4.7]
+            sizeDistribution: ["Fines (<400μm)": 12.3, "Fine (400-600μm)": 25.1, "Medium (600-1000μm)": 45.2, "Coarse (1000-1400μm)": 12.7, "Boulders (>1400μm)": 4.7],
+            calibrationInfo: .defaultPreview
         )
         
         historyManager.saveAnalysis(sampleResults, name: "Morning Espresso", notes: "Breville Smart Grinder Pro")

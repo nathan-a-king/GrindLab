@@ -245,7 +245,8 @@ struct EditTastingNotesDialog_Previews: PreviewProvider {
             processedImage: nil,
             grindType: .filter,
             timestamp: Date(),
-            sizeDistribution: ["Fines (<400μm)": 12.3, "Medium (600-1000μm)": 75.0, "Boulders (>1400μm)": 8.7]
+            sizeDistribution: ["Fines (<400μm)": 12.3, "Medium (600-1000μm)": 75.0, "Boulders (>1400μm)": 8.7],
+            calibrationInfo: .defaultPreview
         )
         
         let sampleAnalysis = SavedCoffeeAnalysis(
