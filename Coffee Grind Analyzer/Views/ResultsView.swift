@@ -420,7 +420,7 @@ struct ResultsView: View {
                         x: .value("Size (μm)", dataPoint.microns),
                         y: .value("Percentage", dataPoint.percentage / 100.0)
                     )
-                    .foregroundStyle(colorForCategory(dataPoint.label))
+                    .foregroundStyle(.white)
                     .interpolationMethod(.catmullRom)
                     .symbol(Circle().strokeBorder(lineWidth: 2))
                     .symbolSize(60)
@@ -431,7 +431,7 @@ struct ResultsView: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [colorForCategory(dataPoint.label).opacity(0.3), colorForCategory(dataPoint.label).opacity(0.1)],
+                            colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
