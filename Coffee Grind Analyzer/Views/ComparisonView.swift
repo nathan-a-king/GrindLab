@@ -247,39 +247,54 @@ struct ComparisonView: View {
             isHigherBetter: isHigherBetter
         )
         
-        return HStack {
+        return VStack(spacing: 12) {
+            // Title at the top
             Text(label)
                 .font(.subheadline)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
             
-            HStack(spacing: 8) {
-                Text(String(format: "%.1f", baseline) + unit)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.blue)
-                
-                Image(systemName: "arrow.right")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                Text(String(format: "%.1f", comparison) + unit)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.orange)
-                
-                VStack(spacing: 2) {
-                    Image(systemName: metric.changeIcon)
+            // Scores below in a horizontal layout
+            HStack(spacing: 16) {
+                // Baseline score
+                VStack(spacing: 4) {
+                    Text("Baseline")
                         .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.1f", baseline) + unit)
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                }
+                .frame(maxWidth: .infinity)
+                
+                // Arrow and change indicator
+                VStack(spacing: 4) {
+                    Image(systemName: metric.changeIcon)
+                        .font(.title3)
                         .foregroundColor(metric.changeColor)
                     
                     Text(metric.formattedDifference)
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundColor(metric.changeColor)
                         .fontWeight(.semibold)
                 }
-                .frame(width: 50)
+                .frame(width: 60)
+                
+                // Comparison score
+                VStack(spacing: 4) {
+                    Text("Current")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.1f", comparison) + unit)
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.orange)
+                }
+                .frame(maxWidth: .infinity)
             }
         }
+        .padding(.vertical, 8)
     }
     
     private var multiWayComparison: some View {
@@ -527,8 +542,11 @@ struct ComparisonView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.95))
+                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
+        )
     }
     
     @available(iOS 16.0, *)
@@ -557,8 +575,11 @@ struct ComparisonView: View {
             .chartYAxisLabel(getMetricUnit(selectedMetric))
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.95))
+                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
+        )
     }
     
     private func getMetricValue(_ results: CoffeeAnalysisResults, metric: String) -> Double {

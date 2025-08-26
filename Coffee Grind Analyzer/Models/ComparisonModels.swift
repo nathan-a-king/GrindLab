@@ -142,31 +142,21 @@ struct ComparisonChartData {
         self.analysisId = analysis.id
         self.color = color
         
-        let categoryOrder = [
-            "Fines (<400μm)": 0,
-            "Fine (400-600μm)": 1,
-            "Medium (600-1000μm)": 2,
-            "Coarse (1000-1400μm)": 3,
-            "Boulders (>1400μm)": 4
-        ]
-        
-        let shortNames = [
-            "Fines (<400μm)": "Fines",
-            "Fine (400-600μm)": "Fine",
-            "Medium (600-1000μm)": "Medium",
-            "Coarse (1000-1400μm)": "Coarse",
-            "Boulders (>1400μm)": "Boulders"
-        ]
+        // Use the dynamic categories from the grind type
+        let grindCategories = analysis.results.grindType.distributionCategories
         
         self.distributionData = analysis.results.sizeDistribution.compactMap { key, value in
-            guard let order = categoryOrder[key],
-                  let shortName = shortNames[key] else { return nil }
+            // Find the matching category to get the correct order
+            guard let categoryIndex = grindCategories.firstIndex(where: { $0.label == key }) else { return nil }
+            
+            // Extract short name from the label (everything before the parentheses)
+            let shortName = key.components(separatedBy: " (").first ?? key
             
             return ChartDataPoint(
                 category: key,
                 shortCategory: shortName,
                 percentage: value,
-                order: order
+                order: categoryIndex
             )
         }.sorted { $0.order < $1.order }
     }
