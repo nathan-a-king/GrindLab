@@ -85,16 +85,9 @@ struct ComparisonView: View {
     
     private var sideBySide: some View {
         ZStack {
-            // Modern gradient background matching history view
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.97, green: 0.96, blue: 0.95), // Light cream
-                    Color(red: 0.94, green: 0.92, blue: 0.90)  // Warm gray
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Light brown background
+            Color.brown.opacity(0.25)
+                .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 20) {
@@ -119,15 +112,16 @@ struct ComparisonView: View {
                 Text("Comparing \(comparison.analyses.count) Analyses")
                     .font(.title2)
                     .fontWeight(.bold)
+                    .foregroundColor(.white)
                 
                 Spacer()
                 
                 Text("Baseline: \(comparison.baseline.name)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.blue.opacity(0.1))
+                    .background(Color.black.opacity(0.2))
                     .cornerRadius(8)
             }
             
@@ -141,7 +135,7 @@ struct ComparisonView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.95))
+                .fill(Color.brown.opacity(0.7))
                 .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
         )
     }
@@ -163,6 +157,7 @@ struct ComparisonView: View {
             Text(analysis.name)
                 .font(.caption)
                 .fontWeight(.medium)
+                .foregroundColor(.white)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
             
@@ -175,7 +170,7 @@ struct ComparisonView: View {
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white)
+                .fill(Color.black.opacity(0.2))
                 .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         )
     }
@@ -187,6 +182,7 @@ struct ComparisonView: View {
         return VStack(spacing: 16) {
             Text("Head-to-Head Comparison")
                 .font(.headline)
+                .foregroundColor(.white)
             
             VStack(spacing: 12) {
                 comparisonRow(
@@ -230,7 +226,7 @@ struct ComparisonView: View {
                 )
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.brown.opacity(0.7))
             .cornerRadius(12)
             .shadow(radius: 2)
         }
@@ -250,6 +246,7 @@ struct ComparisonView: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.semibold)
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
             
             // Scores below in a horizontal layout
@@ -258,7 +255,7 @@ struct ComparisonView: View {
                 VStack(spacing: 4) {
                     Text("Baseline")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.7))
                     Text(String(format: "%.1f", baseline) + unit)
                         .font(.title3)
                         .fontWeight(.medium)
@@ -283,7 +280,7 @@ struct ComparisonView: View {
                 VStack(spacing: 4) {
                     Text("Current")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.7))
                     Text(String(format: "%.1f", comparison) + unit)
                         .font(.title3)
                         .fontWeight(.medium)
@@ -299,6 +296,7 @@ struct ComparisonView: View {
         VStack(spacing: 16) {
             Text("Multi-Way Comparison")
                 .font(.headline)
+                .foregroundColor(.white)
             
             LazyVGrid(columns: [
                 GridItem(.flexible()),
@@ -325,6 +323,7 @@ struct ComparisonView: View {
                 Text(analysis.name)
                     .font(.caption)
                     .fontWeight(.medium)
+                    .foregroundColor(.white)
                     .lineLimit(1)
                 
                 if isBaseline {
@@ -344,7 +343,7 @@ struct ComparisonView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.brown.opacity(0.7))
         .cornerRadius(12)
         .shadow(radius: 2)
         .overlay(
@@ -357,7 +356,7 @@ struct ComparisonView: View {
         HStack {
             Text(label)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
             
             Spacer()
             
@@ -372,6 +371,7 @@ struct ComparisonView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Tasting Notes Comparison")
                 .font(.headline)
+                .foregroundColor(.white)
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
@@ -397,6 +397,7 @@ struct ComparisonView: View {
                 Text(analysis.name)
                     .font(.caption)
                     .fontWeight(.medium)
+                    .foregroundColor(.white)
                     .lineLimit(1)
             }
             
@@ -409,7 +410,7 @@ struct ComparisonView: View {
                         
                         Text(tastingNotes.brewMethod.rawValue)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.8))
                     }
                     
                     HStack(spacing: 2) {
@@ -439,7 +440,7 @@ struct ComparisonView: View {
                             if tastingNotes.tastingTags.count > 3 {
                                 Text("+\(tastingNotes.tastingTags.count - 3) more")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.white.opacity(0.7))
                             }
                         }
                     }
@@ -447,13 +448,13 @@ struct ComparisonView: View {
             } else {
                 Text("No tasting notes")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.7))
                     .italic()
             }
         }
         .frame(width: 140, alignment: .leading)
         .padding(12)
-        .background(Color(.systemGray6))
+        .background(Color.brown.opacity(0.7))
         .cornerRadius(8)
     }
     
@@ -461,16 +462,9 @@ struct ComparisonView: View {
     
     private var overlayCharts: some View {
         ZStack {
-            // Modern gradient background matching history view
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.97, green: 0.96, blue: 0.95), // Light cream
-                    Color(red: 0.94, green: 0.92, blue: 0.90)  // Warm gray
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Light brown background
+            Color.brown.opacity(0.25)
+                .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 24) {
@@ -479,7 +473,7 @@ struct ComparisonView: View {
                         metricsComparisonChart
                     } else {
                         Text("Charts require iOS 16+")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.7))
                     }
                 }
                 .padding()
@@ -492,6 +486,7 @@ struct ComparisonView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Particle Size Distribution Comparison")
                 .font(.headline)
+                .foregroundColor(.white)
             
             Chart {
                 ForEach(chartData, id: \.analysisId) { analysisData in
@@ -532,6 +527,7 @@ struct ComparisonView: View {
                         
                         Text(data.analysisName)
                             .font(.caption)
+                            .foregroundColor(.white)
                             .lineLimit(1)
                         
                         Spacer()
@@ -552,6 +548,7 @@ struct ComparisonView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Key Metrics Comparison")
                 .font(.headline)
+                .foregroundColor(.white)
             
             Picker("Metric", selection: $selectedMetric) {
                 Text("Uniformity Score").tag("uniformityScore")
@@ -620,6 +617,9 @@ struct ComparisonView: View {
                 }
             }
         }
+        .listStyle(PlainListStyle())
+        .scrollContentBackground(.hidden)
+        .background(Color.brown.opacity(0.25))
     }
     
     private func metricComparisonRows(baseline: SavedCoffeeAnalysis, comparison: SavedCoffeeAnalysis) -> some View {
@@ -714,6 +714,7 @@ struct MetricComparisonRow: View {
         HStack {
             Text(label)
                 .font(.subheadline)
+                .foregroundColor(.white)
             
             Spacer()
             
@@ -722,6 +723,7 @@ struct MetricComparisonRow: View {
                     Text(String(format: unit.isEmpty ? "%.0f" : "%.1f", comparison) + unit)
                         .font(.subheadline)
                         .fontWeight(.medium)
+                        .foregroundColor(.white)
                     
                     Image(systemName: metric.changeIcon)
                         .font(.caption)

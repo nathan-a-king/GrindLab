@@ -716,7 +716,7 @@ struct ResultsView: View {
             }
             .padding()
         }
-        .background(Color.brown.opacity(0.25))
+        .background(Color.white)
     }
     
     private func imageSection(title: String, image: UIImage, subtitle: String) -> some View {

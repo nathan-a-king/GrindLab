@@ -560,11 +560,6 @@ struct ComparisonHistoryRowView: View {
                                     .foregroundColor(.white)
                             }
                         }
-                        
-                        Text("\(Int(analysis.results.uniformityScore))%")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
                     }
                     .frame(width: 50)
                     
