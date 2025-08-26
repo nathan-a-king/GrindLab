@@ -391,21 +391,8 @@ struct ResultsView: View {
                 .font(.headline)
                 .foregroundColor(.white)
             
-            // Prepare data with micron values for x-axis
-            let categories = results.grindType.distributionCategories
-            let chartData: [(microns: Double, percentage: Double, label: String)] = categories.compactMap { category in
-                guard let percentage = results.sizeDistribution[category.label] else { return nil }
-                
-                // Use the midpoint of the range for positioning (except for infinite ranges)
-                let micronValue: Double
-                if category.range.upperBound == Double.infinity {
-                    micronValue = category.range.lowerBound + 200 // Arbitrary offset for ">" categories
-                } else {
-                    micronValue = (category.range.lowerBound + category.range.upperBound) / 2
-                }
-                
-                return (microns: micronValue, percentage: percentage, label: category.label)
-            }
+            // Prepare more granular data for smoother chart
+            let chartData = prepareChartData()
             
             // Debug logging
             let _ = print("🎨 Rendering chart with \(chartData.count) data points")
@@ -421,9 +408,8 @@ struct ResultsView: View {
                         y: .value("Percentage", dataPoint.percentage / 100.0)
                     )
                     .foregroundStyle(.white)
+                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.catmullRom)
-                    .symbol(Circle().strokeBorder(lineWidth: 2))
-                    .symbolSize(60)
                     
                     AreaMark(
                         x: .value("Size (μm)", dataPoint.microns),
@@ -489,6 +475,93 @@ struct ResultsView: View {
             return shortName
         }
         return category
+    }
+    
+    private func prepareChartData() -> [(microns: Double, percentage: Double, label: String)] {
+        if !results.particles.isEmpty {
+            // Use actual particle data for more accurate distribution
+            let sizeRanges = createGranularSizeRanges()
+            return sizeRanges.compactMap { range in
+                let particlesInRange = results.particles.filter { particle in
+                    particle.size >= range.lowerBound && particle.size < range.upperBound
+                }
+                let percentage = (Double(particlesInRange.count) / Double(results.particles.count)) * 100
+                let midpoint = range.upperBound == Double.infinity ? 
+                    range.lowerBound + 200 : 
+                    (range.lowerBound + range.upperBound) / 2
+                
+                return (microns: midpoint, percentage: percentage, label: "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm")
+            }
+        } else {
+            // Fallback: interpolate between existing categories for smoother curve
+            let categories = results.grindType.distributionCategories
+            var interpolatedData: [(microns: Double, percentage: Double, label: String)] = []
+            
+            for (index, category) in categories.enumerated() {
+                guard let percentage = results.sizeDistribution[category.label] else { continue }
+                
+                let micronValue: Double
+                if category.range.upperBound == Double.infinity {
+                    micronValue = category.range.lowerBound + 200
+                } else {
+                    micronValue = (category.range.lowerBound + category.range.upperBound) / 2
+                }
+                
+                interpolatedData.append((microns: micronValue, percentage: percentage, label: category.label))
+                
+                // Add interpolated points between categories (except for the last one)
+                if index < categories.count - 1 {
+                    let nextCategory = categories[index + 1]
+                    guard let nextPercentage = results.sizeDistribution[nextCategory.label] else { continue }
+                    
+                    let nextMicronValue: Double
+                    if nextCategory.range.upperBound == Double.infinity {
+                        nextMicronValue = nextCategory.range.lowerBound + 200
+                    } else {
+                        nextMicronValue = (nextCategory.range.lowerBound + nextCategory.range.upperBound) / 2
+                    }
+                    
+                    // Add 2 interpolated points between each pair
+                    for i in 1...2 {
+                        let t = Double(i) / 3.0 // divide into thirds
+                        let interpMicrons = micronValue + (nextMicronValue - micronValue) * t
+                        let interpPercentage = percentage + (nextPercentage - percentage) * t
+                        
+                        interpolatedData.append((
+                            microns: interpMicrons, 
+                            percentage: interpPercentage, 
+                            label: "interp_\(index)_\(i)"
+                        ))
+                    }
+                }
+            }
+            
+            return interpolatedData.sorted { $0.microns < $1.microns }
+        }
+    }
+    
+    private func createGranularSizeRanges() -> [Range<Double>] {
+        // Create 15-20 size ranges for smoother distribution curve
+        return [
+            0..<100,     // Ultra fine
+            100..<200,   // Extra fine
+            200..<300,   // Fine
+            300..<400,   // Fine-medium
+            400..<500,   // Medium-fine
+            500..<600,   // Medium-fine+
+            600..<700,   // Medium
+            700..<800,   // Medium+
+            800..<900,   // Medium-coarse
+            900..<1000,  // Medium-coarse+
+            1000..<1100, // Coarse
+            1100..<1200, // Coarse+
+            1200..<1300, // Extra coarse
+            1300..<1400, // Extra coarse+
+            1400..<1500, // Very coarse
+            1500..<1700, // Very coarse+
+            1700..<2000, // Ultra coarse
+            2000..<Double.infinity  // Boulders
+        ]
     }
     
     private func colorForCategory(_ category: String) -> Color {
