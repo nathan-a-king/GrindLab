@@ -3,6 +3,7 @@
 //  Coffee Grind Analyzer
 //
 //  Created by Nathan King on 8/20/25.
+//  Refactored version incorporating advanced particle detection from Python implementation
 //
 
 import UIKit
@@ -12,6 +13,16 @@ import CoreImage
 
 class CoffeeAnalysisEngine {
     private let settings: AnalysisSettings
+    
+    // Python algorithm parameters
+    private let referenceThreshold: Double = 0.4
+    private let maxCost: Double = 0.35
+    private let defaultThreshold: Double = 58.8
+    private let minRoundness: Double = 0.0
+    private let smoothingWindowSize: Int = 3
+    
+    // Polygon selection for region of interest
+    private var analysisPolygon: [CGPoint]?
     
     init(settings: AnalysisSettings = AnalysisSettings()) {
         self.settings = settings
@@ -98,58 +109,108 @@ class CoffeeAnalysisEngine {
         }
     }
     
+    // Overloaded version with reference object support
+    func analyzeGrind(
+        image: UIImage,
+        grindType: CoffeeGrindType,
+        referenceObjectDiameter: Double? = nil,
+        completion: @escaping (Result<CoffeeAnalysisResults, CoffeeAnalysisError>) -> Void
+    ) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let results = try self.performAdvancedAnalysis(
+                    image: image,
+                    grindType: grindType,
+                    referenceObjectDiameter: referenceObjectDiameter
+                )
+                DispatchQueue.main.async {
+                    completion(.success(results))
+                }
+            } catch let error as CoffeeAnalysisError {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(.analysisError(error.localizedDescription)))
+                }
+            }
+        }
+    }
+    
     private func performAnalysis(image: UIImage, grindType: CoffeeGrindType) throws -> CoffeeAnalysisResults {
+        // Delegate to advanced analysis with no reference object
+        return try performAdvancedAnalysis(image: image, grindType: grindType, referenceObjectDiameter: nil)
+    }
+    
+    private func performAdvancedAnalysis(
+        image: UIImage,
+        grindType: CoffeeGrindType,
+        referenceObjectDiameter: Double?
+    ) throws -> CoffeeAnalysisResults {
         let startTime = CFAbsoluteTimeGetCurrent()
-        print("🔬 Starting simplified coffee analysis for \(grindType.displayName)...")
+        print("🔬 Starting advanced coffee analysis for \(grindType.displayName)...")
         print("📐 Image size: \(Int(image.size.width))x\(Int(image.size.height))")
         
-        // Get CGImage for consistent coordinate system
-        guard let originalCGImage = image.cgImage else {
+        guard let cgImage = image.cgImage else {
             throw CoffeeAnalysisError.imageProcessingFailed
         }
         
-        // Step 1: Convert to grayscale
-        let step1Start = CFAbsoluteTimeGetCurrent()
-        print("⚫ Step 1: Converting to grayscale...")
-        guard let grayImage = convertToGrayscale(image) else {
-            throw CoffeeAnalysisError.imageProcessingFailed
-        }
-        print("✅ Step 1 complete in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - step1Start))s")
+        // Step 1: Extract blue channel (as in Python)
+        print("🔵 Step 1: Extracting blue channel...")
+        let blueChannelData = try extractBlueChannel(from: cgImage)
         
-        // Step 2: Apply simple Otsu thresholding
-        let step2Start = CFAbsoluteTimeGetCurrent()
-        print("🎭 Step 2: Applying Otsu thresholding...")
-        guard let binaryImage = applySimpleThresholding(grayImage) else {
-            throw CoffeeAnalysisError.imageProcessingFailed
-        }
-        print("✅ Step 2 complete in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - step2Start))s")
+        // Step 2: Apply adaptive thresholding based on median
+        print("🎭 Step 2: Applying adaptive thresholding...")
+        let (thresholdMask, backgroundMedian) = try applyAdaptiveThreshold(
+            data: blueChannelData,
+            width: cgImage.width,
+            height: cgImage.height
+        )
         
-        // Step 3: Detect and analyze particles
-        let step3Start = CFAbsoluteTimeGetCurrent()
-        print("🔍 Step 3: Detecting particles...")
-        let particles = try detectParticles(in: binaryImage, originalImage: grayImage)
-        print("✅ Step 3 complete in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - step3Start))s")
-        print("📊 Found \(particles.count) particles")
+        // Step 3: Detect particles using clustering algorithm
+        print("🔍 Step 3: Detecting particles with advanced clustering...")
+        let clusters = try detectParticlesWithClustering(
+            thresholdMask: thresholdMask,
+            imageData: blueChannelData,
+            backgroundMedian: backgroundMedian,
+            width: cgImage.width,
+            height: cgImage.height
+        )
         
-        if particles.isEmpty {
+        print("📊 Found \(clusters.count) valid clusters")
+        
+        if clusters.isEmpty {
             throw CoffeeAnalysisError.noParticlesDetected
         }
         
-        // Step 4: Calculate statistics
-        let step4Start = CFAbsoluteTimeGetCurrent()
-        print("📈 Step 4: Calculating statistics...")
-        let statistics = calculateStatistics(particles: particles, grindType: grindType)
-        print("✅ Step 4 complete in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - step4Start))s")
+        // Step 4: Convert clusters to particles with proper calibration
+        print("📏 Step 4: Converting clusters to calibrated particles...")
+        let calibrationFactor = calculateCalibrationFactor(
+            referenceObjectDiameter: referenceObjectDiameter,
+            imageWidth: cgImage.width
+        )
+        let particles = convertClustersToParticles(
+            clusters: clusters,
+            calibrationFactor: calibrationFactor
+        )
         
-        // Step 5: Create processed image for visualization
-        let step5Start = CFAbsoluteTimeGetCurrent()
-        print("🎨 Step 5: Creating processed image...")
-        let processedImage = createProcessedImage(originalImage: image, cgImage: originalCGImage, particles: particles)
-        print("✅ Step 5 complete in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - step5Start))s")
+        // Step 5: Calculate advanced statistics
+        print("📈 Step 5: Calculating advanced statistics...")
+        let statistics = calculateAdvancedStatistics(
+            particles: particles,
+            grindType: grindType
+        )
+        
+        // Step 6: Create visualization
+        print("🎨 Step 6: Creating visualization...")
+        let processedImage = createVisualization(
+            originalImage: image,
+            particles: particles
+        )
         
         let totalTime = CFAbsoluteTimeGetCurrent() - startTime
-        print("🎯 Analysis complete in \(String(format: "%.2f", totalTime))s total")
-        print("📋 Results: \(particles.count) particles, \(String(format: "%.1f", statistics.uniformityScore))% uniformity")
+        print("🎯 Analysis complete in \(String(format: "%.2f", totalTime))s")
         
         return CoffeeAnalysisResults(
             uniformityScore: statistics.uniformityScore,
@@ -168,23 +229,401 @@ class CoffeeAnalysisEngine {
         )
     }
     
-    // MARK: - Image Processing
+    // MARK: - Blue Channel Extraction
     
-    private func convertToGrayscale(_ image: UIImage) -> UIImage? {
-        guard let ciImage = CIImage(image: image) else { return nil }
+    private func extractBlueChannel(from cgImage: CGImage) throws -> [UInt8] {
+        let width = cgImage.width
+        let height = cgImage.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
         
-        let context = CIContext()
-        let grayscaleFilter = CIFilter(name: "CIColorMonochrome")!
-        grayscaleFilter.setValue(ciImage, forKey: kCIInputImageKey)
-        grayscaleFilter.setValue(CIColor.white, forKey: kCIInputColorKey)
-        grayscaleFilter.setValue(1.0, forKey: kCIInputIntensityKey)
+        var pixelData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
         
-        guard let output = grayscaleFilter.outputImage,
-              let cgImage = context.createCGImage(output, from: output.extent) else { return nil }
+        guard let context = CGContext(
+            data: &pixelData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw CoffeeAnalysisError.imageProcessingFailed
+        }
         
-        return UIImage(cgImage: cgImage)
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        // Extract just the blue channel
+        var blueChannel = [UInt8](repeating: 0, count: width * height)
+        for i in 0..<(width * height) {
+            blueChannel[i] = pixelData[i * 4 + 2] // Blue is at offset 2
+        }
+        
+        return blueChannel
     }
     
+    // MARK: - Adaptive Thresholding
+    
+    private func applyAdaptiveThreshold(
+        data: [UInt8],
+        width: Int,
+        height: Int
+    ) throws -> (mask: [(x: Int, y: Int)], backgroundMedian: Double) {
+        // Calculate median of the image (or within polygon if set)
+        let backgroundMedian = calculateMedian(
+            data: data,
+            width: width,
+            height: height,
+            polygon: analysisPolygon
+        )
+        
+        print("📊 Background median: \(backgroundMedian)")
+        
+        // Apply threshold (defaultThreshold is percentage)
+        let thresholdValue = backgroundMedian * (defaultThreshold / 100.0)
+        var thresholdMask: [(x: Int, y: Int)] = []
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let index = y * width + x
+                let pixelValue = Double(data[index])
+                
+                // Check if pixel is dark enough (below threshold)
+                if pixelValue < thresholdValue {
+                    // If polygon is set, check if point is inside
+                    if let polygon = analysisPolygon {
+                        if isPointInPolygon(point: CGPoint(x: x, y: y), polygon: polygon) {
+                            thresholdMask.append((x: x, y: y))
+                        }
+                    } else {
+                        thresholdMask.append((x: x, y: y))
+                    }
+                }
+            }
+        }
+        
+        let thresholdPercentage = Double(thresholdMask.count) / Double(width * height) * 100.0
+        print("🎭 Thresholded \(thresholdMask.count) pixels (\(String(format: "%.1f", thresholdPercentage))%)")
+        
+        return (thresholdMask, backgroundMedian)
+    }
+    
+    // MARK: - Advanced Particle Detection with Clustering
+    
+    private struct Cluster {
+        var pixels: [(x: Int, y: Int, brightness: UInt8)]
+        var surface: Double
+        var centroidX: Double
+        var centroidY: Double
+        var longAxis: Double
+        var shortAxis: Double
+        var roundness: Double
+        var volume: Double
+    }
+    
+    private func detectParticlesWithClustering(
+        thresholdMask: [(x: Int, y: Int)],
+        imageData: [UInt8],
+        backgroundMedian: Double,
+        width: Int,
+        height: Int
+    ) throws -> [Cluster] {
+        // Sort threshold pixels by brightness (darkest first)
+        let sortedMask = thresholdMask.sorted { pixel1, pixel2 in
+            let index1 = pixel1.y * width + pixel1.x
+            let index2 = pixel2.y * width + pixel2.x
+            return imageData[index1] < imageData[index2]
+        }
+        
+        // Create spatial index for fast neighbor lookups
+        var pixelGrid = [String: Int]() // Maps "x,y" to index in sortedMask
+        for (index, pixel) in sortedMask.enumerated() {
+            pixelGrid["\(pixel.x),\(pixel.y)"] = index
+        }
+        
+        var counted = [Bool](repeating: false, count: sortedMask.count)
+        var clusters: [Cluster] = []
+        let maxClusterAxis = Double(settings.maxParticleSize)
+        let minSurface = Double(settings.minParticleSize * settings.minParticleSize / 4)
+        
+        print("🔬 Starting clustering with \(sortedMask.count) threshold pixels...")
+        
+        for i in 0..<sortedMask.count {
+            if i % 10000 == 0 {
+                let progress = Double(i) / Double(sortedMask.count) * 100.0
+                print("⏳ Clustering progress: \(String(format: "%.1f", progress))%")
+            }
+            
+            if counted[i] { continue }
+            
+            let startPixel = sortedMask[i]
+            let startIndex = startPixel.y * width + startPixel.x
+            let startBrightness = imageData[startIndex]
+            
+            // Find connected pixels using improved flood fill with spatial index
+            let clusterPixels = quickClusterOptimized(
+                startX: startPixel.x,
+                startY: startPixel.y,
+                pixelGrid: pixelGrid,
+                sortedMask: sortedMask,
+                counted: &counted,
+                maxDistance: maxClusterAxis,
+                startIndex: i
+            )
+            
+            // Apply cost function for cluster breakup (from Python)
+            let filteredPixels = applyClusterBreakup(
+                clusterPixels: clusterPixels,
+                imageData: imageData,
+                backgroundMedian: backgroundMedian,
+                width: width,
+                startBrightness: startBrightness
+            )
+            
+            // Check minimum surface
+            guard filteredPixels.count >= Int(minSurface) else { continue }
+            
+            // Calculate cluster properties
+            if let cluster = createCluster(from: filteredPixels, width: width, height: height) {
+                // Apply quality filters
+                if cluster.roundness >= minRoundness &&
+                   cluster.longAxis <= maxClusterAxis {
+                    clusters.append(cluster)
+                }
+            }
+        }
+        
+        print("✅ Clustering complete: \(clusters.count) valid clusters found")
+        return clusters
+    }
+    
+    private func quickClusterOptimized(
+        startX: Int,
+        startY: Int,
+        pixelGrid: [String: Int],
+        sortedMask: [(x: Int, y: Int)],
+        counted: inout [Bool],
+        maxDistance: Double,
+        startIndex: Int
+    ) -> [(x: Int, y: Int, brightness: UInt8)] {
+        var result: [(x: Int, y: Int, brightness: UInt8)] = []
+        var toCheck = [(startX, startY)]
+        var visited = Set<String>()
+        
+        // Mark start pixel as counted
+        counted[startIndex] = true
+        result.append((x: startX, y: startY, brightness: 0))
+        
+        while !toCheck.isEmpty {
+            let (currentX, currentY) = toCheck.removeFirst()
+            
+            // Check 8-connected neighbors directly (much faster than checking all pixels)
+            let neighbors = [
+                (currentX-1, currentY-1), (currentX, currentY-1), (currentX+1, currentY-1),
+                (currentX-1, currentY),                          (currentX+1, currentY),
+                (currentX-1, currentY+1), (currentX, currentY+1), (currentX+1, currentY+1)
+            ]
+            
+            for (nx, ny) in neighbors {
+                let neighborKey = "\(nx),\(ny)"
+                
+                // Skip if already visited
+                if visited.contains(neighborKey) { continue }
+                visited.insert(neighborKey)
+                
+                // Check if this pixel exists in our threshold mask
+                if let neighborIndex = pixelGrid[neighborKey] {
+                    // Skip if already counted
+                    if !counted[neighborIndex] {
+                        counted[neighborIndex] = true
+                        result.append((x: nx, y: ny, brightness: 0))
+                        toCheck.append((nx, ny))
+                    }
+                }
+            }
+        }
+        
+        return result
+    }
+    
+    // Keep old method for compatibility but it's not used anymore
+    private func quickCluster(
+        startX: Int,
+        startY: Int,
+        sortedMask: [(x: Int, y: Int)],
+        counted: inout [Bool],
+        maxDistance: Double,
+        startIndex: Int
+    ) -> [(x: Int, y: Int, brightness: UInt8)] {
+        var result: [(x: Int, y: Int, brightness: UInt8)] = []
+        var toCheck = [(startX, startY)]
+        var checked = Set<String>()
+        
+        // Mark start pixel as counted
+        counted[startIndex] = true
+        
+        while !toCheck.isEmpty {
+            let (checkX, checkY) = toCheck.removeFirst()
+            let key = "\(checkX),\(checkY)"
+            
+            if checked.contains(key) { continue }
+            checked.insert(key)
+            
+            // Find all uncounted pixels within range
+            for (idx, pixel) in sortedMask.enumerated() {
+                if counted[idx] { continue }
+                
+                let distance = sqrt(pow(Double(pixel.x - checkX), 2) + pow(Double(pixel.y - checkY), 2))
+                if distance <= 1.5 { // Adjacent pixels
+                    counted[idx] = true
+                    result.append((x: pixel.x, y: pixel.y, brightness: 0)) // Will fill brightness later
+                    toCheck.append((pixel.x, pixel.y))
+                }
+            }
+        }
+        
+        return result
+    }
+    
+    private func applyClusterBreakup(
+        clusterPixels: [(x: Int, y: Int, brightness: UInt8)],
+        imageData: [UInt8],
+        backgroundMedian: Double,
+        width: Int,
+        startBrightness: UInt8
+    ) -> [(x: Int, y: Int, brightness: UInt8)] {
+        // This implements the cost function from Python for breaking up clumped particles
+        var filteredPixels: [(x: Int, y: Int, brightness: UInt8)] = []
+        
+        for pixel in clusterPixels {
+            let index = pixel.y * width + pixel.x
+            let brightness = imageData[index]
+            
+            // Calculate cost function
+            let cost = pow(Double(brightness) - Double(startBrightness), 2) / pow(backgroundMedian, 2)
+            
+            // Accept pixel if cost is below threshold
+            if cost < maxCost {
+                filteredPixels.append((x: pixel.x, y: pixel.y, brightness: brightness))
+            }
+        }
+        
+        return filteredPixels
+    }
+    
+    private func createCluster(
+        from pixels: [(x: Int, y: Int, brightness: UInt8)],
+        width: Int,
+        height: Int
+    ) -> Cluster? {
+        guard !pixels.isEmpty else { return nil }
+        
+        let surface = Double(pixels.count)
+        
+        // Calculate centroid
+        let centroidX = Double(pixels.map { $0.x }.reduce(0, +)) / Double(pixels.count)
+        let centroidY = Double(pixels.map { $0.y }.reduce(0, +)) / Double(pixels.count)
+        
+        // Calculate axes
+        let distances = pixels.map { pixel in
+            sqrt(pow(Double(pixel.x) - centroidX, 2) + pow(Double(pixel.y) - centroidY, 2))
+        }
+        let longAxis = distances.max() ?? 0
+        let shortAxis = surface / (Double.pi * longAxis)
+        
+        // Calculate roundness
+        let roundness = surface / (Double.pi * longAxis * longAxis)
+        
+        // Estimate volume (ellipsoid approximation)
+        let volume = Double.pi * shortAxis * shortAxis * longAxis
+        
+        // Check edge proximity
+        let edgeBuffer = 10.0
+        if centroidX < edgeBuffer || centroidX > Double(width - Int(edgeBuffer)) ||
+           centroidY < edgeBuffer || centroidY > Double(height - Int(edgeBuffer)) {
+            return nil // Too close to edge
+        }
+        
+        return Cluster(
+            pixels: pixels,
+            surface: surface,
+            centroidX: centroidX,
+            centroidY: centroidY,
+            longAxis: longAxis,
+            shortAxis: shortAxis,
+            roundness: roundness,
+            volume: volume
+        )
+    }
+    
+    // MARK: - Particle Conversion and Calibration
+    
+    private func calculateCalibrationFactor(
+        referenceObjectDiameter: Double?,
+        imageWidth: Int
+    ) -> Double {
+        if let diameter = referenceObjectDiameter, diameter > 0 {
+            // If we have a reference object, use it for calibration
+            // This would need the reference object pixel length from user selection
+            // For now, return a reasonable default
+            return diameter / 100.0 // Placeholder - would need actual pixel measurement
+        }
+        
+        // Default calibration based on typical smartphone photos
+        return settings.calibrationFactor
+    }
+    
+    private func convertClustersToParticles(
+        clusters: [Cluster],
+        calibrationFactor: Double
+    ) -> [CoffeeParticle] {
+        return clusters.map { cluster in
+            // Calculate diameter from surface area
+            let diameterPixels = 2.0 * sqrt(cluster.surface / Double.pi)
+            let sizeMicrons = diameterPixels * calibrationFactor
+            
+            // Calculate circularity (perimeter-based)
+            let perimeter = calculatePerimeterFromPixels(pixels: cluster.pixels)
+            let circularity = (4.0 * Double.pi * cluster.surface) / (perimeter * perimeter)
+            
+            // Calculate average brightness
+            let avgBrightness = cluster.pixels.isEmpty ? 0.5 :
+                Double(cluster.pixels.map { Int($0.brightness) }.reduce(0, +)) / Double(cluster.pixels.count) / 255.0
+            
+            return CoffeeParticle(
+                size: sizeMicrons,
+                area: cluster.surface,
+                circularity: min(max(circularity, 0), 1),
+                position: CGPoint(x: cluster.centroidX, y: cluster.centroidY),
+                brightness: avgBrightness
+            )
+        }
+    }
+    
+    private func calculatePerimeterFromPixels(pixels: [(x: Int, y: Int, brightness: UInt8)]) -> Double {
+        let pixelSet = Set(pixels.map { "\($0.x),\($0.y)" })
+        var perimeter = 0.0
+        
+        for pixel in pixels {
+            // Check 4-connected neighbors
+            let neighbors = [
+                "\(pixel.x-1),\(pixel.y)",
+                "\(pixel.x+1),\(pixel.y)",
+                "\(pixel.x),\(pixel.y-1)",
+                "\(pixel.x),\(pixel.y+1)"
+            ]
+            
+            for neighbor in neighbors {
+                if !pixelSet.contains(neighbor) {
+                    perimeter += 1.0
+                }
+            }
+        }
+        
+        return perimeter
+    }
+    
+    // Keep old thresholding method for validation tests
     private func applySimpleThresholding(_ image: UIImage) -> UIImage? {
         guard let cgImage = image.cgImage else { return nil }
         
@@ -649,8 +1088,82 @@ class CoffeeAnalysisEngine {
         return particleArea / boundingBoxArea
     }
     
-    // MARK: - Statistics Calculation
+    // MARK: - Advanced Statistics
     
+    private func calculateAdvancedStatistics(
+        particles: [CoffeeParticle],
+        grindType: CoffeeGrindType
+    ) -> (
+        uniformityScore: Double,
+        averageSize: Double,
+        medianSize: Double,
+        standardDeviation: Double,
+        finesPercentage: Double,
+        bouldersPercentage: Double,
+        confidence: Double
+    ) {
+        let sizes = particles.map { $0.size }.sorted()
+        let volumes = particles.map { calculateVolume(from: $0) }
+        
+        // Weight by volume for more accurate statistics
+        let totalVolume = volumes.reduce(0, +)
+        var weightedSum = 0.0
+        for i in 0..<particles.count {
+            weightedSum += sizes[i] * (volumes[i] / totalVolume)
+        }
+        let weightedAverage = weightedSum
+        
+        // Calculate median
+        let medianSize = sizes[sizes.count / 2]
+        
+        // Calculate weighted standard deviation
+        var weightedVariance = 0.0
+        for i in 0..<particles.count {
+            let weight = volumes[i] / totalVolume
+            weightedVariance += weight * pow(sizes[i] - weightedAverage, 2)
+        }
+        let standardDeviation = sqrt(weightedVariance)
+        
+        // Calculate uniformity (using coefficient of variation)
+        let coefficientOfVariation = (standardDeviation / weightedAverage) * 100
+        let uniformityScore = max(0, 100 - coefficientOfVariation)
+        
+        // Calculate fines and boulders based on grind type
+        let targetRange = grindType.targetSizeMicrons
+        let fineThreshold = targetRange.lowerBound * 0.6
+        let boulderThreshold = targetRange.upperBound * 1.5
+        
+        let fines = sizes.filter { $0 < fineThreshold }.count
+        let boulders = sizes.filter { $0 > boulderThreshold }.count
+        
+        let finesPercentage = Double(fines) / Double(particles.count) * 100
+        let bouldersPercentage = Double(boulders) / Double(particles.count) * 100
+        
+        // Calculate confidence based on multiple factors
+        let particleCountScore = min(Double(particles.count) / 500.0, 1.0)
+        let uniformityScore2 = uniformityScore / 100.0
+        let distributionScore = 1.0 - (finesPercentage + bouldersPercentage) / 100.0
+        
+        let confidence = (particleCountScore * 0.4 + uniformityScore2 * 0.3 + distributionScore * 0.3) * 100
+        
+        return (
+            uniformityScore: uniformityScore,
+            averageSize: weightedAverage,
+            medianSize: medianSize,
+            standardDeviation: standardDeviation,
+            finesPercentage: finesPercentage,
+            bouldersPercentage: bouldersPercentage,
+            confidence: confidence
+        )
+    }
+    
+    private func calculateVolume(from particle: CoffeeParticle) -> Double {
+        // Estimate volume from area assuming spherical particles
+        let radius = sqrt(particle.area / Double.pi)
+        return (4.0 / 3.0) * Double.pi * pow(radius, 3)
+    }
+    
+    // Keep old statistics for validation tests
     private func calculateStatistics(particles: [CoffeeParticle], grindType: CoffeeGrindType) -> (
         uniformityScore: Double,
         averageSize: Double,
@@ -696,6 +1209,80 @@ class CoffeeAnalysisEngine {
         )
     }
     
+    // MARK: - Visualization
+    
+    private func createVisualization(
+        originalImage: UIImage,
+        particles: [CoffeeParticle]
+    ) -> UIImage? {
+        guard let cgImage = originalImage.cgImage else { return nil }
+        
+        print("🎨 Creating overlay for \(particles.count) particles")
+        print("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height))")
+        
+        let renderer = UIGraphicsImageRenderer(size: originalImage.size)
+        
+        return renderer.image { context in
+            originalImage.draw(at: .zero)
+            
+            context.cgContext.setLineWidth(3.0)
+            
+            for particle in particles {
+                // Color based on size
+                let color: UIColor
+                if particle.size < 400 {
+                    color = .red.withAlphaComponent(0.7)
+                } else if particle.size < 800 {
+                    color = .yellow.withAlphaComponent(0.7)
+                } else if particle.size < 1200 {
+                    color = .green.withAlphaComponent(0.7)
+                } else {
+                    color = .blue.withAlphaComponent(0.7)
+                }
+                
+                context.cgContext.setStrokeColor(color.cgColor)
+                
+                // Transform particle position from CGImage coordinates to UIImage display coordinates
+                let transformedPosition = transformCGImageToUIImageCoordinates(
+                    cgPoint: particle.position,
+                    cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
+                    uiImage: originalImage
+                )
+                
+                let radius = sqrt(particle.area / Double.pi)
+                let rect = CGRect(
+                    x: transformedPosition.x - radius,
+                    y: transformedPosition.y - radius,
+                    width: radius * 2,
+                    height: radius * 2
+                )
+                
+                context.cgContext.strokeEllipse(in: rect)
+                
+                // Add size label for larger particles
+                if particle.size > 500 {
+                    let sizeText = String(format: "%.0fμm", particle.size)
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .font: UIFont.systemFont(ofSize: 10),
+                        .foregroundColor: UIColor.white,
+                        .backgroundColor: UIColor.black.withAlphaComponent(0.5)
+                    ]
+                    
+                    let textSize = sizeText.size(withAttributes: attributes)
+                    let textRect = CGRect(
+                        x: transformedPosition.x - textSize.width/2,
+                        y: transformedPosition.y - textSize.height/2,
+                        width: textSize.width,
+                        height: textSize.height
+                    )
+                    
+                    sizeText.draw(in: textRect, withAttributes: attributes)
+                }
+            }
+        }
+    }
+    
+    // Keep old processed image method for validation tests
     private func createProcessedImage(originalImage: UIImage, cgImage: CGImage, particles: [CoffeeParticle]) -> UIImage? {
         print("🎨 Creating overlay for \(particles.count) particles on \(Int(originalImage.size.width))x\(Int(originalImage.size.height)) image")
         print("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height)), orientation: \(originalImage.imageOrientation.rawValue)")
@@ -789,4 +1376,80 @@ class CoffeeAnalysisEngine {
         }
     }
     #endif
+    
+    // MARK: - Helper Functions
+    
+    private func calculateMedian(
+        data: [UInt8],
+        width: Int,
+        height: Int,
+        polygon: [CGPoint]?
+    ) -> Double {
+        var values: [UInt8] = []
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let point = CGPoint(x: x, y: y)
+                
+                // If polygon is set, only include points inside
+                if let polygon = polygon {
+                    if isPointInPolygon(point: point, polygon: polygon) {
+                        let index = y * width + x
+                        values.append(data[index])
+                    }
+                } else {
+                    let index = y * width + x
+                    values.append(data[index])
+                }
+            }
+        }
+        
+        values.sort()
+        let count = values.count
+        
+        if count == 0 { return 0 }
+        if count == 1 { return Double(values[0]) }
+        
+        if count % 2 == 0 {
+            // For even count, average the two middle values
+            let midIndex1 = count / 2 - 1
+            let midIndex2 = count / 2
+            // Prevent overflow by converting to Double before addition
+            return (Double(values[midIndex1]) + Double(values[midIndex2])) / 2.0
+        } else {
+            // For odd count, return the middle value
+            return Double(values[count / 2])
+        }
+    }
+    
+    private func isPointInPolygon(point: CGPoint, polygon: [CGPoint]) -> Bool {
+        guard polygon.count >= 3 else { return false }
+        
+        var inside = false
+        var p1 = polygon.last!
+        
+        for p2 in polygon {
+            if (p2.y > point.y) != (p1.y > point.y) {
+                let slope = (point.x - p1.x) * (p2.y - p1.y) - (p2.x - p1.x) * (point.y - p1.y)
+                if (p2.y > p1.y && slope < 0) || (p2.y < p1.y && slope > 0) {
+                    inside = !inside
+                }
+            }
+            p1 = p2
+        }
+        
+        return inside
+    }
+    
+    // MARK: - Public Methods for UI Integration
+    
+    func setAnalysisRegion(polygon: [CGPoint]) {
+        self.analysisPolygon = polygon
+        print("📍 Analysis region set with \(polygon.count) points")
+    }
+    
+    func clearAnalysisRegion() {
+        self.analysisPolygon = nil
+        print("📍 Analysis region cleared")
+    }
 }
