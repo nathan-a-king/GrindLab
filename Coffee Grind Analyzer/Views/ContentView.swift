@@ -138,11 +138,10 @@ struct ContentView: View {
     
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image("coffee_magnifier")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 84, height: 84)
-                .shadow(radius: 8)
+            Image(systemName: "cup.and.saucer.fill")
+                .font(.system(size: 64, weight: .medium))
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
             
             Text("Coffee Grind Analyzer")
                 .font(.title)
@@ -173,37 +172,51 @@ struct ContentView: View {
     }
     
     private func grindTypeCard(for type: CoffeeGrindType) -> some View {
-        let (icon, color) = iconAndColor(for: type)
-        
-        return Button(action: {
-            selectedGrindType = type
-            showingCamera = true
-        }) {
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 32))
-                    .foregroundColor(color)
-                
-                Text(type.displayName)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                
-                Text("Target: \(type.targetSizeRange)")
-                    .font(.caption)
-                    .foregroundColor(color.opacity(0.8))
-                    .multilineTextAlignment(.center)
+        let (icon, _) = iconAndColor(for: type)
+
+        return ZStack {
+            // Shadow layer (separate from the button)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.01))   // > 0 so it casts a shadow
+                .shadow(color: .black.opacity(0.45), radius: 30, x: 0, y: 18)
+                .shadow(color: .black.opacity(0.22), radius: 8,  x: 0, y: 3)
+                .allowsHitTesting(false)            // so it doesn't steal taps
+
+            // Button with your translucent visual card
+            Button {
+                selectedGrindType = type
+                showingCamera = true
+            } label: {
+                VStack(spacing: 12) {
+                    Image(systemName: icon)
+                        .font(.system(size: 32))
+                        .foregroundColor(.white)
+
+                    Text(type.displayName)
+                        .font(.headline).fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+
+                    Text("Target: \(type.targetSizeRange)")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, minHeight: 140, alignment: .center)
+                .background(cardBackgroundView)
+                // Keep the visual rounded shape consistent for hit-testing/rasterization:
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                )
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 140)
-            .padding(16)
-            .background(cardBackgroundView)
+            .buttonStyle(.plain)
         }
-        .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity, minHeight: 140)
     }
-    
+
     private func iconAndColor(for type: CoffeeGrindType) -> (String, Color) {
         switch type {
         case .filter:
@@ -219,10 +232,10 @@ struct ContentView: View {
     
     private var cardBackgroundView: some View {
         RoundedRectangle(cornerRadius: 16)
-            .fill(Color.white.opacity(0.1))
+            .fill(Color.white.opacity(0.15))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
             )
     }
     
