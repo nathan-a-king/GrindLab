@@ -784,14 +784,18 @@ struct ComparisonView_Previews: PreviewProvider {
             name: "Morning Filter",
             results: sampleResults1,
             savedDate: Date().addingTimeInterval(-86400),
-            notes: nil
+            notes: nil,
+            originalImagePath: nil,
+            processedImagePath: nil
         )
         
         let analysis2 = SavedCoffeeAnalysis(
             name: "Afternoon Filter",
             results: sampleResults2,
             savedDate: Date(),
-            notes: nil
+            notes: nil,
+            originalImagePath: nil,
+            processedImagePath: nil
         )
         
         let comparison = AnalysisComparison(analyses: [analysis1, analysis2])

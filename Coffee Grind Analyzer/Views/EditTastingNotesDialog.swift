@@ -253,7 +253,9 @@ struct EditTastingNotesDialog_Previews: PreviewProvider {
             name: "Morning Filter",
             results: sampleResults,
             savedDate: Date(),
-            notes: "Breville Smart Grinder Pro"
+            notes: "Breville Smart Grinder Pro",
+            originalImagePath: nil,
+            processedImagePath: nil
         )
         
         EditTastingNotesDialog(

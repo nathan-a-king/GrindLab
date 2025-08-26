@@ -638,6 +638,7 @@ struct ComparisonHistoryRowView: View {
                                 .font(.caption2)
                                 .foregroundColor(.white.opacity(0.6))
                         }
+                        .padding(.trailing, 8)
                     }
                 }
             }

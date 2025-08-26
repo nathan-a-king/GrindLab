@@ -17,6 +17,8 @@ struct SavedCoffeeAnalysis: Identifiable {
     let results: CoffeeAnalysisResults
     let savedDate: Date
     let notes: String?
+    let originalImagePath: String?
+    let processedImagePath: String?
 }
 
 // MARK: - History Manager
@@ -28,20 +30,81 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
     private let savedAnalysesKey = "SavedCoffeeAnalyses"
     private let maxStoredResults = 50 // Limit to prevent storage bloat
     
+    // Image storage
+    private var imagesDirectory: URL {
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return documentsPath.appendingPathComponent("AnalysisImages")
+    }
+    
     init() {
+        createImagesDirectoryIfNeeded()
         loadSavedAnalyses()
+    }
+    
+    // MARK: - Image Persistence
+    
+    private func createImagesDirectoryIfNeeded() {
+        try? FileManager.default.createDirectory(at: imagesDirectory, withIntermediateDirectories: true)
+    }
+    
+    private func saveImage(_ image: UIImage, with identifier: String, suffix: String) -> String? {
+        guard let compressedData = compressImage(image) else { return nil }
+        
+        let filename = "\(identifier)_\(suffix).jpg"
+        let fileURL = imagesDirectory.appendingPathComponent(filename)
+        
+        do {
+            try compressedData.write(to: fileURL)
+            return filename
+        } catch {
+            print("❌ Failed to save image: \(error)")
+            return nil
+        }
+    }
+    
+    private func compressImage(_ image: UIImage) -> Data? {
+        // Resize to max 800px width for low-res storage
+        let maxWidth: CGFloat = 800
+        let scale = min(maxWidth / image.size.width, maxWidth / image.size.height)
+        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        // Compress to JPEG with 70% quality for good balance of size/quality
+        return resizedImage?.jpegData(compressionQuality: 0.7)
+    }
+    
+    func loadImage(from path: String) -> UIImage? {
+        let fileURL = imagesDirectory.appendingPathComponent(path)
+        return UIImage(contentsOfFile: fileURL.path)
+    }
+    
+    private func deleteImage(at path: String?) {
+        guard let path = path else { return }
+        let fileURL = imagesDirectory.appendingPathComponent(path)
+        try? FileManager.default.removeItem(at: fileURL)
     }
     
     // MARK: - Save Analysis
     
     func saveAnalysis(_ results: CoffeeAnalysisResults, name: String? = nil, notes: String? = nil) {
         let analysisName = name ?? generateDefaultName(for: results)
+        let identifier = UUID().uuidString
+        
+        // Save images to disk
+        let originalImagePath = results.image.flatMap { saveImage($0, with: identifier, suffix: "original") }
+        let processedImagePath = results.processedImage.flatMap { saveImage($0, with: identifier, suffix: "processed") }
         
         let savedAnalysis = SavedCoffeeAnalysis(
             name: analysisName,
             results: results,
             savedDate: Date(),
-            notes: notes
+            notes: notes,
+            originalImagePath: originalImagePath,
+            processedImagePath: processedImagePath
         )
         
         // Add to beginning of array (most recent first)
@@ -86,7 +149,9 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             name: savedAnalyses[index].name,
             results: updatedResults,
             savedDate: savedAnalyses[index].savedDate,
-            notes: savedAnalyses[index].notes
+            notes: savedAnalyses[index].notes,
+            originalImagePath: savedAnalyses[index].originalImagePath,
+            processedImagePath: savedAnalyses[index].processedImagePath
         )
         
         // Update the array
@@ -102,11 +167,23 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
     
     func deleteAnalysis(at index: Int) {
         guard index < savedAnalyses.count else { return }
+        let analysis = savedAnalyses[index]
+        
+        // Clean up image files
+        deleteImage(at: analysis.originalImagePath)
+        deleteImage(at: analysis.processedImagePath)
+        
         savedAnalyses.remove(at: index)
         persistAnalyses()
     }
     
     func deleteAnalysis(withId id: UUID) {
+        // Find and clean up images before removing
+        if let analysis = savedAnalyses.first(where: { $0.id == id }) {
+            deleteImage(at: analysis.originalImagePath)
+            deleteImage(at: analysis.processedImagePath)
+        }
+        
         savedAnalyses.removeAll { $0.id == id }
         persistAnalyses()
     }
@@ -114,6 +191,12 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
     // MARK: - Clear All
     
     func clearAllAnalyses() {
+        // Clean up all image files
+        for analysis in savedAnalyses {
+            deleteImage(at: analysis.originalImagePath)
+            deleteImage(at: analysis.processedImagePath)
+        }
+        
         savedAnalyses.removeAll()
         persistAnalyses()
     }
@@ -178,7 +261,9 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     savedDate: analysis.savedDate,
                     notes: analysis.notes,
                     sizeDistribution: analysis.results.sizeDistribution,
-                    tastingNotes: analysis.results.tastingNotes
+                    tastingNotes: analysis.results.tastingNotes,
+                    originalImagePath: analysis.originalImagePath,
+                    processedImagePath: analysis.processedImagePath
                 )
             }
             
@@ -222,6 +307,10 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                 
                 print("📊 Loading analysis '\(storable.name)': distribution has \(distribution.count) categories")
                 
+                // Load images from disk if available
+                let originalImage = storable.originalImagePath.flatMap { loadImage(from: $0) }
+                let processedImage = storable.processedImagePath.flatMap { loadImage(from: $0) }
+                
                 let results = CoffeeAnalysisResults(
                     uniformityScore: storable.uniformityScore,
                     averageSize: storable.averageSize,
@@ -232,8 +321,8 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     particleCount: storable.particleCount,
                     particles: [], // Don't store individual particles for space
                     confidence: storable.confidence,
-                    image: nil, // Don't store images for space
-                    processedImage: nil,
+                    image: originalImage, // Load from disk
+                    processedImage: processedImage, // Load from disk
                     grindType: storable.grindType,
                     timestamp: storable.timestamp,
                     sizeDistribution: distribution, // Use validated distribution
@@ -250,7 +339,9 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     name: storable.name,
                     results: results,
                     savedDate: storable.savedDate,
-                    notes: storable.notes
+                    notes: storable.notes,
+                    originalImagePath: storable.originalImagePath,
+                    processedImagePath: storable.processedImagePath
                 )
             }
             
@@ -310,7 +401,9 @@ private struct StorableAnalysis: Codable {
     let savedDate: Date
     let notes: String?
     let sizeDistribution: [String: Double]
-    let tastingNotes: TastingNotes? // Add tasting notes
+    let tastingNotes: TastingNotes?
+    let originalImagePath: String?
+    let processedImagePath: String?
     
     // Custom decoder to handle legacy data without sizeDistribution or tastingNotes
     init(from decoder: Decoder) throws {
@@ -336,13 +429,17 @@ private struct StorableAnalysis: Codable {
         
         // Try to decode tastingNotes, fallback to nil if not present (legacy data)
         tastingNotes = try container.decodeIfPresent(TastingNotes.self, forKey: .tastingNotes)
+        
+        // Try to decode image paths, fallback to nil if not present (legacy data)
+        originalImagePath = try container.decodeIfPresent(String.self, forKey: .originalImagePath)
+        processedImagePath = try container.decodeIfPresent(String.self, forKey: .processedImagePath)
     }
     
     // Standard initializer for encoding
     init(id: UUID, name: String, grindType: CoffeeGrindType, uniformityScore: Double, averageSize: Double,
          medianSize: Double, standardDeviation: Double, finesPercentage: Double, bouldersPercentage: Double,
          particleCount: Int, confidence: Double, timestamp: Date, savedDate: Date, notes: String?,
-         sizeDistribution: [String: Double], tastingNotes: TastingNotes?) {
+         sizeDistribution: [String: Double], tastingNotes: TastingNotes?, originalImagePath: String?, processedImagePath: String?) {
         self.id = id
         self.name = name
         self.grindType = grindType
@@ -359,10 +456,13 @@ private struct StorableAnalysis: Codable {
         self.notes = notes
         self.sizeDistribution = sizeDistribution
         self.tastingNotes = tastingNotes
+        self.originalImagePath = originalImagePath
+        self.processedImagePath = processedImagePath
     }
     
     private enum CodingKeys: String, CodingKey {
         case id, name, grindType, uniformityScore, averageSize, medianSize, standardDeviation
         case finesPercentage, bouldersPercentage, particleCount, confidence, timestamp, savedDate, notes, sizeDistribution, tastingNotes
+        case originalImagePath, processedImagePath
     }
 }
