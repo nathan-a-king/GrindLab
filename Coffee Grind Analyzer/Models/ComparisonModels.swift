@@ -80,7 +80,7 @@ class ComparisonManager: ObservableObject {
     @Published var selectedAnalyses: Set<UUID> = []
     @Published var showingComparison = false
     
-    private let maxComparisons = 4 // Limit for readability
+    private let maxComparisons = 2 // Limit to 2 for better comparison
     
     func toggleSelection(_ analysisId: UUID) {
         if selectedAnalyses.contains(analysisId) {

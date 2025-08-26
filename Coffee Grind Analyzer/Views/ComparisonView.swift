@@ -131,13 +131,11 @@ struct ComparisonView: View {
                     .cornerRadius(8)
             }
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(Array(comparison.analyses.enumerated()), id: \.element.id) { index, analysis in
-                        analysisChip(analysis: analysis, color: Color.comparisonColor(for: index), isBaseline: index == comparison.baselineIndex)
-                    }
+            // Since we only compare 2 analyses now, give each one more space
+            HStack(spacing: 16) {
+                ForEach(Array(comparison.analyses.enumerated()), id: \.element.id) { index, analysis in
+                    analysisChip(analysis: analysis, color: Color.comparisonColor(for: index), isBaseline: index == comparison.baselineIndex)
                 }
-                .padding(.horizontal, 4)
             }
         }
         .padding()
@@ -173,7 +171,7 @@ struct ComparisonView: View {
                 .foregroundColor(analysis.results.uniformityColor)
                 .fontWeight(.bold)
         }
-        .frame(width: 80)
+        .frame(maxWidth: .infinity)
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: 10)

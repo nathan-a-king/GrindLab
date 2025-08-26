@@ -22,6 +22,7 @@ struct HistoryView: View {
     @State private var showingEditTastingNotes = false
     @State private var analysisToEditTastingNotes: SavedCoffeeAnalysis?
     @State private var showingComparison = false
+    @State private var isInComparisonMode = false
     
     enum SortOption: String, CaseIterable {
         case dateNewest = "Date (Newest)"
@@ -134,18 +135,16 @@ struct HistoryView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if comparisonManager.selectedAnalyses.isEmpty {
+                    if !isInComparisonMode {
                         Button("Compare") {
-                            // Start comparison mode by adding the first analysis automatically
-                            // This puts us into selection mode
-                            if let firstAnalysis = filteredAndSortedAnalyses.first {
-                                comparisonManager.toggleSelection(firstAnalysis.id)
-                            }
+                            // Start comparison mode without selecting anything
+                            isInComparisonMode = true
                         }
                         .disabled(filteredAndSortedAnalyses.count < 2)
                     } else {
                         Button("Cancel") {
                             comparisonManager.clearSelection()
+                            isInComparisonMode = false
                         }
                     }
                 }
@@ -193,12 +192,12 @@ struct HistoryView: View {
             }
             .overlay(
                 Group {
-                    if !comparisonManager.selectedAnalyses.isEmpty {
+                    if isInComparisonMode {
                         VStack {
                             Spacer()
                             comparisonInstructionsBar
+                                .padding(.bottom, 20) // Position right above tab bar
                         }
-                        .ignoresSafeArea(edges: .bottom)
                     }
                 }
             )
@@ -233,6 +232,7 @@ struct HistoryView: View {
                 ComparisonView(comparison: comparison)
                     .onDisappear {
                         comparisonManager.clearSelection()
+                        isInComparisonMode = false
                     }
             }
         }
@@ -296,7 +296,7 @@ struct HistoryView: View {
                         isSelected: comparisonManager.isSelected(analysis.id),
                         canSelect: comparisonManager.canSelect(analysis.id),
                         onTap: {
-                            if !comparisonManager.selectedAnalyses.isEmpty {
+                            if isInComparisonMode {
                                 // In comparison mode - toggle selection
                                 comparisonManager.toggleSelection(analysis.id)
                             } else {
@@ -531,12 +531,12 @@ struct ComparisonHistoryRowView: View {
                     VStack(spacing: 4) {
                         ZStack {
                             if isSelected {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.blue)
-                                    .frame(width: 40, height: 40)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.brown)
+                                    .frame(width: 24, height: 24)
                                 
                                 Image(systemName: "checkmark")
-                                    .font(.title3)
+                                    .font(.caption)
                                     .foregroundColor(.white)
                                     .fontWeight(.bold)
                             } else {
@@ -651,12 +651,7 @@ struct ComparisonHistoryRowView: View {
     }
     
     private func iconColorForGrindType(_ grindType: CoffeeGrindType) -> Color {
-        switch grindType {
-        case .filter: return .blue
-        case .espresso: return .orange
-        case .frenchPress: return .green
-        case .coldBrew: return .cyan
-        }
+        return .brown
     }
 }
 
