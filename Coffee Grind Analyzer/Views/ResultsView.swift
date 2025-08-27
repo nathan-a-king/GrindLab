@@ -9,7 +9,7 @@ import SwiftUI
 import Charts
 
 struct ResultsView: View {
-    let results: CoffeeAnalysisResults
+    let baseResults: CoffeeAnalysisResults
     let isFromHistory: Bool
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var historyManager: CoffeeAnalysisHistoryManager
@@ -24,8 +24,17 @@ struct ResultsView: View {
     @State private var showingEditTastingNotes = false
     
     init(results: CoffeeAnalysisResults, isFromHistory: Bool = false) {
-        self.results = results
+        self.baseResults = results
         self.isFromHistory = isFromHistory
+    }
+    
+    // Computed property to get current results with updated tasting notes
+    private var results: CoffeeAnalysisResults {
+        if isFromHistory,
+           let savedAnalysis = historyManager.savedAnalyses.first(where: { $0.results.timestamp == baseResults.timestamp }) {
+            return savedAnalysis.results
+        }
+        return baseResults
     }
     
     var body: some View {
@@ -172,6 +181,7 @@ struct ResultsView: View {
                 if let tastingNotes = results.tastingNotes {
                     TastingNotesDisplayView(tastingNotes: tastingNotes)
                         .onAppear { print("📊 Tasting notes section appeared") }
+                        .id(tastingNotes) // Force refresh when tasting notes change
                 }
                 
             }
@@ -604,10 +614,10 @@ struct ResultsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "target")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(.white)
                     Text("\(results.grindType.targetSizeRange)")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(.white)
                 }
             }
             
@@ -617,11 +627,6 @@ struct ResultsView: View {
             ForEach(categories, id: \.label) { category in
                 if let percentage = results.sizeDistribution[category.label] {
                     HStack {
-                        // Color indicator
-                        Circle()
-                            .fill(colorForCategory(category.label))
-                            .frame(width: 12, height: 12)
-                        
                         // Category name without range (it's shown separately)
                         Text(categoryShortName(category.label))
                             .font(.subheadline)
@@ -641,11 +646,11 @@ struct ResultsView: View {
                             // Mini bar chart
                             GeometryReader { geometry in
                                 Rectangle()
-                                    .fill(colorForCategory(category.label).opacity(0.3))
+                                    .fill(Color.white.opacity(0.4))
                                     .frame(width: geometry.size.width * (percentage / 100))
                             }
                             .frame(width: 40, height: 8)
-                            .background(Color(.systemGray5))
+                            .background(Color.white.opacity(0.1))
                             .cornerRadius(4)
                             
                             Text(String(format: "%.1f%%", percentage))

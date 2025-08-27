@@ -75,6 +75,10 @@ struct EditTastingNotesDialog: View {
             .background(Color.brown.opacity(0.25))
             .navigationTitle(hasExistingNotes ? "Edit Tasting Notes" : "Add Tasting Notes")
             .navigationBarTitleDisplayMode(.inline)
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside text fields
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -104,15 +108,6 @@ struct EditTastingNotesDialog: View {
                 Spacer()
                 Text(savedAnalysis.results.grindType.displayName)
                     .foregroundColor(.white.opacity(0.8))
-            }
-            
-            HStack {
-                Text("Uniformity Score")
-                    .foregroundColor(.white)
-                Spacer()
-                Text("\(Int(savedAnalysis.results.uniformityScore))%")
-                    .foregroundColor(savedAnalysis.results.uniformityColor)
-                    .fontWeight(.semibold)
             }
             
             HStack {
@@ -193,7 +188,17 @@ struct EditTastingNotesDialog: View {
                         Spacer()
                         TextField("30s", text: $extractionTime)
                             .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.white.opacity(0.15))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+                            )
+                            .foregroundColor(.white)
                             .keyboardType(.decimalPad)
                     }
                     
@@ -203,7 +208,17 @@ struct EditTastingNotesDialog: View {
                         Spacer()
                         TextField("93°C", text: $waterTemp)
                             .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.white.opacity(0.15))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+                            )
+                            .foregroundColor(.white)
                             .keyboardType(.decimalPad)
                     }
                     
@@ -213,7 +228,17 @@ struct EditTastingNotesDialog: View {
                         Spacer()
                         TextField("18g", text: $doseIn)
                             .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.white.opacity(0.15))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+                            )
+                            .foregroundColor(.white)
                             .keyboardType(.decimalPad)
                     }
                     
@@ -223,7 +248,17 @@ struct EditTastingNotesDialog: View {
                         Spacer()
                         TextField("36g", text: $yieldOut)
                             .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.white.opacity(0.15))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+                            )
+                            .foregroundColor(.white)
                             .keyboardType(.decimalPad)
                     }
                 }
@@ -235,7 +270,16 @@ struct EditTastingNotesDialog: View {
             
             Section {
                 TextField("How did it taste? Any issues?", text: $extractionNotes, axis: .vertical)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.15))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+                    )
+                    .foregroundColor(.white)
                     .lineLimit(2...4)
             } header: {
                 Text("Extraction Notes")

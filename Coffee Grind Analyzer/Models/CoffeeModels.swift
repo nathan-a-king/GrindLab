@@ -119,7 +119,7 @@ struct CoffeeParticle {
 
 // MARK: - Tasting Notes
 
-struct TastingNotes: Equatable, Codable {
+struct TastingNotes: Equatable, Codable, Hashable {
     let brewMethod: BrewMethod
     let overallRating: Int // 1-5 stars
     let tastingTags: [String] // ["Balanced", "Fruity", "Bright"]
