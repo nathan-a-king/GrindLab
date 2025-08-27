@@ -7,6 +7,29 @@
 
 import SwiftUI
 
+// MARK: - Helper Function
+func colorForTag(_ tag: String) -> Color {
+    // Positive tags
+    if ["Balanced", "Sweet", "Smooth", "Bright", "Clean", "Complex",
+        "Fruity", "Floral", "Nutty", "Chocolatey", "Caramel", "Vanilla"].contains(tag) {
+        return .green
+    }
+    
+    // Neutral/Descriptive tags
+    if ["Full Body", "Light Body", "Medium Body", "Acidic", "Low Acid",
+        "Earthy", "Spicy", "Herbal", "Wine-like", "Tea-like"].contains(tag) {
+        return .blue
+    }
+    
+    // Issues
+    if ["Bitter", "Sour", "Astringent", "Muddy", "Weak", "Over-extracted",
+        "Under-extracted", "Chalky", "Harsh", "Flat"].contains(tag) {
+        return .red
+    }
+    
+    return .gray
+}
+
 struct TastingTagsView: View {
     @Binding var selectedTags: Set<String>
     
@@ -20,7 +43,7 @@ struct TastingTagsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tap tags that describe the taste")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.8))
             
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(TastingNotes.availableTags, id: \.self) { tag in
@@ -42,7 +65,7 @@ struct TastingTagsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Selected (\(selectedTags.count)):")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.8))
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -72,41 +95,15 @@ struct TagButton: View {
             Text(tag)
                 .font(.caption)
                 .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundColor(isSelected ? .white : colorForTag(tag))
+                .foregroundColor(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(isSelected ? colorForTag(tag) : colorForTag(tag).opacity(0.1))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(colorForTag(tag), lineWidth: isSelected ? 0 : 1)
+                        .fill(colorForTag(tag).opacity(isSelected ? 0.6 : 0.4))
                 )
         }
         .buttonStyle(PlainButtonStyle())
-    }
-    
-    private func colorForTag(_ tag: String) -> Color {
-        // Positive tags
-        if ["Balanced", "Sweet", "Smooth", "Bright", "Clean", "Complex",
-            "Fruity", "Floral", "Nutty", "Chocolatey", "Caramel", "Vanilla"].contains(tag) {
-            return .green
-        }
-        
-        // Neutral/Descriptive tags
-        if ["Full Body", "Light Body", "Medium Body", "Acidic", "Low Acid",
-            "Earthy", "Spicy", "Herbal", "Wine-like", "Tea-like"].contains(tag) {
-            return .blue
-        }
-        
-        // Issues
-        if ["Bitter", "Sour", "Astringent", "Muddy", "Weak", "Over-extracted",
-            "Under-extracted", "Chalky", "Harsh", "Flat"].contains(tag) {
-            return .red
-        }
-        
-        return .gray
     }
 }
 
@@ -120,12 +117,12 @@ struct SelectedTagView: View {
         HStack(spacing: 6) {
             Text(tag)
                 .font(.caption)
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
             
             Button(action: onRemove) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -133,7 +130,7 @@ struct SelectedTagView: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray5))
+                .fill(colorForTag(tag).opacity(0.5))
         )
     }
 }

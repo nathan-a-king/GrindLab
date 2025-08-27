@@ -126,35 +126,28 @@ struct ContentView: View {
     }
     
     private var backgroundGradient: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                Color.brown.opacity(0.8),
-                Color.black.opacity(0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        Color.brown.opacity(0.25)
+            .ignoresSafeArea()
     }
     
     private var headerSection: some View {
         VStack(spacing: 12) {
             Image(systemName: "cup.and.saucer.fill")
                 .font(.system(size: 64, weight: .medium))
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                .foregroundColor(.black)
+                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
             
             Text("Coffee Grind Analyzer")
                 .font(.title)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(.black)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
             
             Text("Select your grind type to begin analysis")
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(.black.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
         }
@@ -179,9 +172,8 @@ struct ContentView: View {
         return ZStack {
             // Shadow layer (separate from the button)
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.01))   // > 0 so it casts a shadow
-                .shadow(color: .black.opacity(0.45), radius: 30, x: 0, y: 18)
-                .shadow(color: .black.opacity(0.22), radius: 8,  x: 0, y: 3)
+                .fill(Color.clear)
+                .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 6)
                 .allowsHitTesting(false)            // so it doesn't steal taps
 
             // Card content (no Button, just the visual)
@@ -207,7 +199,7 @@ struct ContentView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
             )
         }
         .frame(maxWidth: .infinity, minHeight: 140)
@@ -251,10 +243,10 @@ struct ContentView: View {
     
     private var cardBackgroundView: some View {
         RoundedRectangle(cornerRadius: 16)
-            .fill(Color.white.opacity(0.15))
+            .fill(Color.brown.opacity(0.7))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
             )
     }
     
@@ -333,7 +325,7 @@ struct ContentView: View {
                     Image(systemName: "gearshape.fill")
                     Text("Settings")
                 }
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(.black.opacity(0.8))
                 .font(.subheadline)
             }
             

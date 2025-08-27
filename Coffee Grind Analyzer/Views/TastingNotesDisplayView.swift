@@ -60,16 +60,12 @@ struct TastingNotesDisplayView: View {
                         ForEach(tastingNotes.tastingTags.sorted(), id: \.self) { tag in
                             Text(tag)
                                 .font(.caption)
-                                .foregroundColor(colorForTag(tag))
+                                .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(colorForTag(tag).opacity(0.1))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(colorForTag(tag).opacity(0.3), lineWidth: 1)
+                                        .fill(colorForTag(tag).opacity(0.4))
                                 )
                         }
                     }

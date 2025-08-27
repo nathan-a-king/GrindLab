@@ -71,6 +71,8 @@ struct EditTastingNotesDialog: View {
                     tastingNotesForm
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.brown.opacity(0.25))
             .navigationTitle(hasExistingNotes ? "Edit Tasting Notes" : "Add Tasting Notes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -95,16 +97,18 @@ struct EditTastingNotesDialog: View {
     }
     
     private var analysisInfoSection: some View {
-        Section("Analysis Info") {
+        Section {
             HStack {
                 Text("Grind Type")
+                    .foregroundColor(.white)
                 Spacer()
                 Text(savedAnalysis.results.grindType.displayName)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
             }
             
             HStack {
                 Text("Uniformity Score")
+                    .foregroundColor(.white)
                 Spacer()
                 Text("\(Int(savedAnalysis.results.uniformityScore))%")
                     .foregroundColor(savedAnalysis.results.uniformityColor)
@@ -113,11 +117,16 @@ struct EditTastingNotesDialog: View {
             
             HStack {
                 Text("Date")
+                    .foregroundColor(.white)
                 Spacer()
                 Text(savedAnalysis.savedDate, style: .date)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
             }
+        } header: {
+            Text("Analysis Info")
+                .foregroundColor(.black)
         }
+        .listRowBackground(Color.brown.opacity(0.7))
     }
     
     private var removeNotesSection: some View {
@@ -126,39 +135,61 @@ struct EditTastingNotesDialog: View {
                 .foregroundColor(.red)
         } footer: {
             Text("Toggle this to remove all tasting notes from this analysis")
+                .foregroundColor(.black.opacity(0.6))
         }
+        .listRowBackground(Color.brown.opacity(0.7))
     }
     
     private var tastingNotesForm: some View {
         Group {
-            Section("Brew Method") {
-                Picker("Method", selection: $brewMethod) {
-                    ForEach(TastingNotes.BrewMethod.allCases, id: \.self) { method in
-                        HStack {
-                            Image(systemName: method.icon)
-                            Text(method.rawValue)
-                        }.tag(method)
+            Section {
+                HStack {
+                    Text("Method")
+                        .foregroundColor(.white)
+                    Spacer()
+                    Picker("", selection: $brewMethod) {
+                        ForEach(TastingNotes.BrewMethod.allCases, id: \.self) { method in
+                            HStack {
+                                Image(systemName: method.icon)
+                                Text(method.rawValue)
+                            }.tag(method)
+                        }
                     }
+                    .pickerStyle(MenuPickerStyle())
+                    .accentColor(.white)
                 }
-                .pickerStyle(MenuPickerStyle())
+            } header: {
+                Text("Brew Method")
+                    .foregroundColor(.black)
             }
+            .listRowBackground(Color.brown.opacity(0.7))
             
-            Section("Overall Rating") {
+            Section {
                 HStack {
                     Text("How was it?")
+                        .foregroundColor(.white)
                     Spacer()
                     StarRatingView(rating: $overallRating)
                 }
+            } header: {
+                Text("Overall Rating")
+                    .foregroundColor(.black)
             }
+            .listRowBackground(Color.brown.opacity(0.7))
             
-            Section("Tasting Profile") {
+            Section {
                 TastingTagsView(selectedTags: $selectedTags)
+            } header: {
+                Text("Tasting Profile")
+                    .foregroundColor(.black)
             }
+            .listRowBackground(Color.brown.opacity(0.7))
             
-            Section("Brewing Details") {
+            Section {
                 VStack(spacing: 12) {
                     HStack {
                         Text("Extraction Time")
+                            .foregroundColor(.white)
                         Spacer()
                         TextField("30s", text: $extractionTime)
                             .frame(width: 60)
@@ -168,6 +199,7 @@ struct EditTastingNotesDialog: View {
                     
                     HStack {
                         Text("Water Temp")
+                            .foregroundColor(.white)
                         Spacer()
                         TextField("93°C", text: $waterTemp)
                             .frame(width: 60)
@@ -177,6 +209,7 @@ struct EditTastingNotesDialog: View {
                     
                     HStack {
                         Text("Dose In")
+                            .foregroundColor(.white)
                         Spacer()
                         TextField("18g", text: $doseIn)
                             .frame(width: 60)
@@ -186,6 +219,7 @@ struct EditTastingNotesDialog: View {
                     
                     HStack {
                         Text("Yield Out")
+                            .foregroundColor(.white)
                         Spacer()
                         TextField("36g", text: $yieldOut)
                             .frame(width: 60)
@@ -193,13 +227,21 @@ struct EditTastingNotesDialog: View {
                             .keyboardType(.decimalPad)
                     }
                 }
+            } header: {
+                Text("Brewing Details")
+                    .foregroundColor(.black)
             }
+            .listRowBackground(Color.brown.opacity(0.7))
             
-            Section("Extraction Notes") {
+            Section {
                 TextField("How did it taste? Any issues?", text: $extractionNotes, axis: .vertical)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .lineLimit(2...4)
+            } header: {
+                Text("Extraction Notes")
+                    .foregroundColor(.black)
             }
+            .listRowBackground(Color.brown.opacity(0.7))
         }
     }
     
