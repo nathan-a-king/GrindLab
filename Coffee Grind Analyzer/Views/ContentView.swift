@@ -132,16 +132,16 @@ struct ContentView: View {
     
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "cup.and.saucer.fill")
+            Image(systemName: "lines.measurement.horizontal.aligned.bottom")
                 .font(.system(size: 64, weight: .medium))
                 .foregroundColor(.black)
                 .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
             
-            Text("Coffee Grind Analyzer")
-                .font(.title)
-                .fontWeight(.bold)
+            Text("GrindLab")
+                .font(.system(size: 42, weight: .thin, design: .default))
                 .foregroundColor(.black)
                 .multilineTextAlignment(.center)
+                .tracking(-1)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
             

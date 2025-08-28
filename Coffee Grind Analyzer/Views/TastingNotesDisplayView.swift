@@ -34,7 +34,7 @@ struct TastingNotesDisplayView: View {
                     HStack(spacing: 2) {
                         ForEach(1...5, id: \.self) { index in
                             Image(systemName: index <= tastingNotes.overallRating ? "star.fill" : "star")
-                                .foregroundColor(index <= tastingNotes.overallRating ? .yellow : .gray)
+                                .foregroundColor(index <= tastingNotes.overallRating ? .white : .gray)
                                 .font(.caption)
                         }
                     }

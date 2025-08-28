@@ -87,7 +87,7 @@ struct ResultsView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: { showingEditTastingNotes = true }) {
                             Image(systemName: results.tastingNotes != nil ? "star.fill" : "star")
-                                .foregroundColor(results.tastingNotes != nil ? .yellow : .gray)
+                                .foregroundColor(results.tastingNotes != nil ? .black : .gray)
                         }
                     }
                 }

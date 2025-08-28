@@ -117,6 +117,7 @@ class CoinCalibrationDetector {
     // MARK: - Main Detection Pipeline
     private func performDetection(in image: UIImage) -> [CoinDetection] {
         print("🔍 Starting coin detection...")
+        print("   📐 Image size: \(image.size.width)x\(image.size.height)")
         
         // Step 1: Preprocess the image
         guard let processedImage = preprocessImage(image) else {
@@ -128,15 +129,30 @@ class CoinCalibrationDetector {
         let circles = detectCircles(in: processedImage, originalImage: image)
         print("📊 Found \(circles.count) potential circles")
         
-        // Step 3: Analyze each circle and identify coins
-        var detections: [CoinDetection] = []
-        for circle in circles {
-            if let detection = identifyCoin(circle: circle, in: image) {
-                detections.append(detection)
+        if circles.isEmpty {
+            print("   ⚠️ No circles detected at all")
+        } else {
+            for (index, circle) in circles.enumerated() {
+                print("   Circle #\(index + 1): center=(\(Int(circle.center.x)), \(Int(circle.center.y))), radius=\(Int(circle.radius)), circularity=\(String(format: "%.2f", circle.circularity))")
             }
         }
         
-        print("✅ Identified \(detections.count) coins")
+        // Step 3: Analyze each circle and identify coins
+        var detections: [CoinDetection] = []
+        for (index, circle) in circles.enumerated() {
+            if let detection = identifyCoin(circle: circle, in: image) {
+                detections.append(detection)
+                print("   ✅ Circle #\(index + 1) identified as \(detection.coinType.displayName)")
+            } else {
+                print("   ❌ Circle #\(index + 1) not identified as a coin")
+            }
+        }
+        
+        if detections.count == 0 && circles.count > 0 {
+            print("   ⚠️ Found circles but none were identified as coins")
+        }
+        
+        print("✅ Identified \(detections.count) coins total")
         return detections.sorted { $0.confidence > $1.confidence }
     }
     

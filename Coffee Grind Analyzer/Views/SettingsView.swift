@@ -158,7 +158,7 @@ struct SettingsView: View {
             }
             
             Button("Reset to Default") {
-                settings.calibrationFactor = 1.0
+                settings.calibrationFactor = 150.0  // Match the default in CoffeeModels.swift
             }
             .foregroundColor(.red)
         }
@@ -223,7 +223,7 @@ struct SettingsView: View {
                 settings.minParticleSize = 10
                 settings.maxParticleSize = 1000
                 settings.enableAdvancedFiltering = false
-                settings.calibrationFactor = 1.0
+                settings.calibrationFactor = 150.0  // Match the default in CoffeeModels.swift
                 print("✅ Settings reset complete")
             }) {
                 HStack {

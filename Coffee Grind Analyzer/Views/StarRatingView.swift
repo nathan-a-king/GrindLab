@@ -18,7 +18,7 @@ struct StarRatingView: View {
                     rating = index
                 }) {
                     Image(systemName: index <= rating ? "star.fill" : "star")
-                        .foregroundColor(index <= rating ? .yellow : .gray)
+                        .foregroundColor(index <= rating ? .white : .gray)
                         .font(.title2)
                 }
                 .buttonStyle(PlainButtonStyle())
