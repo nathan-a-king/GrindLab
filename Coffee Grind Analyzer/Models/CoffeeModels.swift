@@ -411,6 +411,186 @@ enum CoffeeAnalysisError: Error, LocalizedError {
     }
 }
 
+// MARK: - Flavor Profile and Brewing Recommendations
+
+struct FlavorProfile: Codable, Equatable {
+    let overallTaste: OverallTaste
+    let flavorIssues: [FlavorIssue]
+    let intensity: TasteIntensity
+    let notes: String?
+    let timestamp: Date
+    
+    enum OverallTaste: String, CaseIterable, Codable {
+        case balanced = "Balanced"
+        case underExtracted = "Sour/Under-extracted"
+        case overExtracted = "Bitter/Over-extracted"
+        case weak = "Weak/Watery"
+        case harsh = "Harsh/Astringent"
+        
+        var description: String {
+            switch self {
+            case .balanced:
+                return "Great! Sweet, complex, and well-balanced"
+            case .underExtracted:
+                return "Tastes sour, lacks sweetness, finishes quickly"
+            case .overExtracted:
+                return "Bitter, dry, astringent, hollow flavor"
+            case .weak:
+                return "Lacks body and intensity"
+            case .harsh:
+                return "Unpleasantly sharp or rough"
+            }
+        }
+    }
+    
+    enum FlavorIssue: String, CaseIterable, Codable {
+        case sour = "Sour"
+        case bitter = "Bitter"
+        case salty = "Salty"
+        case astringent = "Dry/Astringent"
+        case muddy = "Muddy"
+        case flat = "Flat"
+        case acidic = "Too Acidic"
+        case weak = "Weak"
+        case harsh = "Harsh"
+        case metallic = "Metallic"
+        
+        var isExtractionRelated: Bool {
+            switch self {
+            case .sour, .salty, .weak, .acidic:
+                return true // Under-extraction indicators
+            case .bitter, .astringent, .harsh:
+                return true // Over-extraction indicators
+            default:
+                return false // Equipment/bean quality related
+            }
+        }
+    }
+    
+    enum TasteIntensity: String, CaseIterable, Codable {
+        case veryMild = "Very Mild"
+        case mild = "Mild"
+        case moderate = "Moderate"
+        case strong = "Strong"
+        case veryStrong = "Very Strong"
+    }
+}
+
+struct BrewingRecommendation: Codable, Equatable {
+    let primaryAction: RecommendationAction
+    let secondaryActions: [RecommendationAction]
+    let reasoning: String
+    let expectedImprovement: String
+    let confidence: Double // 0-100%
+    let grindAnalysisFactors: [String]
+    
+    enum RecommendationAction: Codable, Equatable {
+        case grindFiner(amount: GrindAdjustment)
+        case grindCoarser(amount: GrindAdjustment)
+        case increaseDose(grams: Double?)
+        case decreaseDose(grams: Double?)
+        case increaseBrewTime(seconds: Double?)
+        case decreaseBrewTime(seconds: Double?)
+        case increaseWaterTemp(celsius: Double?)
+        case decreaseWaterTemp(celsius: Double?)
+        case improveGrinderUniformity
+        case checkWaterQuality
+        case useFresherBeans
+        
+        var displayText: String {
+            switch self {
+            case .grindFiner(let amount):
+                return "Grind \(amount.rawValue.lowercased()) finer"
+            case .grindCoarser(let amount):
+                return "Grind \(amount.rawValue.lowercased()) coarser"
+            case .increaseDose(let grams):
+                return grams != nil ? "Increase dose by \(String(format: "%.1f", grams!))g" : "Increase coffee dose"
+            case .decreaseDose(let grams):
+                return grams != nil ? "Decrease dose by \(String(format: "%.1f", grams!))g" : "Decrease coffee dose"
+            case .increaseBrewTime(let seconds):
+                return seconds != nil ? "Brew \(String(format: "%.0f", seconds!))s longer" : "Extend brew time"
+            case .decreaseBrewTime(let seconds):
+                return seconds != nil ? "Brew \(String(format: "%.0f", seconds!))s shorter" : "Reduce brew time"
+            case .increaseWaterTemp(let celsius):
+                return celsius != nil ? "Increase water temp to \(String(format: "%.0f", celsius!))°C" : "Use hotter water"
+            case .decreaseWaterTemp(let celsius):
+                return celsius != nil ? "Decrease water temp to \(String(format: "%.0f", celsius!))°C" : "Use cooler water"
+            case .improveGrinderUniformity:
+                return "Upgrade to a burr grinder for better consistency"
+            case .checkWaterQuality:
+                return "Check your water quality and mineral content"
+            case .useFresherBeans:
+                return "Use fresher coffee beans (2-30 days post-roast)"
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .grindFiner, .grindCoarser:
+                return "slider.horizontal.3"
+            case .increaseDose, .decreaseDose:
+                return "scalemass"
+            case .increaseBrewTime, .decreaseBrewTime:
+                return "clock"
+            case .increaseWaterTemp, .decreaseWaterTemp:
+                return "thermometer"
+            case .improveGrinderUniformity:
+                return "gear"
+            case .checkWaterQuality:
+                return "drop"
+            case .useFresherBeans:
+                return "leaf"
+            }
+        }
+    }
+    
+    enum GrindAdjustment: String, CaseIterable, Codable {
+        case slightly = "Slightly"
+        case moderately = "Moderately" 
+        case significantly = "Significantly"
+    }
+}
+
+struct CoffeeImprovementSession {
+    let id = UUID()
+    let analysisResults: CoffeeAnalysisResults
+    let flavorProfile: FlavorProfile?
+    let recommendations: [BrewingRecommendation]
+    let followUpAnalysis: CoffeeAnalysisResults?
+    let improvementNotes: String?
+    let timestamp: Date
+    
+    var hasImprovement: Bool {
+        followUpAnalysis != nil
+    }
+    
+    var improvementScore: Double? {
+        guard let followUp = followUpAnalysis else { return nil }
+        
+        // Compare key metrics
+        let uniformityImprovement = followUp.uniformityScore - analysisResults.uniformityScore
+        let sizeTargetImprovement = calculateSizeTargetImprovement(
+            original: analysisResults,
+            followUp: followUp
+        )
+        
+        return (uniformityImprovement + sizeTargetImprovement) / 2.0
+    }
+    
+    private func calculateSizeTargetImprovement(
+        original: CoffeeAnalysisResults,
+        followUp: CoffeeAnalysisResults
+    ) -> Double {
+        let targetRange = original.grindType.targetSizeMicrons
+        let targetCenter = (targetRange.lowerBound + targetRange.upperBound) / 2
+        
+        let originalDeviation = abs(original.averageSize - targetCenter)
+        let followUpDeviation = abs(followUp.averageSize - targetCenter)
+        
+        return ((originalDeviation - followUpDeviation) / targetCenter) * 100
+    }
+}
+
 // MARK: - Settings Model
 
 struct AnalysisSettings: Equatable {

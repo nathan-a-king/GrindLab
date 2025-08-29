@@ -72,7 +72,7 @@ struct EditTastingNotesDialog: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Color.brown.opacity(0.25))
+            .background(Color.brown.opacity(0.7))
             .navigationTitle(hasExistingNotes ? "Edit Tasting Notes" : "Add Tasting Notes")
             .navigationBarTitleDisplayMode(.inline)
             .onTapGesture {
@@ -119,9 +119,9 @@ struct EditTastingNotesDialog: View {
             }
         } header: {
             Text("Analysis Info")
-                .foregroundColor(.black)
+                .foregroundColor(.white)
         }
-        .listRowBackground(Color.brown.opacity(0.25))
+        .listRowBackground(Color.brown.opacity(0.5))
     }
     
     private var removeNotesSection: some View {
@@ -130,9 +130,9 @@ struct EditTastingNotesDialog: View {
                 .foregroundColor(.red)
         } footer: {
             Text("Toggle this to remove all tasting notes from this analysis")
-                .foregroundColor(.black.opacity(0.6))
+                .foregroundColor(.white.opacity(0.7))
         }
-        .listRowBackground(Color.brown.opacity(0.25))
+        .listRowBackground(Color.brown.opacity(0.5))
     }
     
     private var tastingNotesForm: some View {
@@ -155,9 +155,9 @@ struct EditTastingNotesDialog: View {
                 }
             } header: {
                 Text("Brew Method")
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
             }
-            .listRowBackground(Color.brown.opacity(0.25))
+            .listRowBackground(Color.brown.opacity(0.5))
             
             Section {
                 HStack {
@@ -168,17 +168,17 @@ struct EditTastingNotesDialog: View {
                 }
             } header: {
                 Text("Overall Rating")
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
             }
-            .listRowBackground(Color.brown.opacity(0.25))
+            .listRowBackground(Color.brown.opacity(0.5))
             
             Section {
                 TastingTagsView(selectedTags: $selectedTags)
             } header: {
                 Text("Tasting Profile")
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
             }
-            .listRowBackground(Color.brown.opacity(0.25))
+            .listRowBackground(Color.brown.opacity(0.5))
             
             Section {
                 VStack(spacing: 12) {
@@ -264,9 +264,9 @@ struct EditTastingNotesDialog: View {
                 }
             } header: {
                 Text("Brewing Details")
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
             }
-            .listRowBackground(Color.brown.opacity(0.25))
+            .listRowBackground(Color.brown.opacity(0.5))
             
             Section {
                 TextField("How did it taste? Any issues?", text: $extractionNotes, axis: .vertical)
@@ -283,9 +283,9 @@ struct EditTastingNotesDialog: View {
                     .lineLimit(2...4)
             } header: {
                 Text("Extraction Notes")
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
             }
-            .listRowBackground(Color.brown.opacity(0.25))
+            .listRowBackground(Color.brown.opacity(0.5))
         }
     }
     

@@ -20,8 +20,8 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Brown background to match app theme
-                Color.brown.opacity(0.25)
+                // Much darker brown background to match RecommendationView
+                Color.brown.opacity(0.7)
                     .ignoresSafeArea()
                 
                 Form {

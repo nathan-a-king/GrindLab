@@ -133,7 +133,7 @@ struct ContentView: View {
     }
     
     private var backgroundGradient: some View {
-        Color.brown.opacity(0.25)
+        Color.brown.opacity(0.7)
             .ignoresSafeArea()
     }
     
@@ -141,12 +141,12 @@ struct ContentView: View {
         VStack(spacing: 12) {
             Image(systemName: "lines.measurement.horizontal.aligned.bottom")
                 .font(.system(size: 64, weight: .medium))
-                .foregroundColor(.black)
-                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                .foregroundColor(.white)
+                .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
             
             Text("GrindLab")
                 .font(.system(size: 42, weight: .thin, design: .default))
-                .foregroundColor(.black)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .tracking(-1)
                 .lineLimit(2)
@@ -154,7 +154,7 @@ struct ContentView: View {
             
             Text("Select your grind type to begin analysis")
                 .font(.subheadline)
-                .foregroundColor(.black.opacity(0.8))
+                .foregroundColor(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
         }
@@ -250,10 +250,10 @@ struct ContentView: View {
     
     private var cardBackgroundView: some View {
         RoundedRectangle(cornerRadius: 16)
-            .fill(Color.brown.opacity(0.25))
+            .fill(Color.brown.opacity(0.5))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.4), lineWidth: 2)
             )
     }
     
@@ -580,7 +580,7 @@ struct ContentView: View {
             
             Text(title)
                 .font(.caption2)
-                .foregroundColor(.gray)
+                .foregroundColor(.white.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
@@ -609,8 +609,8 @@ struct ContentView: View {
             .padding(30)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.brown.opacity(0.25))
-                    .shadow(color: .black.opacity(0.2), radius: 10)
+                    .fill(Color.brown.opacity(0.5))
+                    .shadow(color: .black.opacity(0.4), radius: 15)
             )
         }
     }

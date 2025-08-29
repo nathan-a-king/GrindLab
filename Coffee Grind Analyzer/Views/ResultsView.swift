@@ -22,6 +22,8 @@ struct ResultsView: View {
     @State private var saveSuccess = false
     @State private var chartRefreshTrigger = false
     @State private var showingEditTastingNotes = false
+    @State private var showingFlavorProfile = false
+    @State private var flavorProfile: FlavorProfile?
     
     init(results: CoffeeAnalysisResults, isFromHistory: Bool = false) {
         self.baseResults = results
@@ -141,6 +143,12 @@ struct ResultsView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingFlavorProfile) {
+            FlavorProfileView(
+                flavorProfile: $flavorProfile,
+                analysisResults: results
+            )
+        }
         .alert("Analysis Saved!", isPresented: $saveSuccess) {
             Button("OK") { }
         } message: {
@@ -184,13 +192,16 @@ struct ResultsView: View {
                         .id(tastingNotes) // Force refresh when tasting notes change
                 }
                 
+                // Coffee improvement section
+                coffeeImprovementSection
+                
             }
             .padding()
             .onAppear {
                 print("📊 Overview tab content appeared")
             }
         }
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.7))
         .onAppear {
             print("📊 Overview tab ScrollView appeared")
         }
@@ -230,8 +241,12 @@ struct ResultsView: View {
                 .tint(isInRange ? .green : .red)
         }
         .padding()
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.5))
         .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+        )
     }
     
     private var metricsGrid: some View {
@@ -296,12 +311,89 @@ struct ResultsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.5))
         .cornerRadius(12)
-        .shadow(radius: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+        )
+        .shadow(radius: 4)
     }
     
-    
+    private var coffeeImprovementSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundColor(.yellow)
+                Text("Coffee Compass")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            
+            Text("Get personalized brewing recommendations based on your grind analysis and taste feedback")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+            
+            HStack(spacing: 12) {
+                Button("How did it taste?") {
+                    showingFlavorProfile = true
+                }
+                .buttonStyle(ImprovementButtonStyle(color: .blue, isSecondary: false))
+                
+                Button("View Analysis") {
+                    selectedTab = 1
+                }
+                .buttonStyle(ImprovementButtonStyle(color: .brown, isSecondary: true))
+            }
+            
+            // Show quick grind assessment
+            HStack {
+                let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                let uniformityGood = results.uniformityScore >= 60
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: isInRange ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(isInRange ? .green : .orange)
+                        Text("Size: \(isInRange ? "Good" : "Needs adjustment")")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    
+                    HStack {
+                        Image(systemName: uniformityGood ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(uniformityGood ? .green : .orange)
+                        Text("Uniformity: \(uniformityGood ? "Good" : "Could improve")")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                }
+                
+                Spacer()
+                
+                if !isInRange || !uniformityGood {
+                    Text("💡 Tap for tips!")
+                        .font(.caption)
+                        .foregroundColor(.yellow)
+                }
+            }
+        }
+        .padding()
+        .background(
+            LinearGradient(
+                colors: [Color.brown.opacity(0.3), Color.brown.opacity(0.2)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+        )
+    }
     
     // MARK: - Details Tab
     
@@ -350,7 +442,7 @@ struct ResultsView: View {
             }
             .padding()
         }
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.7))
     }
     
     private func detailSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -383,15 +475,19 @@ struct ResultsView: View {
                             .foregroundColor(.white.opacity(0.7))
                     }
                     .padding()
-                    .background(Color.brown.opacity(0.25))
+                    .background(Color.brown.opacity(0.5))
                     .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                    )
                 }
                 
                 sizeDistributionList
             }
             .padding()
         }
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.7))
     }
     
     @available(iOS 16.0, *)
@@ -467,8 +563,12 @@ struct ResultsView: View {
             }
         }
         .padding()
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.5))
         .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+        )
     }
     
     private func categoryShortName(_ category: String) -> String {
@@ -679,8 +779,12 @@ struct ResultsView: View {
             }
         }
         .padding()
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.5))
         .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+        )
     }
     
     private func formatRange(_ range: Range<Double>) -> String {
@@ -721,7 +825,7 @@ struct ResultsView: View {
             }
             .padding()
         }
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.7))
     }
     
     private func imageSection(title: String, image: UIImage, subtitle: String) -> some View {
@@ -765,8 +869,12 @@ struct DetailRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.5))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
@@ -1102,6 +1210,37 @@ struct SaveAnalysisDialog: View {
         }
         
         onSave(name, notes, tastingNotes)
+    }
+}
+
+// MARK: - Button Styles
+
+struct ImprovementButtonStyle: ButtonStyle {
+    let color: Color
+    let isSecondary: Bool
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .foregroundColor(isSecondary ? color : .white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                isSecondary ? 
+                    AnyView(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(color.opacity(0.5), lineWidth: 1)
+                            .background(Color.clear)
+                    ) :
+                    AnyView(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(color)
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

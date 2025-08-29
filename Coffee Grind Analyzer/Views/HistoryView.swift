@@ -70,8 +70,8 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Light brown background
-                Color.brown.opacity(0.25)
+                // Much darker brown background to match RecommendationView
+                Color.brown.opacity(0.7)
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
@@ -79,7 +79,7 @@ struct HistoryView: View {
                     HStack {
                         HStack {
                             Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.white.opacity(0.7))
                             
                             TextField("Search analyses...", text: $searchText)
                                 .textFieldStyle(PlainTextFieldStyle())
@@ -93,8 +93,9 @@ struct HistoryView: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.brown.opacity(0.25))
-                                .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+                                .fill(Color.brown.opacity(0.5))
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                         )
                         .onTapGesture {
                             // Allow tapping in search field to focus
@@ -132,7 +133,7 @@ struct HistoryView: View {
                             
                             Text("Showing \(filteredAndSortedAnalyses.count) of \(historyManager.totalAnalyses)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.white.opacity(0.7))
                         }
                         .padding(.horizontal, 16)
                         .padding(.bottom, 8)
@@ -283,16 +284,17 @@ struct HistoryView: View {
             
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 64))
-                .foregroundColor(.gray)
+                .foregroundColor(.white.opacity(0.5))
             
             VStack(spacing: 8) {
                 Text("No Saved Analyses")
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .foregroundColor(.white)
                 
                 Text("Capture and save coffee grind analyses to see them here")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
             }
             
@@ -334,7 +336,8 @@ struct HistoryView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.brown.opacity(0.25))
+                            .fill(Color.brown.opacity(0.5))
+                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 4)
                     )
