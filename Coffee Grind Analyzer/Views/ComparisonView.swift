@@ -135,7 +135,7 @@ struct ComparisonView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.brown.opacity(0.7))
+                .fill(Color.brown.opacity(0.25))
                 .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
         )
     }

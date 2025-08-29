@@ -19,7 +19,12 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationView {
-            Form {
+            ZStack {
+                // Brown background to match app theme
+                Color.brown.opacity(0.25)
+                    .ignoresSafeArea()
+                
+                Form {
                 analysisSection
                 
                 if settings.analysisMode == .advanced {
@@ -32,6 +37,9 @@ struct SettingsView: View {
                 #if DEBUG
                 debugSection
                 #endif
+                }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

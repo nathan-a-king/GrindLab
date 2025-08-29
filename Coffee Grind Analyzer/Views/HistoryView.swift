@@ -93,7 +93,7 @@ struct HistoryView: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.white.opacity(0.9))
+                                .fill(Color.brown.opacity(0.25))
                                 .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
                         )
                         .onTapGesture {
@@ -334,7 +334,7 @@ struct HistoryView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.brown.opacity(0.7))
+                            .fill(Color.brown.opacity(0.25))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 4)
                     )

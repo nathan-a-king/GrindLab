@@ -116,13 +116,20 @@ struct ContentView: View {
                     grindTypeCards
                     
                     // Settings button at bottom
-                    settingsButton
+                    // Settings button removed - now in toolbar
                 }
                 .padding(.horizontal, 30)
                 .padding(.bottom, 40)
             }
         }
         .navigationBarHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingSettings = true }) {
+                    Image(systemName: "gearshape.fill")
+                }
+            }
+        }
     }
     
     private var backgroundGradient: some View {
@@ -243,7 +250,7 @@ struct ContentView: View {
     
     private var cardBackgroundView: some View {
         RoundedRectangle(cornerRadius: 16)
-            .fill(Color.brown.opacity(0.7))
+            .fill(Color.brown.opacity(0.25))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.white.opacity(0.2), lineWidth: 1)
@@ -319,18 +326,7 @@ struct ContentView: View {
     }
     
     private var settingsButton: some View {
-        HStack {
-            Button(action: { showingSettings = true }) {
-                HStack {
-                    Image(systemName: "gearshape.fill")
-                    Text("Settings")
-                }
-                .foregroundColor(.black.opacity(0.8))
-                .font(.subheadline)
-            }
-            
-            Spacer()
-        }
+        EmptyView() // Removed - now using toolbar button
     }
     
     // MARK: - Camera View
@@ -406,7 +402,22 @@ struct ContentView: View {
                 analysisOverlay
             }
         }
-        .navigationBarHidden(true)
+        .navigationTitle(grindType.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Back") {
+                    showingCamera = false
+                    selectedGrindType = nil
+                    analysisResults = nil
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingSettings = true }) {
+                    Image(systemName: "gearshape.fill")
+                }
+            }
+        }
         .onAppear {
             camera.startSession()
         }
@@ -416,44 +427,10 @@ struct ContentView: View {
     }
     
     private func cameraHeader(grindType: CoffeeGrindType) -> some View {
-        VStack(spacing: 16) {
-            // Top navigation bar
-            HStack {
-                Button(action: {
-                    showingCamera = false
-                    selectedGrindType = nil
-                    analysisResults = nil
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "chevron.left")
-                            .font(.title2)
-                        Text("Back")
-                            .font(.headline)
-                    }
-                    .foregroundColor(.white)
-                }
-                
-                Spacer()
-                
-                Button(action: { showingSettings = true }) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 10)
-            
-            // Analyzing label centered above camera
-            VStack(spacing: 4) {
-                Text("Analyzing")
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.8))
-                Text(grindType.displayName)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-            }
+        VStack(spacing: 4) {
+            Text("Position coffee grounds in view")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
         }
     }
     
@@ -504,23 +481,41 @@ struct ContentView: View {
     }
     
     private func resultsPreview(results: CoffeeAnalysisResults) -> some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("Analysis Results")
-                    .font(.headline)
-                    .foregroundColor(.white)
+        VStack(spacing: 16) {
+            // Drag handle and header
+            VStack(spacing: 12) {
+                // Visual drag handle
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.white.opacity(0.4))
+                    .frame(width: 40, height: 4)
                 
-                Spacer()
-                
-                Button("View Details") {
-                    // Store results for detail view before clearing card
-                    detailResults = results
-                    showingResults = true
-                    // Clear results so card doesn't appear when user returns
-                    analysisResults = nil
+                HStack {
+                    Button("Dismiss") {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            analysisResults = nil
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+                    
+                    Spacer()
+                    
+                    Text("Analysis Results")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    Button("View Details") {
+                        // Store results for detail view before clearing card
+                        detailResults = results
+                        showingResults = true
+                        // Clear results so card doesn't appear when user returns
+                        analysisResults = nil
+                    }
+                    .foregroundColor(.blue)
+                    .font(.caption)
                 }
-                .foregroundColor(.blue)
-                .font(.subheadline)
             }
             
             HStack(spacing: 16) {
@@ -593,7 +588,9 @@ struct ContentView: View {
     
     private var analysisOverlay: some View {
         ZStack {
-            Color.black.opacity(0.7)
+            // Blur the camera preview instead of covering with solid color
+            Color.clear
+                .background(.ultraThinMaterial)
                 .ignoresSafeArea()
             
             VStack(spacing: 20) {
@@ -609,10 +606,11 @@ struct ContentView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
             }
-            .padding(40)
+            .padding(30)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.black.opacity(0.8))
+                    .fill(Color.brown.opacity(0.25))
+                    .shadow(color: .black.opacity(0.2), radius: 10)
             )
         }
     }

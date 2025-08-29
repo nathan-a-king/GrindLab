@@ -230,7 +230,7 @@ struct ResultsView: View {
                 .tint(isInRange ? .green : .red)
         }
         .padding()
-        .background(Color.brown.opacity(0.7))
+        .background(Color.brown.opacity(0.25))
         .cornerRadius(12)
     }
     
@@ -296,7 +296,7 @@ struct ResultsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.brown.opacity(0.7))
+        .background(Color.brown.opacity(0.25))
         .cornerRadius(12)
         .shadow(radius: 2)
     }
@@ -383,7 +383,7 @@ struct ResultsView: View {
                             .foregroundColor(.white.opacity(0.7))
                     }
                     .padding()
-                    .background(Color.brown.opacity(0.7))
+                    .background(Color.brown.opacity(0.25))
                     .cornerRadius(12)
                 }
                 
@@ -467,7 +467,7 @@ struct ResultsView: View {
             }
         }
         .padding()
-        .background(Color.brown.opacity(0.7))
+        .background(Color.brown.opacity(0.25))
         .cornerRadius(12)
     }
     
@@ -679,7 +679,7 @@ struct ResultsView: View {
             }
         }
         .padding()
-        .background(Color.brown.opacity(0.7))
+        .background(Color.brown.opacity(0.25))
         .cornerRadius(12)
     }
     
@@ -765,7 +765,7 @@ struct DetailRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.brown.opacity(0.7))
+        .background(Color.brown.opacity(0.25))
         .cornerRadius(8)
     }
 }

@@ -128,7 +128,7 @@ struct TastingNotesDisplayView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.brown.opacity(0.7))
+                .fill(Color.brown.opacity(0.25))
                 .shadow(radius: 2)
         )
     }

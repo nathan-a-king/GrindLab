@@ -121,7 +121,7 @@ struct EditTastingNotesDialog: View {
             Text("Analysis Info")
                 .foregroundColor(.black)
         }
-        .listRowBackground(Color.brown.opacity(0.7))
+        .listRowBackground(Color.brown.opacity(0.25))
     }
     
     private var removeNotesSection: some View {
@@ -132,7 +132,7 @@ struct EditTastingNotesDialog: View {
             Text("Toggle this to remove all tasting notes from this analysis")
                 .foregroundColor(.black.opacity(0.6))
         }
-        .listRowBackground(Color.brown.opacity(0.7))
+        .listRowBackground(Color.brown.opacity(0.25))
     }
     
     private var tastingNotesForm: some View {
@@ -157,7 +157,7 @@ struct EditTastingNotesDialog: View {
                 Text("Brew Method")
                     .foregroundColor(.black)
             }
-            .listRowBackground(Color.brown.opacity(0.7))
+            .listRowBackground(Color.brown.opacity(0.25))
             
             Section {
                 HStack {
@@ -170,7 +170,7 @@ struct EditTastingNotesDialog: View {
                 Text("Overall Rating")
                     .foregroundColor(.black)
             }
-            .listRowBackground(Color.brown.opacity(0.7))
+            .listRowBackground(Color.brown.opacity(0.25))
             
             Section {
                 TastingTagsView(selectedTags: $selectedTags)
@@ -178,7 +178,7 @@ struct EditTastingNotesDialog: View {
                 Text("Tasting Profile")
                     .foregroundColor(.black)
             }
-            .listRowBackground(Color.brown.opacity(0.7))
+            .listRowBackground(Color.brown.opacity(0.25))
             
             Section {
                 VStack(spacing: 12) {
@@ -266,7 +266,7 @@ struct EditTastingNotesDialog: View {
                 Text("Brewing Details")
                     .foregroundColor(.black)
             }
-            .listRowBackground(Color.brown.opacity(0.7))
+            .listRowBackground(Color.brown.opacity(0.25))
             
             Section {
                 TextField("How did it taste? Any issues?", text: $extractionNotes, axis: .vertical)
@@ -285,7 +285,7 @@ struct EditTastingNotesDialog: View {
                 Text("Extraction Notes")
                     .foregroundColor(.black)
             }
-            .listRowBackground(Color.brown.opacity(0.7))
+            .listRowBackground(Color.brown.opacity(0.25))
         }
     }
     
