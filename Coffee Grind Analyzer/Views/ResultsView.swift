@@ -120,7 +120,7 @@ struct ResultsView: View {
                         grindType: results.grindType,
                         timestamp: results.timestamp,
                         sizeDistribution: results.sizeDistribution,
-                        calibrationInfo: results.calibrationInfo,
+                        calibrationFactor: results.calibrationFactor,
                         tastingNotes: tastingNotes
                     )
                     
@@ -531,6 +531,7 @@ struct ResultsView: View {
                     .interpolationMethod(.catmullRom)
                 }
                 .frame(height: 200)
+                .chartXScale(domain: determineChartXDomain())
                 .chartXAxis {
                     AxisMarks(position: .bottom) { value in
                         AxisGridLine()
@@ -698,6 +699,30 @@ struct ResultsView: View {
             return .purple   // Coarsest category
         default:
             return .gray
+        }
+    }
+    
+    private func determineChartXDomain() -> ClosedRange<Double> {
+        // Scale based on actual particles captured
+        if !results.particles.isEmpty {
+            let minSize = results.particles.map { $0.size }.min() ?? 0
+            let maxSize = results.particles.map { $0.size }.max() ?? 1000
+            
+            // Add 15% padding on each side for better visualization
+            let range = maxSize - minSize
+            let padding = max(range * 0.15, 50) // At least 50μm padding
+            let lowerBound = max(0, minSize - padding)
+            let upperBound = maxSize + padding
+            
+            return lowerBound...upperBound
+        } else {
+            // Fallback: No particle data, use grind type's expected range
+            let targetRange = results.grindType.targetSizeMicrons
+            let targetMin = targetRange.lowerBound
+            let targetMax = targetRange.upperBound
+            
+            // Show from half the target min to 1.5x the target max
+            return (targetMin * 0.5)...(targetMax * 1.5)
         }
     }
     
@@ -1264,7 +1289,7 @@ struct ResultsView_Previews: PreviewProvider {
             grindType: .filter,
             timestamp: Date(),
             sizeDistribution: ["Fines (<400μm)": 12.3, "Fine (400-600μm)": 25.1, "Medium (600-1000μm)": 45.2, "Coarse (1000-1400μm)": 12.7, "Boulders (>1400μm)": 4.7],
-            calibrationInfo: .defaultPreview
+            calibrationFactor: 150.0
         )
         
         return ResultsView(results: sampleResults)

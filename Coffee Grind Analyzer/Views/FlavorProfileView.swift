@@ -305,7 +305,7 @@ struct IntensityButton: View {
             processedImage: nil,
             grindType: .filter,
             timestamp: Date(),
-            calibrationInfo: CalibrationInfo.defaultPreview
+            calibrationFactor: 150.0
         )
     )
 }

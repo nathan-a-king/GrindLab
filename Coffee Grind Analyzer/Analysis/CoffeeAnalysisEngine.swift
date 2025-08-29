@@ -189,12 +189,6 @@ class CoffeeAnalysisEngine {
         
         // Use manual calibration from settings
         let calibrationFactor = settings.calibrationFactor
-        let calibrationInfo = CalibrationInfo(
-            source: .manual,
-            factor: calibrationFactor,
-            coinType: nil,
-            confidence: nil
-        )
         
         print("📏 Using manual calibration factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
         
@@ -222,14 +216,8 @@ class CoffeeAnalysisEngine {
         
         // Final calibration summary
         print("\n📊 CALIBRATION SUMMARY:")
-        print("   Source: \(calibrationInfo.source)")
-        print("   Factor: \(String(format: "%.2f", calibrationInfo.factor)) μm/pixel")
-        if let coinType = calibrationInfo.coinType {
-            print("   Coin Type: \(coinType)")
-            if let confidence = calibrationInfo.confidence {
-                print("   Detection Confidence: \(String(format: "%.2f", confidence))")
-            }
-        }
+        print("   Source: Manual")
+        print("   Factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
         print("   Average Particle Size: \(String(format: "%.1f", statistics.averageSize)) μm")
         print("\n")
         
@@ -247,7 +235,7 @@ class CoffeeAnalysisEngine {
             processedImage: processedImage,
             grindType: grindType,
             timestamp: Date(),
-            calibrationInfo: calibrationInfo
+            calibrationFactor: calibrationFactor
         )
     }
     
@@ -365,8 +353,10 @@ class CoffeeAnalysisEngine {
         
         var counted = [Bool](repeating: false, count: sortedMask.count)
         var clusters: [Cluster] = []
-        let maxClusterAxis = Double(settings.maxParticleSize)
-        let minSurface = Double(settings.minParticleSize * settings.minParticleSize / 4)
+        // Convert micron limits to pixels for clustering
+        let maxClusterAxis = Double(settings.maxParticleSize) / settings.calibrationFactor
+        let minDiameterPixels = Double(settings.minParticleSize) / settings.calibrationFactor
+        let minSurface = (minDiameterPixels * minDiameterPixels * Double.pi) / 4.0
         
         print("🔬 Starting clustering with \(sortedMask.count) threshold pixels...")
         
@@ -595,38 +585,26 @@ class CoffeeAnalysisEngine {
         return settings.calibrationFactor
     }
     
-    // MARK: - Automatic Coin Detection for Calibration
-    
-    private func detectCalibrationCoin(in image: UIImage) -> CoinDetection? {
-        let detector = CoinCalibrationDetector()
-        var detectedCoin: CoinDetection?
-        
-        let semaphore = DispatchSemaphore(value: 0)
-        
-        detector.detectAndMeasureCoins(in: image) { coins in
-            // Use the highest confidence coin detection
-            detectedCoin = coins.first
-            semaphore.signal()
-        }
-        
-        _ = semaphore.wait(timeout: .now() + 5.0) // 5 second timeout
-        
-        if let coin = detectedCoin {
-            print("🪙 Detected \(coin.coinType.displayName) with confidence: \(String(format: "%.2f", coin.confidence))")
-            print("📏 Calibration factor: \(String(format: "%.2f", coin.calibrationFactor)) microns/pixel")
-        }
-        
-        return detectedCoin
-    }
     
     private func convertClustersToParticles(
         clusters: [Cluster],
         calibrationFactor: Double
     ) -> [CoffeeParticle] {
-        return clusters.map { cluster in
-            // Calculate diameter from surface area
-            let diameterPixels = 2.0 * sqrt(cluster.surface / Double.pi)
+        // Settings already store size limits in microns
+        let minSizeMicrons = Double(settings.minParticleSize)
+        let maxSizeMicrons = Double(settings.maxParticleSize)
+        
+        print("📏 Filtering particles: \(String(format: "%.1f", minSizeMicrons)) - \(String(format: "%.1f", maxSizeMicrons)) μm")
+        
+        let allParticles = clusters.compactMap { cluster -> CoffeeParticle? in
+            // Use actual measured span instead of equivalent circle diameter
+            let diameterPixels = cluster.longAxis * 2.0
             let sizeMicrons = diameterPixels * calibrationFactor
+            
+            // Filter by size in microns
+            guard sizeMicrons >= minSizeMicrons && sizeMicrons <= maxSizeMicrons else {
+                return nil
+            }
             
             // Calculate circularity (perimeter-based)
             let perimeter = calculatePerimeterFromPixels(pixels: cluster.pixels)
@@ -644,6 +622,9 @@ class CoffeeAnalysisEngine {
                 brightness: avgBrightness
             )
         }
+        
+        print("✅ Filtered \(allParticles.count) particles from \(clusters.count) clusters")
+        return allParticles
     }
     
     private func calculatePerimeterFromPixels(pixels: [(x: Int, y: Int, brightness: UInt8)]) -> Double {
@@ -860,14 +841,15 @@ class CoffeeAnalysisEngine {
                     
                     if let particle = createParticle(from: component, cgImage: cgImage, originalImage: originalImage) {
                         // Enhanced filtering with shape and size quality checks
-                        let minDiameter = Double(settings.minParticleSize) // Now using diameter instead of area
-                        let maxDiameter = Double(settings.maxParticleSize) // Now using diameter instead of area
+                        // Convert micron limits to pixels for comparison
+                        let minDiameterPixels = Double(settings.minParticleSize) / settings.calibrationFactor
+                        let maxDiameterPixels = Double(settings.maxParticleSize) / settings.calibrationFactor
                         
-                        // Calculate equivalent diameter for comparison
-                        let equivalentDiameter = 2 * sqrt(particle.area / .pi)
+                        // Use the actual diameter calculated in createParticle for comparison
+                        let actualDiameterPixels = particle.size / settings.calibrationFactor
                         
-                        // Size filtering using diameter instead of area
-                        if equivalentDiameter >= minDiameter && equivalentDiameter <= maxDiameter {
+                        // Size filtering using actual diameter in pixels
+                        if actualDiameterPixels >= minDiameterPixels && actualDiameterPixels <= maxDiameterPixels {
                             // Additional quality checks
                             let aspectRatio = calculateAspectRatio(component: component)
                             let solidity = calculateSolidity(component: component)
@@ -943,9 +925,11 @@ class CoffeeAnalysisEngine {
         let centroidX = Double(component.map { $0.x }.reduce(0, +)) / Double(component.count)
         let centroidY = Double(component.map { $0.y }.reduce(0, +)) / Double(component.count)
         
-        // Calculate equivalent diameter using more accurate method
-        let radius = sqrt(area / .pi)
-        let equivalentDiameter = radius * 2
+        // Calculate actual span instead of equivalent circle diameter
+        let maxDistance = component.map { pixel in
+            sqrt(pow(Double(pixel.x) - centroidX, 2) + pow(Double(pixel.y) - centroidY, 2))
+        }.max() ?? 0
+        let actualDiameter = maxDistance * 2.0
         
         // Micron conversion with calibration factor
         let pixelsToMicrons: Double
@@ -956,7 +940,7 @@ class CoffeeAnalysisEngine {
             // Approximately 100-150 microns per pixel for close-up coffee photos
             pixelsToMicrons = 100.0
         }
-        let sizeMicrons = equivalentDiameter * pixelsToMicrons
+        let sizeMicrons = actualDiameter * pixelsToMicrons
         
         // Calculate circularity (4π×area/perimeter²) - corrected formula
         let perimeter = calculatePerimeter(component: component)
@@ -979,8 +963,7 @@ class CoffeeAnalysisEngine {
         }
         
         // Debug logging for all particles (accepted and rejected)
-        let diameter = sqrt(area / .pi) * 2
-        print("🔍 Component at (\(Int(centroidX)), \(Int(centroidY))): \(component.count) pixels, diameter: \(String(format: "%.1f", diameter))px, size: \(String(format: "%.0f", sizeMicrons))μm")
+        print("🔍 Component at (\(Int(centroidX)), \(Int(centroidY))): \(component.count) pixels, diameter: \(String(format: "%.1f", actualDiameter))px, size: \(String(format: "%.0f", sizeMicrons))μm")
         print("   📊 Circularity: \(String(format: "%.2f", circularity)), Brightness: \(String(format: "%.2f", avgBrightness))")
         
         // Debug logging for rejected particles

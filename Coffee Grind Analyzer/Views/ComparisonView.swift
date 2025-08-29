@@ -759,7 +759,7 @@ struct ComparisonView_Previews: PreviewProvider {
             grindType: .filter,
             timestamp: Date(),
             sizeDistribution: ["Fines (<400μm)": 12.3, "Medium (600-1000μm)": 75.0, "Boulders (>1400μm)": 8.7],
-            calibrationInfo: .defaultPreview
+            calibrationFactor: 150.0
         )
         
         let sampleResults2 = CoffeeAnalysisResults(
@@ -777,7 +777,7 @@ struct ComparisonView_Previews: PreviewProvider {
             grindType: .filter,
             timestamp: Date(),
             sizeDistribution: ["Fines (<400μm)": 10.1, "Medium (600-1000μm)": 78.5, "Boulders (>1400μm)": 6.2],
-            calibrationInfo: .defaultPreview
+            calibrationFactor: 150.0
         )
         
         let analysis1 = SavedCoffeeAnalysis(

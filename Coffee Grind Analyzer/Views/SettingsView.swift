@@ -20,26 +20,28 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Much darker brown background to match RecommendationView
+                // Match History view background
                 Color.brown.opacity(0.7)
                     .ignoresSafeArea()
                 
-                Form {
-                analysisSection
-                
-                if settings.analysisMode == .advanced {
-                    advancedSection
+                ScrollView {
+                    VStack(spacing: 20) {
+                        analysisSection
+                        
+                        if settings.analysisMode == .advanced {
+                            advancedSection
+                        }
+                        
+                        calibrationSection
+                        aboutSection
+                        
+                        #if DEBUG
+                        debugSection
+                        #endif
+                    }
+                    .padding(.horizontal)
+                    .padding(.top)
                 }
-                
-                calibrationSection
-                aboutSection
-                
-                #if DEBUG
-                debugSection
-                #endif
-                }
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -67,35 +69,51 @@ struct SettingsView: View {
     }
     
     private var analysisSection: some View {
-        Section("Analysis Settings") {
-            Picker("Analysis Mode", selection: $settings.analysisMode) {
-                ForEach(AnalysisSettings.AnalysisMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName).tag(mode)
-                }
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            
-            VStack(alignment: .leading, spacing: 8) {
-                Text(modeDescription)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Contrast Threshold")
-                    Spacer()
-                    Text(String(format: "%.1f", settings.contrastThreshold))
-                        .foregroundColor(.secondary)
+        SettingsCard(title: "Analysis Settings") {
+            VStack(spacing: 20) {
+                // Analysis Mode
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Analysis Mode")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                    
+                    Picker("Analysis Mode", selection: $settings.analysisMode) {
+                        ForEach(AnalysisSettings.AnalysisMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .colorScheme(.dark)
+                    .accentColor(.white)
+                    
+                    Text(modeDescription)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 
-                Slider(value: $settings.contrastThreshold, in: 0.1...0.9, step: 0.1)
-                    .tint(.blue)
-                
-                Text("Higher values detect only high-contrast particles")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Contrast Threshold
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Contrast Threshold")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text(String(format: "%.1f", settings.contrastThreshold))
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Slider(value: $settings.contrastThreshold, in: 0.1...0.9, step: 0.1)
+                        .tint(.white)
+                    
+                    Text("Higher values detect only high-contrast particles")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                }
             }
         }
     }
@@ -112,133 +130,229 @@ struct SettingsView: View {
     }
     
     private var advancedSection: some View {
-        Section("Advanced Options") {
-            Toggle("Enhanced Filtering", isOn: $settings.enableAdvancedFiltering)
-            
-            VStack(alignment: .leading, spacing: 8) {
+        SettingsCard(title: "Advanced Options") {
+            VStack(spacing: 20) {
+                // Enhanced Filtering Toggle
                 HStack {
-                    Text("Min Particle Size")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Enhanced Filtering")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        Text("Improved quality with shape analysis")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
                     Spacer()
-                    Text("\(settings.minParticleSize) px")
-                        .foregroundColor(.secondary)
+                    Toggle("", isOn: $settings.enableAdvancedFiltering)
+                        .tint(.blue)
                 }
                 
-                Slider(value: Binding(
-                    get: { Double(settings.minParticleSize) },
-                    set: { settings.minParticleSize = Int($0) }
-                ), in: 5...50, step: 1)
-                .tint(.green)
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Max Particle Size")
-                    Spacer()
-                    Text("\(settings.maxParticleSize) px")
-                        .foregroundColor(.secondary)
+                // Min Particle Size
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Min Particle Size")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text("\(settings.minParticleSize) μm")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Slider(value: Binding(
+                        get: { Double(settings.minParticleSize) },
+                        set: { settings.minParticleSize = Int($0) }
+                    ), in: 50...500, step: 10)
+                    .tint(.white)
                 }
                 
-                Slider(value: Binding(
-                    get: { Double(settings.maxParticleSize) },
-                    set: { settings.maxParticleSize = Int($0) }
-                ), in: 100...2000, step: 50)
-                .tint(.orange)
+                // Max Particle Size
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Max Particle Size")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text("\(settings.maxParticleSize) μm")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Slider(value: Binding(
+                        get: { Double(settings.maxParticleSize) },
+                        set: { settings.maxParticleSize = Int($0) }
+                    ), in: 500...2000, step: 50)
+                    .tint(.white)
+                }
             }
         }
     }
     
     private var calibrationSection: some View {
-        Section("Calibration") {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Calibration Factor")
-                    Text(String(format: "%.2f μm/pixel", settings.calibrationFactor))
+        SettingsCard(title: "Calibration") {
+            VStack(spacing: 20) {
+                // Current Calibration Display
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Current Calibration")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        Text(String(format: "%.2f μm/pixel", settings.calibrationFactor))
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 8) {
+                        Button("Calibrate") {
+                            showingCalibration = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        
+                        Button("Reset") {
+                            settings.calibrationFactor = 150.0
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.gray)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                    }
                 }
                 
-                Spacer()
-                
-                Button("Calibrate") {
-                    showingCalibration = true
-                }
-                .buttonStyle(.bordered)
+                Text("Use a ruler to measure 1 inch for accurate particle sizing")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
             }
-            
-            Button("Reset to Default") {
-                settings.calibrationFactor = 150.0  // Match the default in CoffeeModels.swift
-            }
-            .foregroundColor(.red)
         }
     }
     
     #if DEBUG
     private var debugSection: some View {
-        Section("Debug Tools") {
-            Button("Run Analysis Validation Test") {
-                print("🧪 Running validation test...")
-                let engine = CoffeeAnalysisEngine()
-                engine.runValidationTest()
+        SettingsCard(title: "Debug Tools") {
+            VStack(spacing: 12) {
+                Button(action: {
+                    print("🧪 Running validation test...")
+                    let engine = CoffeeAnalysisEngine()
+                    engine.runValidationTest()
+                }) {
+                    HStack {
+                        Image(systemName: "testtube.2")
+                        Text("Run Analysis Validation Test")
+                        Spacer()
+                    }
+                    .foregroundColor(.white)
+                }
+                
+                Button(action: {
+                    print("🎯 Generating grid test image...")
+                    let (image, particles) = AnalysisValidation.createGridTestImage()
+                    print("✅ Created test image with \(particles.count) particles")
+                }) {
+                    HStack {
+                        Image(systemName: "grid")
+                        Text("Generate Test Image (Grid)")
+                        Spacer()
+                    }
+                    .foregroundColor(.white)
+                }
+                
+                Button(action: {
+                    print("🎲 Generating random test image...")
+                    let (image, particles) = AnalysisValidation.createTestImage()
+                    print("✅ Created test image with \(particles.count) particles")
+                }) {
+                    HStack {
+                        Image(systemName: "dice")
+                        Text("Generate Test Image (Random)")
+                        Spacer()
+                    }
+                    .foregroundColor(.white)
+                }
             }
-            .foregroundColor(.blue)
-            
-            Button("Generate Test Image (Grid)") {
-                print("🎯 Generating grid test image...")
-                let (image, particles) = AnalysisValidation.createGridTestImage()
-                print("✅ Created test image with \(particles.count) particles")
-                // You could save this image or analyze it directly
-            }
-            .foregroundColor(.green)
-            
-            Button("Generate Test Image (Random)") {
-                print("🎲 Generating random test image...")
-                let (image, particles) = AnalysisValidation.createTestImage()
-                print("✅ Created test image with \(particles.count) particles")
-            }
-            .foregroundColor(.orange)
         }
     }
     #endif
     
     private var aboutSection: some View {
-        Section("About") {
-            HStack {
-                Text("Version")
-                Spacer()
-                Text("1.0.0")
-                    .foregroundColor(.secondary)
-            }
-            
-            HStack {
-                Text("Build")
-                Spacer()
-                Text("240822.1")
-                    .foregroundColor(.secondary)
-            }
-            
-            Button("Help & Tips") {
-                showingHelp = true
-            }
-            
-            Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
-            
-            // Working reset button - replaced the problematic one
-            Button(action: {
-                print("🔄 Reset All Settings tapped")
-                AnalysisSettings.resetToDefaults()
-                settings.analysisMode = .standard
-                settings.contrastThreshold = 0.3
-                settings.minParticleSize = 10
-                settings.maxParticleSize = 1000
-                settings.enableAdvancedFiltering = false
-                settings.calibrationFactor = 150.0  // Match the default in CoffeeModels.swift
-                print("✅ Settings reset complete")
-            }) {
-                HStack {
-                    Image(systemName: "arrow.clockwise")
-                        .foregroundColor(.red)
-                    Text("Reset All Settings")
-                        .foregroundColor(.red)
+        SettingsCard(title: "About") {
+            VStack(spacing: 20) {
+                // App Info
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("Version")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text("1.0.0")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .fontWeight(.medium)
+                    }
+                    
+                    HStack {
+                        Text("Build")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text("240822.1")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                }
+                
+                Divider()
+                    .background(Color.white.opacity(0.2))
+                
+                // Action Buttons
+                VStack(spacing: 12) {
+                    Button(action: { showingHelp = true }) {
+                        HStack {
+                            Image(systemName: "questionmark.circle")
+                            Text("Help & Tips")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.white)
+                    }
+                    
+                    Link(destination: URL(string: "https://example.com/privacy")!) {
+                        HStack {
+                            Image(systemName: "hand.raised")
+                            Text("Privacy Policy")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.white)
+                    }
+                    
+                    Button(action: {
+                        print("🔄 Reset All Settings tapped")
+                        AnalysisSettings.resetToDefaults()
+                        settings.analysisMode = .standard
+                        settings.contrastThreshold = 0.3
+                        settings.minParticleSize = 100
+                        settings.maxParticleSize = 2000
+                        settings.enableAdvancedFiltering = false
+                        settings.calibrationFactor = 150.0
+                        print("✅ Settings reset complete")
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Reset All Settings")
+                            Spacer()
+                        }
+                        .foregroundColor(.white)
+                    }
                 }
             }
         }
@@ -487,6 +601,36 @@ struct CalibrationView: View {
         
         calibrationFactor = newFactor
         dismiss()
+    }
+}
+
+// MARK: - Settings Card Component
+
+struct SettingsCard<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title)
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            content
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.brown.opacity(0.5))
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
     }
 }
 

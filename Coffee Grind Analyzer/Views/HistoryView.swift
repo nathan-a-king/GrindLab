@@ -724,7 +724,7 @@ struct HistoryView_Previews: PreviewProvider {
             grindType: .filter,
             timestamp: Date(),
             sizeDistribution: ["Fines (<400μm)": 12.3, "Fine (400-600μm)": 25.1, "Medium (600-1000μm)": 45.2, "Coarse (1000-1400μm)": 12.7, "Boulders (>1400μm)": 4.7],
-            calibrationInfo: .defaultPreview
+            calibrationFactor: 150.0
         )
         
         historyManager.saveAnalysis(sampleResults, name: "Morning Espresso", notes: "Breville Smart Grinder Pro")

@@ -466,7 +466,7 @@ struct ConfidenceBadge: View {
             processedImage: nil,
             grindType: .espresso,
             timestamp: Date(),
-            calibrationInfo: CalibrationInfo.defaultPreview
+            calibrationFactor: 150.0
         ),
         flavorProfile: FlavorProfile(
             overallTaste: .underExtracted,
