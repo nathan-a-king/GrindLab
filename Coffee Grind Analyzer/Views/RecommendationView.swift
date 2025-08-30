@@ -52,6 +52,12 @@ struct RecommendationView: View {
                                 print("📝 Header section appeared")
                             }
                         
+                        // Coffee Compass visualization
+                        CoffeeCompassView(
+                            flavorProfile: flavorProfile,
+                            currentPosition: CoffeeCompassPosition(flavorProfile: flavorProfile)
+                        )
+                        
                         if isLoading {
                             ProgressView("Analyzing your coffee...")
                                 .frame(maxWidth: .infinity, alignment: .center)

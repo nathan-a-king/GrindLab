@@ -91,38 +91,51 @@ class CoffeeCompass {
         let avgSize = analysisResults.averageSize
         let uniformity = analysisResults.uniformityScore
         
-        // Determine grind adjustment needed
+        // Coffee Compass: Under-extraction = "Extract More"
+        // Primary solutions: Finer grind and/or longer brew time
         let grindAdjustment: BrewingRecommendation.GrindAdjustment
         let primaryAction: BrewingRecommendation.RecommendationAction
-        let secondaryActions: [BrewingRecommendation.RecommendationAction]
+        var secondaryActions: [BrewingRecommendation.RecommendationAction] = []
         
         if avgSize > targetRange.upperBound * 1.2 {
-            // Significantly too coarse
+            // Significantly too coarse - primary issue
             grindAdjustment = .significantly
             primaryAction = .grindFiner(amount: grindAdjustment)
-            secondaryActions = [.increaseBrewTime(seconds: 30)]
+            secondaryActions = [
+                .increaseBrewTime(seconds: 30),
+                .increaseWaterTemp(celsius: 3.0)
+            ]
         } else if avgSize > targetRange.upperBound {
             // Moderately too coarse
             grindAdjustment = .moderately
             primaryAction = .grindFiner(amount: grindAdjustment)
-            secondaryActions = [.increaseBrewTime(seconds: 15)]
+            secondaryActions = [.increaseBrewTime(seconds: 20)]
         } else {
-            // Size is okay, focus on other parameters
+            // Size is in range - focus on other extraction parameters
             grindAdjustment = .slightly
             primaryAction = .grindFiner(amount: grindAdjustment)
-            secondaryActions = [
-                .increaseDose(grams: 2.0),
-                .increaseWaterTemp(celsius: 2.0)
-            ]
+            
+            // Coffee Compass: If grind is adequate, increase contact time or temperature
+            if analysisResults.grindType == .espresso {
+                secondaryActions = [.increaseWaterTemp(celsius: 2.0)]
+            } else {
+                secondaryActions = [
+                    .increaseBrewTime(seconds: 30),
+                    .increaseWaterTemp(celsius: 3.0)
+                ]
+            }
         }
         
+        let compassGuidance = "☕️ Coffee Compass: EXTRACT MORE"
         let reasoning = """
-        Your coffee shows signs of under-extraction (sour/weak flavors). 
-        Average grind size: \(String(format: "%.0f", avgSize))μm (target: \(targetRange.lowerBound)-\(targetRange.upperBound)μm).
-        Grinding finer will increase surface area and improve extraction efficiency.
+        \(compassGuidance)
+        Your coffee shows under-extraction with sour, weak, or incomplete flavors. 
+        Average grind size: \(String(format: "%.0f", avgSize))μm (target: \(Int(targetRange.lowerBound))-\(Int(targetRange.upperBound))μm).
+        
+        Following the Coffee Compass: increase extraction through finer grind and/or longer brew time to extract more soluble compounds and achieve better balance.
         """
         
-        let expectedImprovement = "More sweetness, better balance, fuller body"
+        let expectedImprovement = "Increased sweetness, better balance, fuller body, reduced sourness"
         
         let confidence = calculateConfidence(
             uniformity: uniformity,
@@ -153,42 +166,56 @@ class CoffeeCompass {
         let uniformity = analysisResults.uniformityScore
         let finesPercentage = analysisResults.finesPercentage
         
+        // Coffee Compass: Over-extraction = "Extract Less"
+        // Primary solutions: Coarser grind and/or shorter brew time
         let grindAdjustment: BrewingRecommendation.GrindAdjustment
         let primaryAction: BrewingRecommendation.RecommendationAction
         var secondaryActions: [BrewingRecommendation.RecommendationAction] = []
         
         if avgSize < targetRange.lowerBound * 0.8 {
-            // Significantly too fine
+            // Significantly too fine - major contributor to over-extraction
             grindAdjustment = .significantly
             primaryAction = .grindCoarser(amount: grindAdjustment)
-            secondaryActions.append(.decreaseBrewTime(seconds: 30))
+            secondaryActions = [
+                .decreaseBrewTime(seconds: 30),
+                .decreaseWaterTemp(celsius: 4.0)
+            ]
         } else if avgSize < targetRange.lowerBound {
             // Moderately too fine
             grindAdjustment = .moderately
             primaryAction = .grindCoarser(amount: grindAdjustment)
-            secondaryActions.append(.decreaseBrewTime(seconds: 15))
+            secondaryActions = [.decreaseBrewTime(seconds: 20)]
         } else if finesPercentage > analysisResults.grindType.idealFinesPercentage.upperBound * 1.5 {
-            // Too many fines causing over-extraction
-            grindAdjustment = .slightly
+            // Excessive fines causing over-extraction despite good average size
+            grindAdjustment = .moderately
             primaryAction = .grindCoarser(amount: grindAdjustment)
-            secondaryActions.append(.decreaseWaterTemp(celsius: 3.0))
+            secondaryActions = [.decreaseWaterTemp(celsius: 4.0)]
         } else {
-            // Size is okay, adjust other parameters
+            // Size looks good - focus on reducing extraction through other parameters
             grindAdjustment = .slightly
             primaryAction = .grindCoarser(amount: grindAdjustment)
-            secondaryActions = [
-                .decreaseDose(grams: 1.5),
-                .decreaseWaterTemp(celsius: 2.0)
-            ]
+            
+            // Coffee Compass: Reduce extraction through shorter contact time or lower temperature
+            if analysisResults.grindType == .espresso {
+                secondaryActions = [.decreaseWaterTemp(celsius: 3.0)]
+            } else {
+                secondaryActions = [
+                    .decreaseBrewTime(seconds: 30),
+                    .decreaseWaterTemp(celsius: 3.0)
+                ]
+            }
         }
         
+        let compassGuidance = "☕️ Coffee Compass: EXTRACT LESS"
         let reasoning = """
-        Your coffee shows signs of over-extraction (bitter/astringent flavors). 
+        \(compassGuidance)
+        Your coffee shows over-extraction with bitter, astringent, or harsh flavors. 
         Average grind size: \(String(format: "%.0f", avgSize))μm, Fines: \(String(format: "%.1f", finesPercentage))%.
-        Grinding coarser will reduce surface area and prevent over-extraction of undesirable compounds.
+        
+        Following the Coffee Compass: reduce extraction through coarser grind and/or shorter brew time to prevent extracting undesirable bitter compounds.
         """
         
-        let expectedImprovement = "Less bitterness, smoother taste, better balance"
+        let expectedImprovement = "Reduced bitterness, smoother taste, better balance, cleaner finish"
         
         let confidence = calculateConfidence(
             uniformity: uniformity,
@@ -216,23 +243,42 @@ class CoffeeCompass {
     ) -> BrewingRecommendation {
         let avgSize = analysisResults.averageSize
         let uniformity = analysisResults.uniformityScore
+        let targetRange = analysisResults.grindType.targetSizeMicrons
         
+        // Coffee Compass: Weak coffee = "More Coffee" (increase brew ratio)
+        // Primary solution: Increase coffee dose or decrease water amount
         let primaryAction: BrewingRecommendation.RecommendationAction = .increaseDose(grams: 3.0)
-        let secondaryActions: [BrewingRecommendation.RecommendationAction] = [
-            .grindFiner(amount: .slightly),
-            .increaseBrewTime(seconds: 20)
-        ]
+        var secondaryActions: [BrewingRecommendation.RecommendationAction] = []
         
+        // Additional extraction improvements if grind allows
+        if avgSize > targetRange.upperBound {
+            // Grind is also too coarse - can help with both strength and extraction
+            secondaryActions = [
+                .grindFiner(amount: .moderately),
+                .increaseBrewTime(seconds: 15)
+            ]
+        } else {
+            // Grind size is reasonable - focus on ratio and minor extraction tweaks
+            secondaryActions = [
+                .grindFiner(amount: .slightly),
+                .increaseBrewTime(seconds: 20)
+            ]
+        }
+        
+        let compassGuidance = "☕️ Coffee Compass: MORE COFFEE"
         let reasoning = """
-        Your coffee lacks strength and body. This suggests insufficient coffee-to-water ratio.
-        Current grind analysis shows adequate size distribution, so increasing dose is the primary solution.
+        \(compassGuidance)
+        Your coffee lacks strength and body, indicating insufficient coffee-to-water ratio. 
+        Average grind size: \(String(format: "%.0f", avgSize))μm (target: \(Int(targetRange.lowerBound))-\(Int(targetRange.upperBound))μm).
+        
+        Following the Coffee Compass: increase brew ratio by using more coffee or less water to achieve proper strength and body.
         """
         
-        let expectedImprovement = "Fuller body, more intense flavors, better strength"
+        let expectedImprovement = "Fuller body, stronger flavors, better intensity, improved mouthfeel"
         
         let confidence = calculateConfidence(
             uniformity: uniformity,
-            sizeDeviation: 0, // Not size-related issue
+            sizeDeviation: 0, // Not primarily a size-related issue
             flavorIssues: flavorProfile.flavorIssues
         )
         
@@ -255,40 +301,60 @@ class CoffeeCompass {
     ) -> BrewingRecommendation {
         let uniformity = analysisResults.uniformityScore
         let finesPercentage = analysisResults.finesPercentage
+        let avgSize = analysisResults.averageSize
+        let targetRange = analysisResults.grindType.targetSizeMicrons
         
+        // Coffee Compass: Harsh coffee = "Less Coffee" (decrease brew ratio)
+        // But also consider grind uniformity and other extraction factors
         let primaryAction: BrewingRecommendation.RecommendationAction
         var secondaryActions: [BrewingRecommendation.RecommendationAction] = []
         
-        if uniformity < 50 {
-            // Poor grind uniformity is likely causing harshness
+        if uniformity < 45 {
+            // Poor grind uniformity is the primary cause of harshness
             primaryAction = .improveGrinderUniformity
             secondaryActions = [
                 .grindCoarser(amount: .slightly),
-                .decreaseWaterTemp(celsius: 3.0)
+                .decreaseWaterTemp(celsius: 4.0),
+                .decreaseDose(grams: 2.0)
             ]
-        } else if finesPercentage > analysisResults.grindType.idealFinesPercentage.upperBound * 1.3 {
-            // Too many fines causing harshness
+        } else if finesPercentage > analysisResults.grindType.idealFinesPercentage.upperBound * 1.5 {
+            // Excessive fines causing harsh over-extraction
             primaryAction = .grindCoarser(amount: .moderately)
-            secondaryActions = [.decreaseWaterTemp(celsius: 2.0)]
-        } else {
-            // Other factors
-            primaryAction = .decreaseWaterTemp(celsius: 4.0)
             secondaryActions = [
+                .decreaseWaterTemp(celsius: 3.0),
+                .decreaseDose(grams: 1.5)
+            ]
+        } else if avgSize < targetRange.lowerBound {
+            // Grind too fine contributing to harshness
+            primaryAction = .grindCoarser(amount: .moderately)
+            secondaryActions = [
+                .decreaseWaterTemp(celsius: 3.0),
+                .decreaseDose(grams: 1.0)
+            ]
+        } else {
+            // Coffee Compass: Reduce brew ratio as primary solution
+            primaryAction = .decreaseDose(grams: 2.5)
+            secondaryActions = [
+                .decreaseWaterTemp(celsius: 4.0),
                 .checkWaterQuality,
                 .useFresherBeans
             ]
         }
         
+        let compassGuidance = "☕️ Coffee Compass: LESS COFFEE"
         let reasoning = """
-        Harsh flavors often result from uneven extraction or excessive heat.
-        Your grind uniformity is \(String(format: "%.1f", uniformity))% with \(String(format: "%.1f", finesPercentage))% fines.
+        \(compassGuidance)
+        Your coffee tastes harsh, astringent, or unpleasantly sharp. 
+        Grind uniformity: \(String(format: "%.1f", uniformity))%, Fines: \(String(format: "%.1f", finesPercentage))%.
+        
+        Following the Coffee Compass: harsh flavors often result from too strong a brew ratio combined with uneven extraction. Reduce coffee dose and address grind uniformity for smoother results.
         """
         
-        let expectedImprovement = "Smoother taste, reduced harshness, better clarity"
+        let expectedImprovement = "Smoother taste, reduced harshness, better clarity, more balanced flavors"
         
         let confidence = calculateConfidence(
             uniformity: uniformity,
-            sizeDeviation: 0,
+            sizeDeviation: abs(avgSize - (targetRange.lowerBound + targetRange.upperBound) / 2),
             flavorIssues: flavorProfile.flavorIssues
         )
         
@@ -299,6 +365,7 @@ class CoffeeCompass {
             expectedImprovement: expectedImprovement,
             confidence: confidence,
             grindAnalysisFactors: [
+                "Average size: \(String(format: "%.0f", avgSize))μm",
                 "Uniformity: \(String(format: "%.1f", uniformity))%",
                 "Fines: \(String(format: "%.1f", finesPercentage))%"
             ]
