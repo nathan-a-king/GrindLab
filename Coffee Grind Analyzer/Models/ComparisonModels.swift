@@ -266,13 +266,13 @@ struct ComparisonChartData {
 extension Color {
     static let comparisonColors: [Color] = [
         .white,
-        .gray.opacity(0.7),  // Lighter gray for better visibility
+        .blue,  // Blue for better contrast and visibility
         .white.opacity(0.8),
-        .gray.opacity(0.6),
+        .blue.opacity(0.8),
         .white.opacity(0.6),
-        .gray.opacity(0.5),
+        .blue.opacity(0.6),
         .white.opacity(0.4),
-        .gray.opacity(0.3)
+        .blue.opacity(0.4)
     ]
     
     static func comparisonColor(for index: Int) -> Color {

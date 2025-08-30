@@ -494,7 +494,8 @@ struct ComparisonView: View {
                         
                         AreaMark(
                             x: .value("Size (μm)", dataPoint.microns),
-                            y: .value("Percentage", dataPoint.percentage / 100.0),
+                            yStart: .value("Start", 0.0),
+                            yEnd: .value("Percentage", dataPoint.percentage / 100.0),
                             series: .value("Analysis", "\(analysisData.analysis.name)-\(analysisData.analysis.id)")
                         )
                         .foregroundStyle(
