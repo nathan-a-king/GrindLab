@@ -627,20 +627,26 @@ struct ComparisonView: View {
     // MARK: - Detailed Metrics
     
     private var detailedMetrics: some View {
-        List {
-            ForEach(comparison.comparisons, id: \.id) { comparisonAnalysis in
-                Section(header: Text("vs. \(comparisonAnalysis.name)")) {
-                    metricComparisonRows(baseline: comparison.baseline, comparison: comparisonAnalysis)
+        ZStack {
+            // Dark brown background to match other views
+            Color.brown.opacity(0.7)
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    ForEach(comparison.comparisons, id: \.id) { comparisonAnalysis in
+                        ComparisonCard(title: "vs. \(comparisonAnalysis.name)") {
+                            metricComparisonRows(baseline: comparison.baseline, comparison: comparisonAnalysis)
+                        }
+                    }
                 }
+                .padding()
             }
         }
-        .listStyle(PlainListStyle())
-        .scrollContentBackground(.hidden)
-        .background(Color.brown.opacity(0.7))
     }
     
     private func metricComparisonRows(baseline: SavedCoffeeAnalysis, comparison: SavedCoffeeAnalysis) -> some View {
-        Group {
+        VStack(spacing: 16) {
             MetricComparisonRow(
                 label: "Uniformity Score",
                 baseline: baseline.results.uniformityScore,

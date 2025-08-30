@@ -139,9 +139,11 @@ struct ContentView: View {
     
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "lines.measurement.horizontal.aligned.bottom")
-                .font(.system(size: 64, weight: .medium))
-                .foregroundColor(.white)
+            Image("app-icon-display")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
             
             Text("GrindLab")
