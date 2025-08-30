@@ -15,9 +15,12 @@ struct ComparisonView: View {
     @State private var selectedTab = 0
     @State private var selectedMetric: String = "uniformityScore"
     
-    private var chartData: [ComparisonChartData] {
+    private var chartData: [(analysis: SavedCoffeeAnalysis, color: Color, data: [(microns: Double, percentage: Double, label: String)])] {
         return comparison.analyses.enumerated().map { index, analysis in
-            ComparisonChartData(analysis: analysis, color: Color.comparisonColor(for: index))
+            let color = Color.comparisonColor(for: index)
+            let data = prepareChartDataForAnalysis(analysis)
+            print("📊 Chart data for \(analysis.name): \(data.count) points, color index: \(index)")
+            return (analysis: analysis, color: color, data: data)
         }
     }
     
@@ -85,8 +88,8 @@ struct ComparisonView: View {
     
     private var sideBySide: some View {
         ZStack {
-            // Light brown background
-            Color.brown.opacity(0.25)
+            // Dark brown background to match other views
+            Color.brown.opacity(0.7)
                 .ignoresSafeArea()
             
             ScrollView {
@@ -107,51 +110,49 @@ struct ComparisonView: View {
     }
     
     private var comparisonSummaryCard: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Text("Comparing \(comparison.analyses.count) Analyses")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+        ComparisonCard(title: "Analysis Comparison") {
+            VStack(spacing: 16) {
+                HStack {
+                    Text("Comparing \(comparison.analyses.count) Analyses")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    Text("Baseline: \(comparison.baseline.name)")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(6)
+                }
                 
-                Spacer()
-                
-                Text("Baseline: \(comparison.baseline.name)")
-                    .font(.caption)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.2))
-                    .cornerRadius(8)
-            }
-            
-            // Since we only compare 2 analyses now, give each one more space
-            HStack(spacing: 16) {
-                ForEach(Array(comparison.analyses.enumerated()), id: \.element.id) { index, analysis in
-                    analysisChip(analysis: analysis, color: Color.comparisonColor(for: index), isBaseline: index == comparison.baselineIndex)
+                // Since we only compare 2 analyses now, give each one more space
+                HStack(spacing: 16) {
+                    ForEach(Array(comparison.analyses.enumerated()), id: \.element.id) { index, analysis in
+                        analysisChip(analysis: analysis, color: Color.comparisonColor(for: index), isBaseline: index == comparison.baselineIndex)
+                    }
                 }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.brown.opacity(0.25))
-                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
-        )
     }
     
     private func analysisChip(analysis: SavedCoffeeAnalysis, color: Color, isBaseline: Bool) -> some View {
-        VStack(spacing: 4) {
-            HStack {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
                 Circle()
                     .fill(color)
-                    .frame(width: 12, height: 12)
+                    .frame(width: 10, height: 10)
                 
                 if isBaseline {
                     Image(systemName: "star.fill")
                         .font(.caption2)
                         .foregroundColor(.yellow)
                 }
+                
+                Spacer()
             }
             
             Text(analysis.name)
@@ -159,19 +160,22 @@ struct ComparisonView: View {
                 .fontWeight(.medium)
                 .foregroundColor(.white)
                 .lineLimit(2)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
             
-            Text("\(Int(analysis.results.uniformityScore))%")
-                .font(.caption2)
-                .foregroundColor(analysis.results.uniformityColor)
-                .fontWeight(.bold)
+            HStack {
+                Text("\(Int(analysis.results.uniformityScore))%")
+                    .font(.caption2)
+                    .foregroundColor(analysis.results.uniformityColor)
+                    .fontWeight(.bold)
+                Spacer()
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.2))
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.1))
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
     }
     
@@ -179,11 +183,7 @@ struct ComparisonView: View {
         let baseline = comparison.baseline
         let comparison = comparison.comparisons.first!
         
-        return VStack(spacing: 16) {
-            Text("Head-to-Head Comparison")
-                .font(.headline)
-                .foregroundColor(.white)
-            
+        return ComparisonCard(title: "Head-to-Head Comparison") {
             VStack(spacing: 12) {
                 comparisonRow(
                     label: "Uniformity Score",
@@ -225,10 +225,6 @@ struct ComparisonView: View {
                     isHigherBetter: true
                 )
             }
-            .padding()
-            .background(Color.brown.opacity(0.7))
-            .cornerRadius(12)
-            .shadow(radius: 2)
         }
     }
     
@@ -368,11 +364,7 @@ struct ComparisonView: View {
     }
     
     private var tastingNotesComparison: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Tasting Notes Comparison")
-                .font(.headline)
-                .foregroundColor(.white)
-            
+        ComparisonCard(title: "Tasting Notes Comparison") {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(Array(comparison.analyses.enumerated()), id: \.element.id) { index, analysis in
@@ -462,18 +454,21 @@ struct ComparisonView: View {
     
     private var overlayCharts: some View {
         ZStack {
-            // Light brown background
-            Color.brown.opacity(0.25)
+            // Dark brown background to match other views
+            Color.brown.opacity(0.7)
                 .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 20) {
                     if #available(iOS 16.0, *) {
                         distributionOverlayChart
                         metricsComparisonChart
                     } else {
-                        Text("Charts require iOS 16+")
-                            .foregroundColor(.white.opacity(0.7))
+                        ComparisonCard(title: "Charts") {
+                            Text("Charts require iOS 16+")
+                                .foregroundColor(.white.opacity(0.7))
+                                .padding()
+                        }
                     }
                 }
                 .padding()
@@ -483,72 +478,78 @@ struct ComparisonView: View {
     
     @available(iOS 16.0, *)
     private var distributionOverlayChart: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Particle Size Distribution Comparison")
-                .font(.headline)
-                .foregroundColor(.white)
+        ComparisonCard(title: "Particle Size Distribution Comparison") {
             
             Chart {
-                ForEach(chartData, id: \.analysisId) { analysisData in
-                    ForEach(analysisData.distributionData) { dataPoint in
+                ForEach(Array(chartData.enumerated()), id: \.offset) { index, analysisData in
+                    ForEach(analysisData.data, id: \.label) { dataPoint in
                         LineMark(
-                            x: .value("Category", dataPoint.shortCategory),
-                            y: .value("Percentage", dataPoint.percentage),
-                            series: .value("Analysis", analysisData.analysisName)
+                            x: .value("Size (μm)", dataPoint.microns),
+                            y: .value("Percentage", dataPoint.percentage / 100.0),
+                            series: .value("Analysis", "\(analysisData.analysis.name)-\(analysisData.analysis.id)")
                         )
                         .foregroundStyle(analysisData.color)
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                         .interpolationMethod(.catmullRom)
-                        .symbol(Circle().strokeBorder(lineWidth: 2))
-                        .symbolSize(60)
                         
                         AreaMark(
-                            x: .value("Category", dataPoint.shortCategory),
-                            y: .value("Percentage", dataPoint.percentage),
-                            series: .value("Analysis", analysisData.analysisName)
+                            x: .value("Size (μm)", dataPoint.microns),
+                            y: .value("Percentage", dataPoint.percentage / 100.0),
+                            series: .value("Analysis", "\(analysisData.analysis.name)-\(analysisData.analysis.id)")
                         )
-                        .foregroundStyle(analysisData.color.opacity(0.2))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [analysisData.color.opacity(0.25), analysisData.color.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                         .interpolationMethod(.catmullRom)
                     }
                 }
             }
             .frame(height: 250)
+            .chartXScale(domain: determineComparisonXDomain())
+            .chartXAxis {
+                AxisMarks(position: .bottom) { value in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel {
+                        if let microns = value.as(Double.self) {
+                            Text("\(Int(microns))μm")
+                                .font(.caption2)
+                        }
+                    }
+                }
+            }
             .chartLegend(position: .bottom)
             .chartYAxisLabel("Percentage (%)")
-            .chartXAxisLabel("Particle Size Category")
+            .chartXAxisLabel("Particle Size (μm)")
             
             // Legend
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(Array(chartData.enumerated()), id: \.element.analysisId) { index, data in
+                ForEach(Array(chartData.enumerated()), id: \.offset) { index, data in
                     HStack {
                         Rectangle()
                             .fill(data.color)
                             .frame(width: 12, height: 3)
                             .cornerRadius(2)
                         
-                        Text(data.analysisName)
+                        Text(data.analysis.name)
                             .font(.caption)
                             .foregroundColor(.white)
-                            .lineLimit(1)
+                            .lineLimit(2)
                         
                         Spacer()
                     }
                 }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.95))
-                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
-        )
     }
     
     @available(iOS 16.0, *)
     private var metricsComparisonChart: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Key Metrics Comparison")
-                .font(.headline)
-                .foregroundColor(.white)
+        ComparisonCard(title: "Key Metrics Comparison") {
             
             Picker("Metric", selection: $selectedMetric) {
                 Text("Uniformity Score").tag("uniformityScore")
@@ -569,12 +570,6 @@ struct ComparisonView: View {
             .frame(height: 200)
             .chartYAxisLabel(getMetricUnit(selectedMetric))
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.95))
-                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
-        )
     }
     
     private func getMetricValue(_ results: CoffeeAnalysisResults, metric: String) -> Double {
@@ -607,6 +602,83 @@ struct ComparisonView: View {
         }
     }
     
+    // Use EXACT same logic as ResultsView.prepareChartData()
+    private func prepareChartDataForAnalysis(_ analysis: SavedCoffeeAnalysis) -> [(microns: Double, percentage: Double, label: String)] {
+        let results = analysis.results
+        
+        // First priority: Use EXACT saved chart data points if available
+        if let savedChartData = results.chartDataPoints, !savedChartData.isEmpty {
+            let allPoints = savedChartData.map { point in
+                (microns: point.microns, percentage: point.percentage, label: point.label)
+            }
+            print("📊 Data for \(analysis.name): min=\(allPoints.map{$0.microns}.min() ?? 0)μm, max=\(allPoints.map{$0.microns}.max() ?? 0)μm")
+            print("📊 First 5 points: \(allPoints.prefix(5).map { "\($0.microns)μm:\($0.percentage)%" }.joined(separator: ", "))")
+            return allPoints
+        }
+        // Fallback to other methods...
+        else if let granularDist = results.granularDistribution, !granularDist.isEmpty {
+            return granularDist.compactMap { label, percentage -> (microns: Double, percentage: Double, label: String)? in
+                guard percentage > 0 else { return nil }
+                
+                // Parse micron value from label (e.g. "300-400μm" -> 350)
+                let cleanedLabel = label.replacingOccurrences(of: "μm", with: "")
+                let components = cleanedLabel.components(separatedBy: "-")
+                
+                let midpoint: Double
+                if components.count == 2, let lowerBound = Double(components[0]) {
+                    let upperBound: Double
+                    if components[1] == "∞" {
+                        upperBound = lowerBound + 200
+                    } else if let upper = Double(components[1]) {
+                        upperBound = upper
+                    } else {
+                        return nil
+                    }
+                    midpoint = (lowerBound + upperBound) / 2
+                } else if components.count == 1, let singleValue = Double(components[0]) {
+                    midpoint = singleValue
+                } else {
+                    return nil
+                }
+                
+                return (microns: midpoint, percentage: percentage, label: label)
+            }.sorted { $0.microns < $1.microns }
+        }
+        // Final fallback to categorical
+        else {
+            let grindCategories = results.grindType.distributionCategories
+            return results.sizeDistribution.compactMap { key, value -> (microns: Double, percentage: Double, label: String)? in
+                guard let categoryIndex = grindCategories.firstIndex(where: { $0.label == key }) else { return nil }
+                
+                let category = grindCategories[categoryIndex]
+                let midpoint = category.range.upperBound == Double.infinity ? 
+                    category.range.lowerBound + 200 : 
+                    (category.range.lowerBound + category.range.upperBound) / 2
+                
+                return (microns: midpoint, percentage: value, label: key)
+            }.sorted { $0.microns < $1.microns }
+        }
+    }
+    
+    private func determineComparisonXDomain() -> ClosedRange<Double> {
+        // Find the overall min and max across all analyses
+        let allDataPoints = chartData.flatMap { $0.data }
+        guard !allDataPoints.isEmpty else { return 0...2000 }
+        
+        let minMicrons = allDataPoints.map { $0.microns }.min() ?? 0
+        let maxMicrons = allDataPoints.map { $0.microns }.max() ?? 2000
+        
+        // Add 15% padding on each side for better visualization
+        let range = maxMicrons - minMicrons
+        let padding = max(range * 0.15, 100) // At least 100μm padding
+        let lowerBound = max(0, minMicrons - padding)
+        let upperBound = maxMicrons + padding
+        
+        print("📊 Comparison chart domain: \(String(format: "%.0f", lowerBound))-\(String(format: "%.0f", upperBound))μm (data range: \(String(format: "%.0f", minMicrons))-\(String(format: "%.0f", maxMicrons)))")
+        
+        return lowerBound...upperBound
+    }
+    
     // MARK: - Detailed Metrics
     
     private var detailedMetrics: some View {
@@ -619,7 +691,7 @@ struct ComparisonView: View {
         }
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
-        .background(Color.brown.opacity(0.25))
+        .background(Color.brown.opacity(0.7))
     }
     
     private func metricComparisonRows(baseline: SavedCoffeeAnalysis, comparison: SavedCoffeeAnalysis) -> some View {
@@ -736,6 +808,36 @@ struct MetricComparisonRow: View {
                     .fontWeight(.semibold)
             }
         }
+    }
+}
+
+// MARK: - Comparison Card Component
+
+struct ComparisonCard<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title)
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            content
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.brown.opacity(0.5))
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
     }
 }
 

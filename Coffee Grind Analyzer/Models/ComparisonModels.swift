@@ -142,23 +142,122 @@ struct ComparisonChartData {
         self.analysisId = analysis.id
         self.color = color
         
-        // Use the dynamic categories from the grind type
-        let grindCategories = analysis.results.grindType.distributionCategories
+        // Use granular data like individual charts for smooth curves
+        if let savedChartData = analysis.results.chartDataPoints, !savedChartData.isEmpty {
+            // Use exact saved chart data (best option)
+            print("📊 ComparisonChartData: Using chartDataPoints for \(analysis.name) with \(savedChartData.count) points")
+            
+            let processedData = savedChartData.compactMap { point -> ChartDataPoint? in
+                guard point.percentage > 0 else { return nil }
+                return ChartDataPoint(
+                    category: point.label,
+                    shortCategory: "\(Int(point.microns))",
+                    percentage: point.percentage,
+                    order: Int(point.microns) // Sort by actual micron value
+                )
+            }.sorted { (a, b) in a.order < b.order }
+            
+            // Debug the actual data ranges
+            let percentages = processedData.map { $0.percentage }
+            let minPercentage = percentages.min() ?? 0
+            let maxPercentage = percentages.max() ?? 0
+            print("📊 Data range: microns \(processedData.first?.order ?? 0)-\(processedData.last?.order ?? 0), percentages \(minPercentage)-\(maxPercentage)")
+            print("📊 First 3 points: \(processedData.prefix(3).map { "(\($0.order)μm: \($0.percentage)%)" }.joined(separator: ", "))")
+            
+            // Generate intermediate points for smoother curves
+            self.distributionData = Self.generateSmoothCurvePoints(from: processedData)
+        } else if let granularDist = analysis.results.granularDistribution, !granularDist.isEmpty {
+            // Use granular distribution as fallback  
+            print("📊 ComparisonChartData: Using granularDistribution for \(analysis.name) with \(granularDist.count) points")
+            var dataPoints: [ChartDataPoint] = []
+            for (label, percentage) in granularDist {
+                guard percentage > 0 else { continue }
+                
+                // Parse micron value from label (e.g. "300-400μm" -> 350)
+                let cleanedLabel = label.replacingOccurrences(of: "μm", with: "")
+                let components = cleanedLabel.components(separatedBy: "-")
+                
+                let midpoint: Double
+                if components.count == 2, let lowerBound = Double(components[0]) {
+                    let upperBound: Double
+                    if components[1] == "∞" {
+                        upperBound = lowerBound + 200
+                    } else if let upper = Double(components[1]) {
+                        upperBound = upper
+                    } else {
+                        continue
+                    }
+                    midpoint = (lowerBound + upperBound) / 2
+                } else if components.count == 1, let singleValue = Double(components[0]) {
+                    // Handle single values like "150"
+                    midpoint = singleValue
+                } else {
+                    continue
+                }
+                
+                dataPoints.append(ChartDataPoint(
+                    category: label,
+                    shortCategory: "\(Int(midpoint))",
+                    percentage: percentage,
+                    order: Int(midpoint)
+                ))
+            }
+            self.distributionData = dataPoints.sorted { $0.order < $1.order }
+        } else {
+            // Final fallback: use categorical data (least accurate)
+            print("📊 ComparisonChartData: Using categorical sizeDistribution for \(analysis.name) with \(analysis.results.sizeDistribution.count) categories")
+            let grindCategories = analysis.results.grindType.distributionCategories
+            self.distributionData = analysis.results.sizeDistribution.compactMap { key, value in
+                guard let categoryIndex = grindCategories.firstIndex(where: { $0.label == key }) else { return nil }
+                let shortName = key.components(separatedBy: " (").first ?? key
+                
+                return ChartDataPoint(
+                    category: key,
+                    shortCategory: shortName,
+                    percentage: value,
+                    order: categoryIndex
+                )
+            }.sorted { $0.order < $1.order }
+        }
+    }
+    
+    // Generate intermediate points for smoother curve rendering
+    private static func generateSmoothCurvePoints(from originalPoints: [ChartDataPoint]) -> [ChartDataPoint] {
+        guard originalPoints.count >= 2 else { return originalPoints }
         
-        self.distributionData = analysis.results.sizeDistribution.compactMap { key, value in
-            // Find the matching category to get the correct order
-            guard let categoryIndex = grindCategories.firstIndex(where: { $0.label == key }) else { return nil }
+        var smoothPoints: [ChartDataPoint] = []
+        
+        for i in 0..<originalPoints.count {
+            let currentPoint = originalPoints[i]
+            smoothPoints.append(currentPoint)
             
-            // Extract short name from the label (everything before the parentheses)
-            let shortName = key.components(separatedBy: " (").first ?? key
-            
-            return ChartDataPoint(
-                category: key,
-                shortCategory: shortName,
-                percentage: value,
-                order: categoryIndex
-            )
-        }.sorted { $0.order < $1.order }
+            // Generate intermediate points between current and next point
+            if i < originalPoints.count - 1 {
+                let nextPoint = originalPoints[i + 1]
+                let micronGap = nextPoint.order - currentPoint.order
+                
+                // Only interpolate if gap is larger than 50μm
+                if micronGap > 50 {
+                    let steps = min(Int(micronGap / 25), 6) // Max 6 intermediate points
+                    
+                    for step in 1..<steps {
+                        let progress = Double(step) / Double(steps)
+                        let interpMicrons = Double(currentPoint.order) + (Double(nextPoint.order - currentPoint.order) * progress)
+                        let interpPercentage = currentPoint.percentage + ((nextPoint.percentage - currentPoint.percentage) * progress)
+                        
+                        smoothPoints.append(ChartDataPoint(
+                            category: "\(Int(interpMicrons))μm",
+                            shortCategory: "\(Int(interpMicrons))",
+                            percentage: interpPercentage,
+                            order: Int(interpMicrons)
+                        ))
+                    }
+                }
+            }
+        }
+        
+        print("📊 Generated \(smoothPoints.count) smooth points from \(originalPoints.count) original points")
+        return smoothPoints
     }
 }
 
@@ -166,14 +265,14 @@ struct ComparisonChartData {
 
 extension Color {
     static let comparisonColors: [Color] = [
-        .blue,
-        .orange,
-        .green,
-        .purple,
-        .pink,
-        .teal,
-        .indigo,
-        .brown
+        .white,
+        .gray.opacity(0.7),  // Lighter gray for better visibility
+        .white.opacity(0.8),
+        .gray.opacity(0.6),
+        .white.opacity(0.6),
+        .gray.opacity(0.5),
+        .white.opacity(0.4),
+        .gray.opacity(0.3)
     ]
     
     static func comparisonColor(for index: Int) -> Color {
