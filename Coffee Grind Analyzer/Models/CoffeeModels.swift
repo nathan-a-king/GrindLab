@@ -191,6 +191,36 @@ struct CoffeeAnalysisResults {
     // Store size distribution as computed property with backing storage
     let sizeDistribution: [String: Double]
     
+    // Store granular distribution for accurate chart reconstruction
+    let granularDistribution: [String: Double]?
+    
+    // Store exact chart data points for perfect reconstruction
+    struct ChartDataPoint: Codable {
+        let microns: Double
+        let percentage: Double
+        let label: String
+    }
+    let chartDataPoints: [ChartDataPoint]?
+    
+    // Stored min/max particle sizes for chart domain calculation when particles array is empty
+    private let storedMinParticleSize: Double?
+    private let storedMaxParticleSize: Double?
+    
+    // Computed properties for chart domain calculation
+    var minParticleSize: Double? {
+        if !particles.isEmpty {
+            return particles.map { $0.size }.min()
+        }
+        return storedMinParticleSize
+    }
+    
+    var maxParticleSize: Double? {
+        if !particles.isEmpty {
+            return particles.map { $0.size }.max()
+        }
+        return storedMaxParticleSize
+    }
+    
     // Standard initializer (from fresh analysis)
     init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
          finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
@@ -212,15 +242,25 @@ struct CoffeeAnalysisResults {
         self.calibrationFactor = calibrationFactor
         self.tastingNotes = tastingNotes
         
-        // Compute distribution from particles immediately
+        // Fresh analysis doesn't need stored particle sizes (particles array is populated)
+        self.storedMinParticleSize = nil
+        self.storedMaxParticleSize = nil
+        
+        // Compute distributions from particles immediately
         self.sizeDistribution = Self.computeSizeDistribution(from: particles, grindType: grindType, particleCount: particleCount, finesPercentage: finesPercentage, bouldersPercentage: bouldersPercentage)
+        self.granularDistribution = Self.computeGranularDistribution(from: particles)
+        
+        // Compute and store exact chart data points
+        self.chartDataPoints = Self.computeChartDataPoints(from: particles)
     }
     
     // Initializer for loaded results (with pre-computed distribution)
     init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
          finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
          confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType,
-         timestamp: Date, sizeDistribution: [String: Double], calibrationFactor: Double, tastingNotes: TastingNotes? = nil) {
+         timestamp: Date, sizeDistribution: [String: Double], calibrationFactor: Double, tastingNotes: TastingNotes? = nil,
+         storedMinParticleSize: Double? = nil, storedMaxParticleSize: Double? = nil, granularDistribution: [String: Double]? = nil,
+         chartDataPoints: [ChartDataPoint]? = nil) {
         self.uniformityScore = uniformityScore
         self.averageSize = averageSize
         self.medianSize = medianSize
@@ -237,6 +277,10 @@ struct CoffeeAnalysisResults {
         self.sizeDistribution = sizeDistribution
         self.calibrationFactor = calibrationFactor
         self.tastingNotes = tastingNotes
+        self.storedMinParticleSize = storedMinParticleSize
+        self.storedMaxParticleSize = storedMaxParticleSize
+        self.granularDistribution = granularDistribution
+        self.chartDataPoints = chartDataPoints
     }
     
     var uniformityColor: Color {
@@ -348,6 +392,83 @@ struct CoffeeAnalysisResults {
         }
         
         return distribution
+    }
+    
+    private static func computeGranularDistribution(from particles: [CoffeeParticle]) -> [String: Double] {
+        guard !particles.isEmpty else { return [:] }
+        
+        // Use the same granular ranges as the chart
+        let granularRanges: [Range<Double>] = [
+            0..<100, 100..<200, 200..<300, 300..<400, 400..<500, 500..<600,
+            600..<700, 700..<800, 800..<900, 900..<1000, 1000..<1100, 1100..<1200,
+            1200..<1300, 1300..<1400, 1400..<1500, 1500..<1700, 1700..<2000, 2000..<Double.infinity
+        ]
+        
+        let totalParticles = Double(particles.count)
+        var distribution: [String: Double] = [:]
+        
+        // Count particles in each granular range
+        for range in granularRanges {
+            let particlesInRange = particles.filter { particle in
+                particle.size >= range.lowerBound && particle.size < range.upperBound
+            }
+            
+            let percentage = Double(particlesInRange.count) / totalParticles * 100
+            let label = "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm"
+            
+            if percentage > 0 {
+                distribution[label] = percentage
+            }
+        }
+        
+        return distribution
+    }
+    
+    private static func computeChartDataPoints(from particles: [CoffeeParticle]) -> [ChartDataPoint] {
+        guard !particles.isEmpty else { 
+            print("🔴 DEBUG: computeChartDataPoints - No particles provided")
+            return [] 
+        }
+        
+        print("🔵 DEBUG: computeChartDataPoints - Processing \(particles.count) particles")
+        let minSize = particles.map { $0.size }.min() ?? 0
+        let maxSize = particles.map { $0.size }.max() ?? 0
+        print("🔵 DEBUG: Particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm")
+        
+        // Use EXACTLY the same logic as createGranularSizeRanges() in ResultsView
+        let sizeRanges: [Range<Double>] = [
+            0..<100, 100..<200, 200..<300, 300..<400, 400..<500, 500..<600,
+            600..<700, 700..<800, 800..<900, 900..<1000, 1000..<1100, 1100..<1200,
+            1200..<1300, 1300..<1400, 1400..<1500, 1500..<1700, 1700..<2000, 2000..<Double.infinity
+        ]
+        
+        // Use EXACTLY the same logic as prepareChartData() when particles exist
+        let chartPoints = sizeRanges.compactMap { range in
+            let particlesInRange = particles.filter { particle in
+                particle.size >= range.lowerBound && particle.size < range.upperBound
+            }
+            let percentage = (Double(particlesInRange.count) / Double(particles.count)) * 100
+            let midpoint = range.upperBound == Double.infinity ? 
+                range.lowerBound + 200 : 
+                (range.lowerBound + range.upperBound) / 2
+            
+            let label = "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm"
+            
+            if particlesInRange.count > 0 {
+                print("🔵 DEBUG: Range \(label): \(particlesInRange.count) particles (\(String(format: "%.1f", percentage))%)")
+            }
+            
+            return ChartDataPoint(microns: midpoint, percentage: percentage, label: label)
+        }
+        
+        print("🔵 DEBUG: Generated \(chartPoints.count) chart data points")
+        // Log first 5 non-zero points
+        let nonZeroPoints = chartPoints.filter { $0.percentage > 0 }.prefix(5)
+        for point in nonZeroPoints {
+            print("🔵 DEBUG: Point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
+        }
+        
+        return chartPoints
     }
 }
 

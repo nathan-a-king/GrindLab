@@ -20,7 +20,6 @@ struct ResultsView: View {
     @State private var saveName = ""
     @State private var saveNotes = ""
     @State private var saveSuccess = false
-    @State private var chartRefreshTrigger = false
     @State private var showingEditTastingNotes = false
     @State private var showingFlavorProfile = false
     @State private var flavorProfile: FlavorProfile?
@@ -121,7 +120,11 @@ struct ResultsView: View {
                         timestamp: results.timestamp,
                         sizeDistribution: results.sizeDistribution,
                         calibrationFactor: results.calibrationFactor,
-                        tastingNotes: tastingNotes
+                        tastingNotes: tastingNotes,
+                        storedMinParticleSize: results.minParticleSize,
+                        storedMaxParticleSize: results.maxParticleSize,
+                        granularDistribution: results.granularDistribution,
+                        chartDataPoints: results.chartDataPoints
                     )
                     
                     historyManager.saveAnalysis(updatedResults, name: name, notes: notes)
@@ -157,11 +160,7 @@ struct ResultsView: View {
         .onAppear {
             print("📝 ResultsView body appeared - isFromHistory: \(isFromHistory)")
             
-            // Force refresh for first-load issues
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                chartRefreshTrigger.toggle()
-                print("🔄 Chart refresh triggered")
-            }
+            // Debug logging for chart data
             
             // Debug logging
             print("📝 ResultsView data check:")
@@ -500,8 +499,8 @@ struct ResultsView: View {
             // Prepare more granular data for smoother chart
             let chartData = prepareChartData()
             
-            // Debug logging
-            let _ = print("🎨 Rendering chart with \(chartData.count) data points")
+            // Debug logging (moved to a separate function call)
+            let _ = debugLogChartData(chartData)
             
             if chartData.isEmpty {
                 Text("No distribution data available")
@@ -560,7 +559,7 @@ struct ResultsView: View {
                     // Force a small delay to ensure Charts framework is ready
                     print("📊 Chart appeared for analysis")
                 }
-                .id(chartRefreshTrigger) // Force re-render when trigger changes
+                .id("chart-\(results.timestamp.timeIntervalSince1970)-\(results.particles.count)") // Unique ID per analysis
             }
         }
         .padding()
@@ -589,10 +588,36 @@ struct ResultsView: View {
     }
     
     private func prepareChartData() -> [(microns: Double, percentage: Double, label: String)] {
-        if !results.particles.isEmpty {
+        print("🔷 DEBUG prepareChartData START")
+        print("🔷 Has chartDataPoints: \(results.chartDataPoints != nil)")
+        print("🔷 chartDataPoints count: \(results.chartDataPoints?.count ?? 0)")
+        print("🔷 Has particles: \(!results.particles.isEmpty)")
+        print("🔷 Particles count: \(results.particles.count)")
+        
+        // First priority: Use EXACT saved chart data points if available
+        if let savedChartData = results.chartDataPoints, !savedChartData.isEmpty {
+            print("✅ DEBUG: Using EXACT saved chart data with \(savedChartData.count) points")
+            let nonZero = savedChartData.filter { $0.percentage > 0 }
+            print("✅ DEBUG: Non-zero points: \(nonZero.count)")
+            for point in nonZero.prefix(5) {
+                print("✅ DEBUG: Using saved point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
+            }
+            
+            let returnData = savedChartData.map { point in
+                (microns: point.microns, percentage: point.percentage, label: point.label)
+            }
+            print("🔷 DEBUG prepareChartData END - returning saved data")
+            return returnData
+        }
+        // Second priority: Compute from actual particles if available
+        else if !results.particles.isEmpty {
+            print("📊 DEBUG: Computing chart data from \(results.particles.count) particles")
+            let minSize = results.particles.map { $0.size }.min() ?? 0
+            let maxSize = results.particles.map { $0.size }.max() ?? 0
+            print("📊 DEBUG: Particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm")
             // Use actual particle data for more accurate distribution
             let sizeRanges = createGranularSizeRanges()
-            return sizeRanges.compactMap { range in
+            let computedData = sizeRanges.compactMap { range in
                 let particlesInRange = results.particles.filter { particle in
                     particle.size >= range.lowerBound && particle.size < range.upperBound
                 }
@@ -601,54 +626,128 @@ struct ResultsView: View {
                     range.lowerBound + 200 : 
                     (range.lowerBound + range.upperBound) / 2
                 
-                return (microns: midpoint, percentage: percentage, label: "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm")
+                let label = "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm"
+                if particlesInRange.count > 0 {
+                    print("📊 DEBUG: Computing range \(label): \(particlesInRange.count) particles (\(String(format: "%.1f", percentage))%)")
+                }
+                return (microns: midpoint, percentage: percentage, label: label)
             }
+            
+            let nonZero = computedData.filter { $0.percentage > 0 }
+            print("📊 DEBUG: Computed \(computedData.count) total points, \(nonZero.count) non-zero")
+            for point in nonZero.prefix(5) {
+                print("📊 DEBUG: Computed point - \(point.label): \(String(format: "%.1f", point.percentage))%")
+            }
+            print("🔷 DEBUG prepareChartData END - returning computed data")
+            
+            return computedData
         } else {
-            // Fallback: interpolate between existing categories for smoother curve
-            let categories = results.grindType.distributionCategories
-            var interpolatedData: [(microns: Double, percentage: Double, label: String)] = []
-            
-            for (index, category) in categories.enumerated() {
-                guard let percentage = results.sizeDistribution[category.label] else { continue }
+            // Third priority: Use stored granular distribution if available
+            if let granularDist = results.granularDistribution, !granularDist.isEmpty {
+                print("🎯 Using stored granular distribution with \(granularDist.count) data points")
                 
-                let micronValue: Double
-                if category.range.upperBound == Double.infinity {
-                    micronValue = category.range.lowerBound + 200
-                } else {
-                    micronValue = (category.range.lowerBound + category.range.upperBound) / 2
-                }
-                
-                interpolatedData.append((microns: micronValue, percentage: percentage, label: category.label))
-                
-                // Add interpolated points between categories (except for the last one)
-                if index < categories.count - 1 {
-                    let nextCategory = categories[index + 1]
-                    guard let nextPercentage = results.sizeDistribution[nextCategory.label] else { continue }
+                return granularDist.compactMap { (label: String, percentage: Double) -> (microns: Double, percentage: Double, label: String)? in
+                    guard percentage > 0 else { return nil }
                     
-                    let nextMicronValue: Double
-                    if nextCategory.range.upperBound == Double.infinity {
-                        nextMicronValue = nextCategory.range.lowerBound + 200
+                    // Parse the micron range from the label (e.g. "300-400μm" -> 350)
+                    let components = label.replacingOccurrences(of: "μm", with: "").components(separatedBy: "-")
+                    guard components.count == 2 else { return nil }
+                    guard let lowerBound = Double(components[0]) else { return nil }
+                    
+                    let upperBound: Double
+                    if components[1] == "∞" {
+                        upperBound = lowerBound + 200
                     } else {
-                        nextMicronValue = (nextCategory.range.lowerBound + nextCategory.range.upperBound) / 2
+                        guard let upper = Double(components[1]) else { return nil }
+                        upperBound = upper
                     }
                     
-                    // Add 2 interpolated points between each pair
-                    for i in 1...2 {
-                        let t = Double(i) / 3.0 // divide into thirds
-                        let interpMicrons = micronValue + (nextMicronValue - micronValue) * t
-                        let interpPercentage = percentage + (nextPercentage - percentage) * t
-                        
-                        interpolatedData.append((
-                            microns: interpMicrons, 
-                            percentage: interpPercentage, 
-                            label: "interp_\(index)_\(i)"
-                        ))
-                    }
-                }
+                    let midpoint = (lowerBound + upperBound) / 2
+                    return (microns: midpoint, percentage: percentage, label: label)
+                }.sorted { $0.microns < $1.microns }
             }
-            
-            return interpolatedData.sorted { $0.microns < $1.microns }
+            // Fallback: Use granular size ranges like the original, but estimate percentages from saved data
+            else if let minSize = results.minParticleSize, let maxSize = results.maxParticleSize, minSize < maxSize {
+                print("🔄 Using stored particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm for granular chart reconstruction")
+                
+                // Use the same granular ranges as the original
+                let sizeRanges = createGranularSizeRanges()
+                
+                // Filter ranges to only those that overlap with our actual particle range
+                let relevantRanges = sizeRanges.filter { range in
+                    let rangeStart = range.lowerBound
+                    let rangeEnd = range.upperBound == Double.infinity ? maxSize + 100 : range.upperBound
+                    // Range overlaps if it starts before maxSize and ends after minSize
+                    return rangeStart < maxSize && rangeEnd > minSize
+                }
+                
+                print("📊 Using \(relevantRanges.count) granular ranges within particle bounds")
+                
+                // Estimate percentage for each granular range by interpolating from categorical data
+                return relevantRanges.compactMap { range -> (microns: Double, percentage: Double, label: String)? in
+                    let midpoint = range.upperBound == Double.infinity ? range.lowerBound + 200 : (range.lowerBound + range.upperBound) / 2
+                    
+                    // Skip ranges completely outside the actual particle range
+                    if midpoint < minSize || midpoint > maxSize {
+                        return nil
+                    }
+                    
+                    // Find which grind type category this granular range best fits into
+                    var bestMatch: (category: (range: Range<Double>, label: String), percentage: Double)?
+                    for category in results.grindType.distributionCategories {
+                        guard let percentage = results.sizeDistribution[category.label], percentage > 0 else { continue }
+                        
+                        // Check if this granular range overlaps with the category
+                        let categoryStart = category.range.lowerBound
+                        let categoryEnd = category.range.upperBound == Double.infinity ? 2000.0 : category.range.upperBound
+                        
+                        if midpoint >= categoryStart && midpoint < categoryEnd {
+                            bestMatch = (category: category, percentage: percentage)
+                            break
+                        }
+                    }
+                    
+                    guard let match = bestMatch else { return nil }
+                    
+                    // Create a normal distribution-like curve within the actual range
+                    // Particles closer to the center of the actual range get higher percentages
+                    let distanceFromCenter = abs(midpoint - (minSize + maxSize) / 2)
+                    let maxDistance = (maxSize - minSize) / 2
+                    let normalizedDistance = maxDistance > 0 ? distanceFromCenter / maxDistance : 0
+                    let distributionFactor = max(0.1, 1.0 - normalizedDistance) // 0.1 to 1.0
+                    
+                    let estimatedPercentage = match.percentage * distributionFactor * 0.5 // Scale down for smoother curve
+                    
+                    let label = "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm"
+                    return (microns: midpoint, percentage: estimatedPercentage, label: label)
+                }
+            } else {
+                // Final fallback: use the old approach with grind type categories
+                let categories = results.grindType.distributionCategories
+                return categories.compactMap { category in
+                    guard let percentage = results.sizeDistribution[category.label], percentage > 0 else { return nil }
+                    
+                    let micronValue: Double
+                    if category.range.upperBound == Double.infinity {
+                        micronValue = category.range.lowerBound + 200
+                    } else {
+                        micronValue = (category.range.lowerBound + category.range.upperBound) / 2
+                    }
+                    
+                    return (microns: micronValue, percentage: percentage, label: category.label)
+                }.sorted { $0.microns < $1.microns }
+            }
         }
+    }
+    
+    private func debugLogChartData(_ chartData: [(microns: Double, percentage: Double, label: String)]) -> Bool {
+        print("🎨 DEBUG: Rendering chart with \(chartData.count) data points")
+        let nonZeroChart = chartData.filter { $0.percentage > 0 }
+        print("🎨 DEBUG: Non-zero chart points: \(nonZeroChart.count)")
+        for point in nonZeroChart.prefix(5) {
+            print("🎨 DEBUG: Rendering point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
+        }
+        return true
     }
     
     private func createGranularSizeRanges() -> [Range<Double>] {
@@ -703,16 +802,17 @@ struct ResultsView: View {
     }
     
     private func determineChartXDomain() -> ClosedRange<Double> {
-        // Scale based on actual particles captured
-        if !results.particles.isEmpty {
-            let minSize = results.particles.map { $0.size }.min() ?? 0
-            let maxSize = results.particles.map { $0.size }.max() ?? 1000
-            
+        // Scale based on actual particles captured or stored min/max values
+        if let minSize = results.minParticleSize, let maxSize = results.maxParticleSize {
             // Add 15% padding on each side for better visualization
             let range = maxSize - minSize
             let padding = max(range * 0.15, 50) // At least 50μm padding
             let lowerBound = max(0, minSize - padding)
             let upperBound = maxSize + padding
+            
+            let dataSource = results.particles.isEmpty ? "stored min/max" : "particles"
+            print("📊 Chart domain calculated: \(String(format: "%.1f", lowerBound))-\(String(format: "%.1f", upperBound))μm (source: \(dataSource), min: \(String(format: "%.1f", minSize)), max: \(String(format: "%.1f", maxSize)))")
+            print("📊 Particles count: \(results.particles.count), range: \(String(format: "%.1f", range))μm, padding: \(String(format: "%.1f", padding))μm")
             
             return lowerBound...upperBound
         } else {
@@ -1026,76 +1126,21 @@ struct SaveAnalysisDialog: View {
     let onSave: (String?, String?, TastingNotes?) -> Void
     @Environment(\.dismiss) private var dismiss
     
-    @State private var brewMethod: TastingNotes.BrewMethod = .espresso
-    @State private var overallRating: Int = 3
-    @State private var selectedTags: Set<String> = []
-    @State private var extractionNotes: String = ""
-    @State private var extractionTime: String = ""
-    @State private var waterTemp: String = ""
-    @State private var doseIn: String = ""
-    @State private var yieldOut: String = ""
-    @State private var includeTastingNotes: Bool = false
     
     var body: some View {
         NavigationView {
-            Form {
-                Section("Analysis Info") {
-                    HStack {
-                        Text("Grind Type")
-                        Spacer()
-                        Text(results.grindType.displayName)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Size Match")
-                        Spacer()
-                        let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
-                        Text(isInRange ? "In Range" : "Out of Range")
-                            .foregroundColor(isInRange ? .green : .red)
-                            .fontWeight(.semibold)
-                    }
-                    
-                    HStack {
-                        Text("Date")
-                        Spacer()
-                        Text(results.timestamp, style: .date)
-                            .foregroundColor(.secondary)
-                    }
-                }
+            ZStack {
+                // Match History view background
+                Color.brown.opacity(0.7)
+                    .ignoresSafeArea()
                 
-                Section("Save Details") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Name (Optional)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        TextField("Auto-generated if empty", text: $saveName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                ScrollView {
+                    VStack(spacing: 20) {
+                        analysisInfoCard
+                        saveDetailsCard
                     }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Notes (Optional)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        TextField("Add notes about grinder, beans, etc.", text: $saveNotes, axis: .vertical)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .lineLimit(3...6)
-                    }
-                }
-                
-                Section {
-                    Toggle("Add Tasting Notes", isOn: $includeTastingNotes)
-                        .font(.subheadline)
-                } header: {
-                    Text("Brewing Results")
-                } footer: {
-                    Text("Track how this grind performed when brewing")
-                }
-                
-                if includeTastingNotes {
-                    tastingNotesSection
+                    .padding(.horizontal)
+                    .padding(.top)
                 }
             }
             .navigationTitle("Save Analysis")
@@ -1120,79 +1165,70 @@ struct SaveAnalysisDialog: View {
         }
     }
     
-    private var tastingNotesSection: some View {
-        Group {
-            Section("Brew Method") {
-                Picker("Method", selection: $brewMethod) {
-                    ForEach(TastingNotes.BrewMethod.allCases, id: \.self) { method in
-                        HStack {
-                            Image(systemName: method.icon)
-                            Text(method.rawValue)
-                        }.tag(method)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-            }
-            
-            Section("Overall Rating") {
+    private var analysisInfoCard: some View {
+        SaveCard(title: "Analysis Info") {
+            VStack(spacing: 16) {
                 HStack {
-                    Text("How was it?")
+                    Text("Grind Type")
+                        .foregroundColor(.white)
                     Spacer()
-                    StarRatingView(rating: $overallRating)
+                    Text(results.grindType.displayName)
+                        .foregroundColor(.white.opacity(0.8))
                 }
-            }
-            
-            Section("Tasting Profile") {
-                TastingTagsView(selectedTags: $selectedTags)
-            }
-            
-            Section("Brewing Details") {
-                VStack(spacing: 12) {
-                    HStack {
-                        Text("Extraction Time")
-                        Spacer()
-                        TextField("30s", text: $extractionTime)
-                            .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text("Water Temp")
-                        Spacer()
-                        TextField("93°C", text: $waterTemp)
-                            .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text("Dose In")
-                        Spacer()
-                        TextField("18g", text: $doseIn)
-                            .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text("Yield Out")
-                        Spacer()
-                        TextField("36g", text: $yieldOut)
-                            .frame(width: 60)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.decimalPad)
-                    }
+                
+                HStack {
+                    Text("Size Match")
+                        .foregroundColor(.white)
+                    Spacer()
+                    let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                    Text(isInRange ? "In Range" : "Out of Range")
+                        .foregroundColor(isInRange ? .green : .red)
+                        .fontWeight(.semibold)
                 }
-            }
-            
-            Section("Extraction Notes") {
-                TextField("How did it taste? Any issues?", text: $extractionNotes, axis: .vertical)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .lineLimit(2...4)
+                
+                HStack {
+                    Text("Date")
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text(results.timestamp, style: .date)
+                        .foregroundColor(.white.opacity(0.8))
+                }
             }
         }
     }
+    
+    private var saveDetailsCard: some View {
+        SaveCard(title: "Save Details") {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Name (Optional)")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    TextField("Auto-generated if empty", text: $saveName)
+                        .padding(12)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Notes (Optional)")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    TextField("Add notes about grinder, beans, etc.", text: $saveNotes, axis: .vertical)
+                        .padding(12)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                        .lineLimit(3...6)
+                }
+            }
+        }
+    }
+    
+    
     
     private func setupDefaults() {
         if saveName.isEmpty {
@@ -1201,40 +1237,13 @@ struct SaveAnalysisDialog: View {
             let dateString = formatter.string(from: results.timestamp)
             saveName = "\(results.grindType.displayName) - \(dateString)"
         }
-        
-        // Set default brew method based on grind type
-        switch results.grindType {
-        case .espresso:
-            brewMethod = .espresso
-        case .filter:
-            brewMethod = .pourOver
-        case .frenchPress:
-            brewMethod = .frenchPress
-        case .coldBrew:
-            brewMethod = .coldBrew
-        }
     }
     
     private func saveAnalysis() {
         let name = saveName.isEmpty ? nil : saveName
         let notes = saveNotes.isEmpty ? nil : saveNotes
         
-        var tastingNotes: TastingNotes? = nil
-        
-        if includeTastingNotes {
-            tastingNotes = TastingNotes(
-                brewMethod: brewMethod,
-                overallRating: overallRating,
-                tastingTags: Array(selectedTags),
-                extractionNotes: extractionNotes.isEmpty ? nil : extractionNotes,
-                extractionTime: Double(extractionTime),
-                waterTemp: Double(waterTemp),
-                doseIn: Double(doseIn),
-                yieldOut: Double(yieldOut)
-            )
-        }
-        
-        onSave(name, notes, tastingNotes)
+        onSave(name, notes, nil)
     }
 }
 
@@ -1295,4 +1304,35 @@ struct ResultsView_Previews: PreviewProvider {
         return ResultsView(results: sampleResults)
     }
 }
+
+// MARK: - Save Card Component
+
+struct SaveCard<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title)
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            content
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.brown.opacity(0.5))
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
+    }
+}
+
 #endif

@@ -141,7 +141,11 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             timestamp: oldResults.timestamp,
             sizeDistribution: oldResults.sizeDistribution,
             calibrationFactor: oldResults.calibrationFactor,
-            tastingNotes: tastingNotes
+            tastingNotes: tastingNotes,
+            storedMinParticleSize: oldResults.minParticleSize,
+            storedMaxParticleSize: oldResults.maxParticleSize,
+            granularDistribution: oldResults.granularDistribution,
+            chartDataPoints: oldResults.chartDataPoints
         )
         
         // Create updated saved analysis
@@ -245,6 +249,22 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                 print("📝 Saving analysis: \(analysis.name)")
                 print("📝 Has tasting notes: \(analysis.results.tastingNotes != nil)")
                 
+                // Calculate min/max particle sizes for chart domain calculation
+                let minSize = analysis.results.particles.isEmpty ? nil : analysis.results.particles.map { $0.size }.min()
+                let maxSize = analysis.results.particles.isEmpty ? nil : analysis.results.particles.map { $0.size }.max()
+                
+                // DEBUG: Log what we're about to save
+                print("🟢 DEBUG: Saving analysis '\(analysis.name)'")
+                print("🟢 DEBUG: Has particles: \(!analysis.results.particles.isEmpty) (\(analysis.results.particles.count))")
+                print("🟢 DEBUG: Has chartDataPoints: \(analysis.results.chartDataPoints != nil) (\(analysis.results.chartDataPoints?.count ?? 0))")
+                if let chartPoints = analysis.results.chartDataPoints {
+                    let nonZero = chartPoints.filter { $0.percentage > 0 }
+                    print("🟢 DEBUG: Non-zero chart points: \(nonZero.count)")
+                    for point in nonZero.prefix(3) {
+                        print("🟢 DEBUG: Saving point - \(point.label): \(String(format: "%.1f", point.percentage))%")
+                    }
+                }
+                
                 return StorableAnalysis(
                     id: analysis.id,
                     name: analysis.name,
@@ -263,7 +283,11 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     sizeDistribution: analysis.results.sizeDistribution,
                     tastingNotes: analysis.results.tastingNotes,
                     originalImagePath: analysis.originalImagePath,
-                    processedImagePath: analysis.processedImagePath
+                    processedImagePath: analysis.processedImagePath,
+                    minParticleSize: minSize,
+                    maxParticleSize: maxSize,
+                    granularDistribution: analysis.results.granularDistribution,
+                    chartDataPoints: analysis.results.chartDataPoints
                 )
             }
             
@@ -287,7 +311,18 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             let storableAnalyses = try JSONDecoder().decode([StorableAnalysis].self, from: data)
             
             // Convert back to full analysis objects
+            print("🟡 DEBUG: Loading \(storableAnalyses.count) analyses from storage")
+            
             savedAnalyses = storableAnalyses.compactMap { storable in
+                print("🟡 DEBUG: Loading analysis '\(storable.name)'")
+                print("🟡 DEBUG: Has chartDataPoints: \(storable.chartDataPoints != nil) (\(storable.chartDataPoints?.count ?? 0))")
+                if let chartPoints = storable.chartDataPoints {
+                    let nonZero = chartPoints.filter { $0.percentage > 0 }
+                    print("🟡 DEBUG: Loaded non-zero chart points: \(nonZero.count)")
+                    for point in nonZero.prefix(3) {
+                        print("🟡 DEBUG: Loaded point - \(point.label): \(String(format: "%.1f", point.percentage))%")
+                    }
+                }
                 // Check if distribution needs to be regenerated for new category system
                 // Old system had fixed categories like "Fines (<400μm)", new system is dynamic
                 let needsNewDistribution = storable.sizeDistribution.isEmpty ||
@@ -327,7 +362,11 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     timestamp: storable.timestamp,
                     sizeDistribution: distribution, // Use validated distribution
                     calibrationFactor: 150.0, // Default calibration factor for older saved data
-                    tastingNotes: storable.tastingNotes
+                    tastingNotes: storable.tastingNotes,
+                    storedMinParticleSize: storable.minParticleSize, // Pass stored min/max for chart domain
+                    storedMaxParticleSize: storable.maxParticleSize,
+                    granularDistribution: storable.granularDistribution, // Pass stored granular distribution for chart
+                    chartDataPoints: storable.chartDataPoints // Pass exact chart data points
                 )
                 
                 return SavedCoffeeAnalysis(
@@ -399,6 +438,10 @@ private struct StorableAnalysis: Codable {
     let tastingNotes: TastingNotes?
     let originalImagePath: String?
     let processedImagePath: String?
+    let minParticleSize: Double?  // For chart domain calculation
+    let maxParticleSize: Double?  // For chart domain calculation
+    let granularDistribution: [String: Double]?  // For accurate chart reconstruction
+    let chartDataPoints: [CoffeeAnalysisResults.ChartDataPoint]?  // Exact chart data for perfect reconstruction
     
     // Custom decoder to handle legacy data without sizeDistribution or tastingNotes
     init(from decoder: Decoder) throws {
@@ -428,13 +471,25 @@ private struct StorableAnalysis: Codable {
         // Try to decode image paths, fallback to nil if not present (legacy data)
         originalImagePath = try container.decodeIfPresent(String.self, forKey: .originalImagePath)
         processedImagePath = try container.decodeIfPresent(String.self, forKey: .processedImagePath)
+        
+        // Try to decode particle size range, fallback to nil if not present (legacy data)
+        minParticleSize = try container.decodeIfPresent(Double.self, forKey: .minParticleSize)
+        maxParticleSize = try container.decodeIfPresent(Double.self, forKey: .maxParticleSize)
+        
+        // Try to decode granular distribution, fallback to nil if not present (legacy data)
+        granularDistribution = try container.decodeIfPresent([String: Double].self, forKey: .granularDistribution)
+        
+        // Try to decode chart data points, fallback to nil if not present (legacy data)
+        chartDataPoints = try container.decodeIfPresent([CoffeeAnalysisResults.ChartDataPoint].self, forKey: .chartDataPoints)
     }
     
     // Standard initializer for encoding
     init(id: UUID, name: String, grindType: CoffeeGrindType, uniformityScore: Double, averageSize: Double,
          medianSize: Double, standardDeviation: Double, finesPercentage: Double, bouldersPercentage: Double,
          particleCount: Int, confidence: Double, timestamp: Date, savedDate: Date, notes: String?,
-         sizeDistribution: [String: Double], tastingNotes: TastingNotes?, originalImagePath: String?, processedImagePath: String?) {
+         sizeDistribution: [String: Double], tastingNotes: TastingNotes?, originalImagePath: String?, processedImagePath: String?,
+         minParticleSize: Double?, maxParticleSize: Double?, granularDistribution: [String: Double]?, 
+         chartDataPoints: [CoffeeAnalysisResults.ChartDataPoint]?) {
         self.id = id
         self.name = name
         self.grindType = grindType
@@ -453,11 +508,15 @@ private struct StorableAnalysis: Codable {
         self.tastingNotes = tastingNotes
         self.originalImagePath = originalImagePath
         self.processedImagePath = processedImagePath
+        self.minParticleSize = minParticleSize
+        self.maxParticleSize = maxParticleSize
+        self.granularDistribution = granularDistribution
+        self.chartDataPoints = chartDataPoints
     }
     
     private enum CodingKeys: String, CodingKey {
         case id, name, grindType, uniformityScore, averageSize, medianSize, standardDeviation
         case finesPercentage, bouldersPercentage, particleCount, confidence, timestamp, savedDate, notes, sizeDistribution, tastingNotes
-        case originalImagePath, processedImagePath
+        case originalImagePath, processedImagePath, minParticleSize, maxParticleSize, granularDistribution, chartDataPoints
     }
 }

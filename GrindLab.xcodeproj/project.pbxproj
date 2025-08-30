@@ -29,9 +29,9 @@
 
 /* Begin PBXFileReference section */
 		43088AFC2E607011009FF6E3 /* Icon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Icon.icon; sourceTree = "<group>"; };
-		433824332E56BBDC00EC93E5 /* Coffee Grind Analyzer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Coffee Grind Analyzer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		433824402E56BBDD00EC93E5 /* Coffee Grind AnalyzerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Coffee Grind AnalyzerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		4338244A2E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Coffee Grind AnalyzerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		433824332E56BBDC00EC93E5 /* GrindLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrindLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		433824402E56BBDD00EC93E5 /* GrindLabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -91,9 +91,9 @@
 		433824342E56BBDC00EC93E5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				433824332E56BBDC00EC93E5 /* Coffee Grind Analyzer.app */,
-				433824402E56BBDD00EC93E5 /* Coffee Grind AnalyzerTests.xctest */,
-				4338244A2E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests.xctest */,
+				433824332E56BBDC00EC93E5 /* GrindLab.app */,
+				433824402E56BBDD00EC93E5 /* GrindLabTests.xctest */,
+				4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -101,9 +101,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		433824322E56BBDC00EC93E5 /* Coffee Grind Analyzer */ = {
+		433824322E56BBDC00EC93E5 /* GrindLab */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 433824542E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "Coffee Grind Analyzer" */;
+			buildConfigurationList = 433824542E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "GrindLab" */;
 			buildPhases = (
 				4338242F2E56BBDC00EC93E5 /* Sources */,
 				433824302E56BBDC00EC93E5 /* Frameworks */,
@@ -116,16 +116,16 @@
 			fileSystemSynchronizedGroups = (
 				433824352E56BBDC00EC93E5 /* Coffee Grind Analyzer */,
 			);
-			name = "Coffee Grind Analyzer";
+			name = GrindLab;
 			packageProductDependencies = (
 			);
 			productName = "Coffee Grind Analyzer";
-			productReference = 433824332E56BBDC00EC93E5 /* Coffee Grind Analyzer.app */;
+			productReference = 433824332E56BBDC00EC93E5 /* GrindLab.app */;
 			productType = "com.apple.product-type.application";
 		};
-		4338243F2E56BBDD00EC93E5 /* Coffee Grind AnalyzerTests */ = {
+		4338243F2E56BBDD00EC93E5 /* GrindLabTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 433824572E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "Coffee Grind AnalyzerTests" */;
+			buildConfigurationList = 433824572E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "GrindLabTests" */;
 			buildPhases = (
 				4338243C2E56BBDD00EC93E5 /* Sources */,
 				4338243D2E56BBDD00EC93E5 /* Frameworks */,
@@ -139,16 +139,16 @@
 			fileSystemSynchronizedGroups = (
 				433824432E56BBDD00EC93E5 /* Coffee Grind AnalyzerTests */,
 			);
-			name = "Coffee Grind AnalyzerTests";
+			name = GrindLabTests;
 			packageProductDependencies = (
 			);
 			productName = "Coffee Grind AnalyzerTests";
-			productReference = 433824402E56BBDD00EC93E5 /* Coffee Grind AnalyzerTests.xctest */;
+			productReference = 433824402E56BBDD00EC93E5 /* GrindLabTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		433824492E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests */ = {
+		433824492E56BBDD00EC93E5 /* GrindLabUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4338245A2E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "Coffee Grind AnalyzerUITests" */;
+			buildConfigurationList = 4338245A2E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "GrindLabUITests" */;
 			buildPhases = (
 				433824462E56BBDD00EC93E5 /* Sources */,
 				433824472E56BBDD00EC93E5 /* Frameworks */,
@@ -162,11 +162,11 @@
 			fileSystemSynchronizedGroups = (
 				4338244D2E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests */,
 			);
-			name = "Coffee Grind AnalyzerUITests";
+			name = GrindLabUITests;
 			packageProductDependencies = (
 			);
 			productName = "Coffee Grind AnalyzerUITests";
-			productReference = 4338244A2E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests.xctest */;
+			productReference = 4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -192,7 +192,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4338242E2E56BBDC00EC93E5 /* Build configuration list for PBXProject "Coffee Grind Analyzer" */;
+			buildConfigurationList = 4338242E2E56BBDC00EC93E5 /* Build configuration list for PBXProject "GrindLab" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -206,9 +206,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				433824322E56BBDC00EC93E5 /* Coffee Grind Analyzer */,
-				4338243F2E56BBDD00EC93E5 /* Coffee Grind AnalyzerTests */,
-				433824492E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests */,
+				433824322E56BBDC00EC93E5 /* GrindLab */,
+				4338243F2E56BBDD00EC93E5 /* GrindLabTests */,
+				433824492E56BBDD00EC93E5 /* GrindLabUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -265,12 +265,12 @@
 /* Begin PBXTargetDependency section */
 		433824422E56BBDD00EC93E5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 433824322E56BBDC00EC93E5 /* Coffee Grind Analyzer */;
+			target = 433824322E56BBDC00EC93E5 /* GrindLab */;
 			targetProxy = 433824412E56BBDD00EC93E5 /* PBXContainerItemProxy */;
 		};
 		4338244C2E56BBDD00EC93E5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 433824322E56BBDC00EC93E5 /* Coffee Grind Analyzer */;
+			target = 433824322E56BBDC00EC93E5 /* GrindLab */;
 			targetProxy = 4338244B2E56BBDD00EC93E5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -481,7 +481,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Coffee Grind Analyzer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Coffee Grind Analyzer";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GrindLab.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GrindLab";
 			};
 			name = Debug;
 		};
@@ -503,7 +503,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Coffee Grind Analyzer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Coffee Grind Analyzer";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GrindLab.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GrindLab";
 			};
 			name = Release;
 		};
@@ -550,7 +550,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4338242E2E56BBDC00EC93E5 /* Build configuration list for PBXProject "Coffee Grind Analyzer" */ = {
+		4338242E2E56BBDC00EC93E5 /* Build configuration list for PBXProject "GrindLab" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				433824522E56BBDD00EC93E5 /* Debug */,
@@ -559,7 +559,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		433824542E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "Coffee Grind Analyzer" */ = {
+		433824542E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "GrindLab" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				433824552E56BBDD00EC93E5 /* Debug */,
@@ -568,7 +568,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		433824572E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "Coffee Grind AnalyzerTests" */ = {
+		433824572E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "GrindLabTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				433824582E56BBDD00EC93E5 /* Debug */,
@@ -577,7 +577,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4338245A2E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "Coffee Grind AnalyzerUITests" */ = {
+		4338245A2E56BBDD00EC93E5 /* Build configuration list for PBXNativeTarget "GrindLabUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4338245B2E56BBDD00EC93E5 /* Debug */,
