@@ -13,7 +13,6 @@ struct ComparisonView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var selectedTab = 0
-    @State private var selectedMetric: String = "uniformityScore"
     
     private var chartData: [(analysis: SavedCoffeeAnalysis, color: Color, data: [(microns: Double, percentage: Double, label: String)])] {
         return comparison.analyses.enumerated().map { index, analysis in
@@ -255,7 +254,7 @@ struct ComparisonView: View {
                     Text(String(format: "%.1f", baseline) + unit)
                         .font(.title3)
                         .fontWeight(.medium)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.white)
                 }
                 .frame(maxWidth: .infinity)
                 
@@ -280,7 +279,7 @@ struct ComparisonView: View {
                     Text(String(format: "%.1f", comparison) + unit)
                         .font(.title3)
                         .fontWeight(.medium)
-                        .foregroundColor(.orange)
+                        .foregroundColor(.white)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -462,7 +461,6 @@ struct ComparisonView: View {
                 VStack(spacing: 20) {
                     if #available(iOS 16.0, *) {
                         distributionOverlayChart
-                        metricsComparisonChart
                     } else {
                         ComparisonCard(title: "Charts") {
                             Text("Charts require iOS 16+")
@@ -485,7 +483,7 @@ struct ComparisonView: View {
                     ForEach(analysisData.data, id: \.label) { dataPoint in
                         LineMark(
                             x: .value("Size (μm)", dataPoint.microns),
-                            y: .value("Percentage", dataPoint.percentage / 100.0),
+                            y: .value("Percentage", dataPoint.percentage),
                             series: .value("Analysis", "\(analysisData.analysis.name)-\(analysisData.analysis.id)")
                         )
                         .foregroundStyle(analysisData.color)
@@ -495,7 +493,7 @@ struct ComparisonView: View {
                         AreaMark(
                             x: .value("Size (μm)", dataPoint.microns),
                             yStart: .value("Start", 0.0),
-                            yEnd: .value("Percentage", dataPoint.percentage / 100.0),
+                            yEnd: .value("Percentage", dataPoint.percentage),
                             series: .value("Analysis", "\(analysisData.analysis.name)-\(analysisData.analysis.id)")
                         )
                         .foregroundStyle(
@@ -509,7 +507,7 @@ struct ComparisonView: View {
                     }
                 }
             }
-            .frame(height: 250)
+            .frame(height: 350)
             .chartXScale(domain: determineComparisonXDomain())
             .chartXAxis {
                 AxisMarks(position: .bottom) { value in
@@ -548,60 +546,6 @@ struct ComparisonView: View {
         }
     }
     
-    @available(iOS 16.0, *)
-    private var metricsComparisonChart: some View {
-        ComparisonCard(title: "Key Metrics Comparison") {
-            
-            Picker("Metric", selection: $selectedMetric) {
-                Text("Uniformity Score").tag("uniformityScore")
-                Text("Average Size").tag("averageSize")
-                Text("Fines Percentage").tag("finesPercentage")
-                Text("Standard Deviation").tag("standardDeviation")
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            
-            Chart(Array(comparison.analyses.enumerated()), id: \.element.id) { index, analysis in
-                BarMark(
-                    x: .value("Analysis", analysis.name),
-                    y: .value("Value", getMetricValue(analysis.results, metric: selectedMetric))
-                )
-                .foregroundStyle(Color.comparisonColor(for: index))
-                .cornerRadius(4)
-            }
-            .frame(height: 200)
-            .chartYAxisLabel(getMetricUnit(selectedMetric))
-        }
-    }
-    
-    private func getMetricValue(_ results: CoffeeAnalysisResults, metric: String) -> Double {
-        switch metric {
-        case "uniformityScore":
-            return results.uniformityScore
-        case "averageSize":
-            return results.averageSize
-        case "finesPercentage":
-            return results.finesPercentage
-        case "standardDeviation":
-            return results.standardDeviation
-        default:
-            return 0
-        }
-    }
-    
-    private func getMetricUnit(_ metric: String) -> String {
-        switch metric {
-        case "uniformityScore":
-            return "Score (%)"
-        case "averageSize":
-            return "Size (μm)"
-        case "finesPercentage":
-            return "Fines (%)"
-        case "standardDeviation":
-            return "Std Dev (μm)"
-        default:
-            return ""
-        }
-    }
     
     // Use EXACT same logic as ResultsView.prepareChartData()
     private func prepareChartDataForAnalysis(_ analysis: SavedCoffeeAnalysis) -> [(microns: Double, percentage: Double, label: String)] {
