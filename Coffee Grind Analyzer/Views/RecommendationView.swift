@@ -91,7 +91,6 @@ struct RecommendationView: View {
                     .padding()
                 }
             }
-            .background(Color.brown.opacity(0.7))
             .navigationTitle("Brewing Recommendations")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
