@@ -499,7 +499,8 @@ enum CoffeeAnalysisError: Error, LocalizedError {
 
 // MARK: - Flavor Profile and Brewing Recommendations
 
-struct FlavorProfile: Codable, Equatable {
+struct FlavorProfile: Codable, Equatable, Identifiable {
+    let id = UUID()
     let overallTaste: OverallTaste
     let flavorIssues: [FlavorIssue]
     let intensity: TasteIntensity

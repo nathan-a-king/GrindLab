@@ -16,6 +16,7 @@ struct FlavorProfileView: View {
     @State private var selectedIntensity: FlavorProfile.TasteIntensity = .moderate
     @State private var notes: String = ""
     @State private var showingRecommendations = false
+    @State private var profileForRecommendations: FlavorProfile? = nil
     
     let analysisResults: CoffeeAnalysisResults
     
@@ -44,28 +45,20 @@ struct FlavorProfileView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingRecommendations) {
-            // Create a default profile if none exists (shouldn't happen but safe fallback)
-            let profileToUse = flavorProfile ?? FlavorProfile(
-                overallTaste: .balanced,
-                flavorIssues: [],
-                intensity: .moderate,
-                notes: nil,
-                timestamp: Date()
-            )
-            
+        .sheet(item: $profileForRecommendations) { profile in
             ZStack {
                 Color.brown.opacity(0.25)
                     .ignoresSafeArea()
                 
                 RecommendationView(
                     analysisResults: analysisResults,
-                    flavorProfile: profileToUse
+                    flavorProfile: profile
                 )
             }
             .onAppear {
                 print("🎭 Sheet appeared")
-                print("   - Using profile with taste: \(profileToUse.overallTaste.rawValue)")
+                print("   - Using profile with taste: \(profile.overallTaste.rawValue)")
+                print("   - Profile issues: \(profile.flavorIssues.map { $0.rawValue })")
             }
         }
     }
@@ -201,14 +194,14 @@ struct FlavorProfileView: View {
         
         print("   - Created profile with taste: \(profile.overallTaste.rawValue)")
         
-        // Set profile first, then trigger presentation
+        // Set both the binding and the local state
         flavorProfile = profile
         
-        // Small delay to ensure state is updated
-        DispatchQueue.main.async {
-            print("   - Setting showingRecommendations to true")
-            self.showingRecommendations = true
-        }
+        // Set the profile for recommendations - this will automatically trigger the sheet
+        // because we're using sheet(item:) which presents when the item becomes non-nil
+        profileForRecommendations = profile
+        
+        print("   - Profile set for recommendations sheet")
     }
     
     private func skipRecommendations() {

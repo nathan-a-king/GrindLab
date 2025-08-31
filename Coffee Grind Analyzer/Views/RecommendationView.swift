@@ -52,7 +52,7 @@ struct RecommendationView: View {
                                 print("📝 Header section appeared")
                             }
                         
-                        // Coffee Compass visualization
+                        // Smart Suggestions visualization
                         CoffeeCompassView(
                             flavorProfile: flavorProfile,
                             currentPosition: CoffeeCompassPosition(flavorProfile: flavorProfile)
@@ -127,10 +127,8 @@ struct RecommendationView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "lightbulb.fill")
-                    .foregroundColor(.yellow)
                 VStack(alignment: .leading) {
-                    Text("Coffee Compass")
+                    Text("Smart Suggestions")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.white)

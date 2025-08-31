@@ -322,9 +322,7 @@ struct ResultsView: View {
     private var coffeeImprovementSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Image(systemName: "lightbulb.fill")
-                    .foregroundColor(.yellow)
-                Text("Coffee Compass")
+                Text("Smart Suggestions")
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
@@ -335,47 +333,30 @@ struct ResultsView: View {
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.8))
             
-            HStack(spacing: 12) {
-                Button("How did it taste?") {
-                    showingFlavorProfile = true
-                }
-                .buttonStyle(ImprovementButtonStyle(color: .blue, isSecondary: false))
-                
-                Button("View Analysis") {
-                    selectedTab = 1
-                }
-                .buttonStyle(ImprovementButtonStyle(color: .brown, isSecondary: true))
+            Button("How did it taste?") {
+                showingFlavorProfile = true
             }
+            .buttonStyle(ImprovementButtonStyle(color: .blue, isSecondary: false))
             
             // Show quick grind assessment
-            HStack {
+            VStack(alignment: .leading, spacing: 4) {
                 let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
                 let uniformityGood = results.uniformityScore >= 60
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Image(systemName: isInRange ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(isInRange ? .green : .orange)
-                        Text("Size: \(isInRange ? "Good" : "Needs adjustment")")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    
-                    HStack {
-                        Image(systemName: uniformityGood ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(uniformityGood ? .green : .orange)
-                        Text("Uniformity: \(uniformityGood ? "Good" : "Could improve")")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
-                    }
+                HStack {
+                    Image(systemName: isInRange ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(isInRange ? .green : .orange)
+                    Text("Size: \(isInRange ? "Good" : "Needs adjustment")")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.9))
                 }
                 
-                Spacer()
-                
-                if !isInRange || !uniformityGood {
-                    Text("💡 Tap for tips!")
+                HStack {
+                    Image(systemName: uniformityGood ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(uniformityGood ? .green : .orange)
+                    Text("Uniformity: \(uniformityGood ? "Good" : "Could improve")")
                         .font(.caption)
-                        .foregroundColor(.yellow)
+                        .foregroundColor(.white.opacity(0.9))
                 }
             }
         }

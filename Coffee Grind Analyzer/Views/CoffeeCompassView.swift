@@ -16,7 +16,7 @@ struct CoffeeCompassView: View {
     var body: some View {
         VStack(spacing: 20) {
             // Header
-            Text("Coffee Compass")
+            Text("Smart Suggestions")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
@@ -432,6 +432,10 @@ struct CoffeeCompassPosition {
     init(flavorProfile: FlavorProfile) {
         self.taste = flavorProfile.overallTaste
         self.intensity = flavorProfile.intensity
+        print("🧭 CoffeeCompassPosition init:")
+        print("   - Overall taste: \(flavorProfile.overallTaste.rawValue)")
+        print("   - Intensity: \(flavorProfile.intensity.rawValue)")
+        print("   - Flavor issues: \(flavorProfile.flavorIssues.map { $0.rawValue })")
     }
     
     var coordinates: CGPoint? {
@@ -456,38 +460,42 @@ struct CoffeeCompassPosition {
         
         let distance = radius * distanceMultiplier
         
+        let result: CGPoint
         switch taste {
         case .balanced:
-            return center // Stay in the center
+            result = center // Stay in the center
         case .underExtracted:
-            // Top-left quadrant (225 degrees from 0°)
-            let angle = 225.0 * Double.pi / 180.0
-            return CGPoint(
-                x: center.x + CGFloat(cos(angle)) * distance,
-                y: center.y + CGFloat(sin(angle)) * distance
+            // Top-left quadrant - SOUR/WEAK (position 0.28, 0.28)
+            result = CGPoint(
+                x: center.x - distance * 0.7,  // Move left
+                y: center.y - distance * 0.7   // Move up
             )
         case .overExtracted:
-            // Top-right quadrant (315 degrees from 0°)
-            let angle = 315.0 * Double.pi / 180.0
-            return CGPoint(
-                x: center.x + CGFloat(cos(angle)) * distance,
-                y: center.y + CGFloat(sin(angle)) * distance
+            // Top-right quadrant - BITTER/DRY (position 0.72, 0.28)
+            result = CGPoint(
+                x: center.x + distance * 0.7,  // Move right
+                y: center.y - distance * 0.7   // Move up
             )
         case .weak:
-            // Bottom-left quadrant (135 degrees from 0°)
-            let angle = 135.0 * Double.pi / 180.0
-            return CGPoint(
-                x: center.x + CGFloat(cos(angle)) * distance,
-                y: center.y + CGFloat(sin(angle)) * distance
+            // Bottom-left quadrant - LACKS BODY (position 0.28, 0.72)
+            result = CGPoint(
+                x: center.x - distance * 0.7,  // Move left
+                y: center.y + distance * 0.7   // Move down
             )
         case .harsh:
-            // Bottom-right quadrant (45 degrees from 0°)
-            let angle = 45.0 * Double.pi / 180.0
-            return CGPoint(
-                x: center.x + CGFloat(cos(angle)) * distance,
-                y: center.y + CGFloat(sin(angle)) * distance
+            // Bottom-right quadrant - HARSH (position 0.72, 0.72)
+            result = CGPoint(
+                x: center.x + distance * 0.7,  // Move right
+                y: center.y + distance * 0.7   // Move down
             )
         }
+        
+        print("🧭 Compass coordinates calculated:")
+        print("   - Taste: \(taste.rawValue)")
+        print("   - Position: (\(String(format: "%.1f", result.x)), \(String(format: "%.1f", result.y)))")
+        print("   - Center: (\(String(format: "%.1f", center.x)), \(String(format: "%.1f", center.y)))")
+        
+        return result
     }
     
     var color: Color {
