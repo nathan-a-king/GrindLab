@@ -17,6 +17,7 @@ struct RulerCalibrationOverlay: View {
     @State private var totalZoom: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var dragOffset: CGSize = .zero
+    @State private var isPanning: Bool = false
     
     enum DragHandle {
         case start
@@ -332,17 +333,61 @@ struct RulerCalibrationOverlay: View {
                         totalZoom = min(max(totalZoom, 1.0), 5.0)
                     }
             )
-            .gesture(
-                // Pan gesture for moving zoomed image (only when zoomed)
-                DragGesture(minimumDistance: totalZoom * currentZoom > 1.0 ? 0 : 20)
+            .simultaneousGesture(
+                // Pan gesture for moving zoomed image with higher priority control
+                DragGesture()
                     .onChanged { value in
-                        if totalZoom * currentZoom > 1.0 {
+                        let currentTotalZoom = totalZoom * currentZoom
+                        
+                        // Check if this should be a pan gesture
+                        if !isPanning && !isDragging && currentTotalZoom > 1.0 {
+                            // Calculate scale and origin like in the main body
+                            let scale = min(container.width / max(imgSize.width, 1e-6),
+                                           container.height / max(imgSize.height, 1e-6))
+                            let fittedSize = CGSize(width: imgSize.width * scale, height: imgSize.height * scale)
+                            let origin = CGPoint(
+                                x: (container.width - fittedSize.width) / 2.0,
+                                y: (container.height - fittedSize.height) / 2.0
+                            )
+                            
+                            // Determine if drag started near a measurement handle
+                            var nearHandle = false
+                            if let start = startPoint, let end = endPoint {
+                                let startViewPoint = imageToViewCoordinatesWithZoom(
+                                    imagePoint: start,
+                                    scale: scale * currentTotalZoom,
+                                    origin: origin,
+                                    zoom: currentTotalZoom,
+                                    panOffset: CGSize(width: offset.width, height: offset.height)
+                                )
+                                let endViewPoint = imageToViewCoordinatesWithZoom(
+                                    imagePoint: end,
+                                    scale: scale * currentTotalZoom,
+                                    origin: origin,
+                                    zoom: currentTotalZoom,
+                                    panOffset: CGSize(width: offset.width, height: offset.height)
+                                )
+                                
+                                let distToStart = distance(from: value.startLocation, to: startViewPoint)
+                                let distToEnd = distance(from: value.startLocation, to: endViewPoint)
+                                
+                                nearHandle = (distToStart < 50 || distToEnd < 50)
+                            }
+                            
+                            // Only start panning if not near a handle and drag distance is significant
+                            if !nearHandle && sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2)) > 10 {
+                                isPanning = true
+                            }
+                        }
+                        
+                        // Continue panning if already started
+                        if isPanning {
                             dragOffset = value.translation
                         }
                     }
                     .onEnded { value in
                         let currentTotalZoom = totalZoom * currentZoom
-                        if currentTotalZoom > 1.0 {
+                        if isPanning && currentTotalZoom > 1.0 {
                             offset.width += value.translation.width
                             offset.height += value.translation.height
                             dragOffset = .zero
@@ -353,6 +398,7 @@ struct RulerCalibrationOverlay: View {
                             let maxOffsetY = container.height * (currentTotalZoom - 1) / 2
                             offset.height = min(max(offset.height, -maxOffsetY), maxOffsetY)
                         }
+                        isPanning = false
                     }
             )
         }
