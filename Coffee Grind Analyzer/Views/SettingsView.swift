@@ -186,7 +186,7 @@ struct SettingsView: View {
                     Slider(value: Binding(
                         get: { Double(settings.maxParticleSize) },
                         set: { settings.maxParticleSize = Int($0) }
-                    ), in: 500...2000, step: 50)
+                    ), in: 500...3000, step: 50)
                     .tint(.white)
                 }
             }
@@ -341,7 +341,7 @@ struct SettingsView: View {
                         settings.analysisMode = .standard
                         settings.contrastThreshold = 0.3
                         settings.minParticleSize = 100
-                        settings.maxParticleSize = 2000
+                        settings.maxParticleSize = 3000
                         settings.enableAdvancedFiltering = false
                         settings.calibrationFactor = 150.0
                         print("✅ Settings reset complete")
@@ -461,13 +461,16 @@ struct CalibrationView: View {
                 Label("Take a photo of a ruler or measuring tape", systemImage: "1.circle.fill")
                     .foregroundColor(.primary)
                 
-                Label("Drag a line over exactly 1 inch", systemImage: "2.circle.fill")
+                Label("Pinch to zoom for precise alignment", systemImage: "2.circle.fill")
                     .foregroundColor(.primary)
                 
-                Label("The app will count pixels automatically", systemImage: "3.circle.fill")
+                Label("Drag a line over exactly 1 inch", systemImage: "3.circle.fill")
                     .foregroundColor(.primary)
                 
-                Label("Save the calibration factor", systemImage: "4.circle.fill")
+                Label("The app will count pixels automatically", systemImage: "4.circle.fill")
+                    .foregroundColor(.primary)
+                
+                Label("Save the calibration factor", systemImage: "5.circle.fill")
                     .foregroundColor(.primary)
             }
             .font(.subheadline)
@@ -476,7 +479,12 @@ struct CalibrationView: View {
             Text("💡 For best results, use a clear ruler with distinct inch markings and good lighting")
                 .font(.caption)
                 .foregroundColor(.blue)
-                .padding(.top, 8)
+                .padding(.top, 4)
+            
+            Text("🔍 Pinch to zoom in for more precise measurements")
+                .font(.caption)
+                .foregroundColor(.green)
+                .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

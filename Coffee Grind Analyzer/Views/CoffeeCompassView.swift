@@ -210,25 +210,25 @@ struct CoffeeCompassView: View {
     
     private var compassLabels: some View {
         ZStack {
-            // Extract More (top) - clean text without background
-            VStack(spacing: 2) {
-                Text("EXTRACT MORE")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                Text("Finer grind • Longer time")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.9))
-            }
-            .position(x: compassSize/2, y: 40)
-            
-            // Extract Less (bottom) - clean text without background
+            // Extract Less (top) - clean text without background
             VStack(spacing: 2) {
                 Text("EXTRACT LESS")
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                 Text("Coarser grind • Shorter time")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.9))
+            }
+            .position(x: compassSize/2, y: 40)
+            
+            // Extract More (bottom) - clean text without background
+            VStack(spacing: 2) {
+                Text("EXTRACT MORE")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Text("Finer grind • Longer time")
                     .font(.caption2)
                     .foregroundColor(.white.opacity(0.9))
             }

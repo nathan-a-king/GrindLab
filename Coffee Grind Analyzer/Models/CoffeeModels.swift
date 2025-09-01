@@ -748,7 +748,7 @@ struct AnalysisSettings: Equatable {
     var analysisMode: AnalysisMode = .standard
     var contrastThreshold: Double = 0.3
     var minParticleSize: Int = 100 // diameter in microns - minimum particle diameter
-    var maxParticleSize: Int = 2000 // diameter in microns - maximum particle diameter  
+    var maxParticleSize: Int = 3000 // diameter in microns - maximum particle diameter  
     var enableAdvancedFiltering: Bool = true // enabled by default for better quality
     var calibrationFactor: Double = 150.0 // improved default microns per pixel
     var adaptiveThresholdWindow: Int = 15 // window size for adaptive thresholding

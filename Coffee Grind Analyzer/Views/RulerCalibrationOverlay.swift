@@ -12,6 +12,12 @@ struct RulerCalibrationOverlay: View {
     // Track which handle is being dragged
     @State private var draggingHandle: DragHandle?
     
+    // Zoom state
+    @State private var currentZoom: CGFloat = 1.0
+    @State private var totalZoom: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var dragOffset: CGSize = .zero
+    
     enum DragHandle {
         case start
         case end
@@ -36,10 +42,13 @@ struct RulerCalibrationOverlay: View {
             )
             
             ZStack {
-                // The displayed image
+                // The displayed image with zoom and pan
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
+                    .scaleEffect(totalZoom * currentZoom)
+                    .offset(x: offset.width + dragOffset.width,
+                            y: offset.height + dragOffset.height)
                     .frame(width: container.width, height: container.height)
                     .clipped()
                 
@@ -48,14 +57,18 @@ struct RulerCalibrationOverlay: View {
                     .frame(width: container.width, height: container.height)
                     .contentShape(Rectangle())
                     .onTapGesture { location in
-                        // Apply finger offset - move tap point up by offset amount
-                        let offsetLocation = CGPoint(x: location.x, y: location.y - fingerOffset)
-                        let imageLocation = viewToImageCoordinates(
+                        // Apply finger offset and zoom - move tap point up by offset amount
+                        let currentTotalZoom = totalZoom * currentZoom
+                        let offsetLocation = CGPoint(x: location.x, y: location.y - fingerOffset / currentTotalZoom)
+                        let imageLocation = viewToImageCoordinatesWithZoom(
                             viewPoint: offsetLocation,
                             containerSize: container,
                             imageSize: imgSize,
-                            scale: scale,
-                            origin: origin
+                            scale: scale * currentTotalZoom,
+                            origin: origin,
+                            zoom: currentTotalZoom,
+                            panOffset: CGSize(width: offset.width + dragOffset.width,
+                                             height: offset.height + dragOffset.height)
                         )
                         
                         if startPoint == nil {
@@ -69,26 +82,45 @@ struct RulerCalibrationOverlay: View {
                         }
                     }
                     .gesture(
-                        DragGesture()
+                        // Line dragging gesture with higher minimum distance to avoid conflicts
+                        DragGesture(minimumDistance: 10)
                             .onChanged { value in
                                 isDragging = true
                                 
-                                // Apply finger offset - move drag point up by offset amount
-                                let offsetLocation = CGPoint(x: value.location.x, y: value.location.y - fingerOffset)
-                                let imageLocation = viewToImageCoordinates(
+                                // Apply finger offset and zoom - move drag point up by offset amount
+                                let currentTotalZoom = totalZoom * currentZoom
+                                let offsetLocation = CGPoint(x: value.location.x, y: value.location.y - fingerOffset / currentTotalZoom)
+                                let imageLocation = viewToImageCoordinatesWithZoom(
                                     viewPoint: offsetLocation,
                                     containerSize: container,
                                     imageSize: imgSize,
-                                    scale: scale,
-                                    origin: origin
+                                    scale: scale * currentTotalZoom,
+                                    origin: origin,
+                                    zoom: currentTotalZoom,
+                                    panOffset: CGSize(width: offset.width + dragOffset.width,
+                                                     height: offset.height + dragOffset.height)
                                 )
                                 
                                 if draggingHandle == nil {
                                     // Starting new line or determine which handle to drag
                                     if let start = startPoint, let end = endPoint {
                                         // Check which endpoint is closer to drag start
-                                        let startViewPoint = imageToViewCoordinates(imagePoint: start, scale: scale, origin: origin)
-                                        let endViewPoint = imageToViewCoordinates(imagePoint: end, scale: scale, origin: origin)
+                                        let startViewPoint = imageToViewCoordinatesWithZoom(
+                                            imagePoint: start,
+                                            scale: scale * currentTotalZoom,
+                                            origin: origin,
+                                            zoom: currentTotalZoom,
+                                            panOffset: CGSize(width: offset.width + dragOffset.width,
+                                                             height: offset.height + dragOffset.height)
+                                        )
+                                        let endViewPoint = imageToViewCoordinatesWithZoom(
+                                            imagePoint: end,
+                                            scale: scale * currentTotalZoom,
+                                            origin: origin,
+                                            zoom: currentTotalZoom,
+                                            panOffset: CGSize(width: offset.width + dragOffset.width,
+                                                             height: offset.height + dragOffset.height)
+                                        )
                                         
                                         let distToStart = distance(from: value.startLocation, to: startViewPoint)
                                         let distToEnd = distance(from: value.startLocation, to: endViewPoint)
@@ -128,15 +160,22 @@ struct RulerCalibrationOverlay: View {
                 
                 // Draw the measurement line
                 if let start = startPoint, let end = endPoint {
-                    let viewStart = imageToViewCoordinates(
+                    let currentTotalZoom = totalZoom * currentZoom
+                    let viewStart = imageToViewCoordinatesWithZoom(
                         imagePoint: start,
-                        scale: scale,
-                        origin: origin
+                        scale: scale * currentTotalZoom,
+                        origin: origin,
+                        zoom: currentTotalZoom,
+                        panOffset: CGSize(width: offset.width + dragOffset.width,
+                                         height: offset.height + dragOffset.height)
                     )
-                    let viewEnd = imageToViewCoordinates(
+                    let viewEnd = imageToViewCoordinatesWithZoom(
                         imagePoint: end,
-                        scale: scale,
-                        origin: origin
+                        scale: scale * currentTotalZoom,
+                        origin: origin,
+                        zoom: currentTotalZoom,
+                        panOffset: CGSize(width: offset.width + dragOffset.width,
+                                         height: offset.height + dragOffset.height)
                     )
                     
                     // Draw line
@@ -183,6 +222,7 @@ struct RulerCalibrationOverlay: View {
                         y: (viewStart.y + viewEnd.y) / 2 - 20
                     )
                     
+                    // Calculate pixel distance from original image coordinates
                     let pixelDistance = sqrt(pow(end.x - start.x, 2) + pow(end.y - start.y, 2))
                     
                     Text("\(Int(pixelDistance)) pixels")
@@ -194,6 +234,44 @@ struct RulerCalibrationOverlay: View {
                         .foregroundColor(.white)
                         .cornerRadius(6)
                         .position(midPoint)
+                }
+                
+                // Zoom indicator
+                if totalZoom * currentZoom > 1.0 {
+                    VStack {
+                        HStack {
+                            Text(String(format: "%.1fx", totalZoom * currentZoom))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.6))
+                                .foregroundColor(.white)
+                                .cornerRadius(6)
+                            
+                            Button(action: {
+                                withAnimation(.spring()) {
+                                    totalZoom = 1.0
+                                    offset = .zero
+                                    dragOffset = .zero
+                                }
+                            }) {
+                                Text("Reset")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.blue.opacity(0.8))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(6)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding()
+                        
+                        Spacer()
+                    }
                 }
                 
                 // Draw instructions
@@ -211,6 +289,12 @@ struct RulerCalibrationOverlay: View {
                         Text("Line appears above your finger")
                             .font(.caption2)
                             .foregroundColor(.white.opacity(0.7))
+                        
+                        if totalZoom == 1.0 {
+                            Text("Pinch to zoom for precision")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                        }
                     }
                     .padding()
                     .background(Color.black.opacity(0.7))
@@ -234,20 +318,59 @@ struct RulerCalibrationOverlay: View {
                 }
             }
             .frame(width: container.width, height: container.height)
+            .gesture(
+                // Prioritize magnification gesture
+                MagnificationGesture()
+                    .onChanged { value in
+                        currentZoom = value
+                    }
+                    .onEnded { value in
+                        totalZoom *= value
+                        currentZoom = 1.0
+                        
+                        // Limit zoom range
+                        totalZoom = min(max(totalZoom, 1.0), 5.0)
+                    }
+            )
+            .gesture(
+                // Pan gesture for moving zoomed image (only when zoomed)
+                DragGesture(minimumDistance: totalZoom * currentZoom > 1.0 ? 0 : 20)
+                    .onChanged { value in
+                        if totalZoom * currentZoom > 1.0 {
+                            dragOffset = value.translation
+                        }
+                    }
+                    .onEnded { value in
+                        let currentTotalZoom = totalZoom * currentZoom
+                        if currentTotalZoom > 1.0 {
+                            offset.width += value.translation.width
+                            offset.height += value.translation.height
+                            dragOffset = .zero
+                            
+                            // Limit panning to keep image partially visible
+                            let maxOffset = container.width * (currentTotalZoom - 1) / 2
+                            offset.width = min(max(offset.width, -maxOffset), maxOffset)
+                            let maxOffsetY = container.height * (currentTotalZoom - 1) / 2
+                            offset.height = min(max(offset.height, -maxOffsetY), maxOffsetY)
+                        }
+                    }
+            )
         }
     }
     
-    // Convert view coordinates to image pixel coordinates
-    private func viewToImageCoordinates(
+    // Convert view coordinates to image pixel coordinates with zoom
+    private func viewToImageCoordinatesWithZoom(
         viewPoint: CGPoint,
         containerSize: CGSize,
         imageSize: CGSize,
         scale: CGFloat,
-        origin: CGPoint
+        origin: CGPoint,
+        zoom: CGFloat,
+        panOffset: CGSize
     ) -> CGPoint {
-        // Adjust for the origin offset
-        let adjustedX = viewPoint.x - origin.x
-        let adjustedY = viewPoint.y - origin.y
+        // Adjust for pan offset and origin
+        let adjustedX = viewPoint.x - origin.x - panOffset.width
+        let adjustedY = viewPoint.y - origin.y - panOffset.height
         
         // Convert to image coordinates
         let imageX = adjustedX / scale
@@ -260,14 +383,16 @@ struct RulerCalibrationOverlay: View {
         return CGPoint(x: clampedX, y: clampedY)
     }
     
-    // Convert image pixel coordinates to view coordinates
-    private func imageToViewCoordinates(
+    // Convert image pixel coordinates to view coordinates with zoom
+    private func imageToViewCoordinatesWithZoom(
         imagePoint: CGPoint,
         scale: CGFloat,
-        origin: CGPoint
+        origin: CGPoint,
+        zoom: CGFloat,
+        panOffset: CGSize
     ) -> CGPoint {
-        let viewX = origin.x + imagePoint.x * scale
-        let viewY = origin.y + imagePoint.y * scale
+        let viewX = origin.x + imagePoint.x * scale + panOffset.width
+        let viewY = origin.y + imagePoint.y * scale + panOffset.height
         
         return CGPoint(x: viewX, y: viewY)
     }
