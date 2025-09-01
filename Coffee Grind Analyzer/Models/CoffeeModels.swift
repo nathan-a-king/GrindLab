@@ -10,6 +10,13 @@ import Foundation
 
 // MARK: - Coffee Grind Types
 
+// Legend item struct for image comparison
+struct LegendItem: Identifiable {
+    let id = UUID()
+    let color: String
+    let label: String
+}
+
 enum CoffeeGrindType: CaseIterable, Codable {
     case filter
     case espresso
@@ -32,26 +39,26 @@ enum CoffeeGrindType: CaseIterable, Codable {
     var targetSizeRange: String {
         switch self {
         case .filter:
-            return "600-900μm"
+            return "400-800μm"
         case .espresso:
-            return "200-400μm"
+            return "170-300μm"
         case .frenchPress:
             return "750-1000μm"
         case .coldBrew:
-            return "1000-1200μm"
+            return "800-1200μm"
         }
     }
     
     var targetSizeMicrons: ClosedRange<Double> {
         switch self {
         case .filter:
-            return 600...900
+            return 400...800
         case .espresso:
-            return 200...400
+            return 170...300
         case .frenchPress:
             return 750...1000
         case .coldBrew:
-            return 1000...1200
+            return 800...1200
         }
     }
     
@@ -72,19 +79,19 @@ enum CoffeeGrindType: CaseIterable, Codable {
         switch self {
         case .espresso:
             return [
-                (0..<150, "Extra Fine (<150μm)"),
-                (150..<250, "Fine (150-250μm)"),
-                (250..<350, "Target (250-350μm)"),
-                (350..<450, "Medium (350-450μm)"),
-                (450..<Double.infinity, "Coarse (>450μm)")
+                (0..<120, "Extra Fine (<120μm)"),
+                (120..<170, "Fine (120-170μm)"),
+                (170..<300, "Target (170-300μm)"),
+                (300..<400, "Medium (300-400μm)"),
+                (400..<Double.infinity, "Coarse (>400μm)")
             ]
         case .filter:
             return [
-                (0..<400, "Fine (<400μm)"),
-                (400..<600, "Medium-Fine (400-600μm)"),
-                (600..<900, "Target (600-900μm)"),
-                (900..<1200, "Coarse (900-1200μm)"),
-                (1200..<Double.infinity, "Extra Coarse (>1200μm)")
+                (0..<300, "Fine (<300μm)"),
+                (300..<400, "Medium-Fine (300-400μm)"),
+                (400..<800, "Target (400-800μm)"),
+                (800..<1000, "Coarse (800-1000μm)"),
+                (1000..<Double.infinity, "Extra Coarse (>1000μm)")
             ]
         case .frenchPress:
             return [
@@ -96,13 +103,70 @@ enum CoffeeGrindType: CaseIterable, Codable {
             ]
         case .coldBrew:
             return [
-                (0..<700, "Fine (<700μm)"),
-                (700..<1000, "Medium (700-1000μm)"),
-                (1000..<1200, "Target (1000-1200μm)"),
+                (0..<600, "Fine (<600μm)"),
+                (600..<800, "Medium (600-800μm)"),
+                (800..<1200, "Target (800-1200μm)"),
                 (1200..<1500, "Coarse (1200-1500μm)"),
                 (1500..<Double.infinity, "Extra Coarse (>1500μm)")
             ]
         }
+    }
+    
+    // Method to get color for a particle based on its size
+    func particleColor(for size: Double) -> (color: String, alpha: Double) {
+        // Define a standard color scheme that adapts to each grind type
+        let categories = self.distributionCategories
+        
+        // Map categories to colors from finest to coarsest
+        let colorMapping: [(color: String, alpha: Double)] = [
+            ("red", 0.8),      // Finest particles
+            ("orange", 0.8),   // Fine particles
+            ("yellow", 0.8),   // Medium-fine particles
+            ("green", 0.8),    // Target range particles
+            ("blue", 0.8),     // Coarse particles
+            ("purple", 0.8)    // Extra coarse particles
+        ]
+        
+        // Find which category this particle belongs to
+        for (index, category) in categories.enumerated() {
+            if size >= category.range.lowerBound && size < category.range.upperBound {
+                // Use appropriate color from mapping, cycling if needed
+                let colorIndex = min(index, colorMapping.count - 1)
+                return colorMapping[colorIndex]
+            }
+        }
+        
+        // Default to blue for particles outside defined ranges
+        return ("blue", 0.8)
+    }
+    
+    // Method to get legend items for image comparison
+    var imageLegendItems: [LegendItem] {
+        let categories = self.distributionCategories
+        let colorMapping = ["red", "orange", "yellow", "green", "blue", "purple"]
+        
+        var legendItems: [LegendItem] = []
+        
+        for (index, category) in categories.enumerated() {
+            let colorIndex = min(index, colorMapping.count - 1)
+            let color = colorMapping[colorIndex]
+            
+            // Simplify label for legend
+            let label: String
+            if category.range.upperBound == Double.infinity {
+                label = ">\(Int(category.range.lowerBound))μm"
+            } else if category.range.lowerBound == 0 {
+                label = "<\(Int(category.range.upperBound))μm"
+            } else {
+                label = "\(Int(category.range.lowerBound))-\(Int(category.range.upperBound))μm"
+            }
+            
+            legendItems.append(LegendItem(color: color, label: label))
+        }
+        
+        // Return all items for complete legend
+        // Don't simplify as it causes colors to be missing from the legend
+        return legendItems
     }
 }
 

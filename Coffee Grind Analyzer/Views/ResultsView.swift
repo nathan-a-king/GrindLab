@@ -1018,11 +1018,12 @@ struct ImageComparisonView: View {
                         } else {
                             Text("Processed image with detected particles highlighted in color:")
                             
-                            HStack(spacing: 16) {
-                                legendItem(color: .red, label: "Fines (<400μm)")
-                                legendItem(color: .yellow, label: "Fine (400-800μm)")
-                                legendItem(color: .green, label: "Medium (800-1200μm)")
-                                legendItem(color: .blue, label: "Coarse (>1200μm)")
+                            let legendItems = results.grindType.imageLegendItems
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(legendItems) { item in
+                                    legendItem(color: colorFromString(item.color), label: item.label)
+                                }
                             }
                             .font(.caption)
                         }
@@ -1050,6 +1051,18 @@ struct ImageComparisonView: View {
                 .fill(color)
                 .frame(width: 8, height: 8)
             Text(label)
+        }
+    }
+    
+    private func colorFromString(_ colorName: String) -> Color {
+        switch colorName {
+        case "red": return .red
+        case "orange": return .orange
+        case "yellow": return .yellow
+        case "green": return .green
+        case "blue": return .blue
+        case "purple": return .purple
+        default: return .gray
         }
     }
 }

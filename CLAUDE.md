@@ -79,10 +79,10 @@ swiftlint lint --path "Coffee Grind Analyzer"
 - Supports JSON encoding/decoding for all models
 
 ### Grind Type Specifications
-- Filter/Pour-Over: 600-900μm target range
-- Espresso: 200-400μm target range  
+- Filter/Pour-Over: 400-800μm target range
+- Espresso: 170-300μm target range  
 - French Press: 750-1000μm target range
-- Cold Brew: 1000-1200μm target range
+- Cold Brew: 800-1200μm target range
 
 ### Testing Approach
 - Unit tests in Coffee_Grind_AnalyzerTests.swift

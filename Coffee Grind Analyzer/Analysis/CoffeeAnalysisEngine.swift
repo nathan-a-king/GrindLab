@@ -208,7 +208,8 @@ class CoffeeAnalysisEngine {
         print("🎨 Step 6: Creating visualization...")
         let processedImage = createVisualization(
             originalImage: image,
-            particles: particles
+            particles: particles,
+            grindType: grindType
         )
         
         let totalTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -1242,7 +1243,8 @@ class CoffeeAnalysisEngine {
     
     private func createVisualization(
         originalImage: UIImage,
-        particles: [CoffeeParticle]
+        particles: [CoffeeParticle],
+        grindType: CoffeeGrindType
     ) -> UIImage? {
         guard let cgImage = originalImage.cgImage else { return nil }
         
@@ -1257,16 +1259,25 @@ class CoffeeAnalysisEngine {
             context.cgContext.setLineWidth(3.0)
             
             for particle in particles {
-                // Color based on size
+                // Get color based on grind type's distribution categories
+                let colorInfo = grindType.particleColor(for: particle.size)
                 let color: UIColor
-                if particle.size < 400 {
-                    color = .red.withAlphaComponent(0.7)
-                } else if particle.size < 800 {
-                    color = .yellow.withAlphaComponent(0.7)
-                } else if particle.size < 1200 {
-                    color = .green.withAlphaComponent(0.7)
-                } else {
-                    color = .blue.withAlphaComponent(0.7)
+                
+                switch colorInfo.color {
+                case "red":
+                    color = UIColor.red.withAlphaComponent(colorInfo.alpha)
+                case "orange":
+                    color = UIColor.orange.withAlphaComponent(colorInfo.alpha)
+                case "yellow":
+                    color = UIColor.yellow.withAlphaComponent(colorInfo.alpha)
+                case "green":
+                    color = UIColor.green.withAlphaComponent(colorInfo.alpha)
+                case "blue":
+                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
+                case "purple":
+                    color = UIColor.purple.withAlphaComponent(colorInfo.alpha)
+                default:
+                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
                 }
                 
                 context.cgContext.setStrokeColor(color.cgColor)
@@ -1312,7 +1323,7 @@ class CoffeeAnalysisEngine {
     }
     
     // Keep old processed image method for validation tests
-    private func createProcessedImage(originalImage: UIImage, cgImage: CGImage, particles: [CoffeeParticle]) -> UIImage? {
+    private func createProcessedImage(originalImage: UIImage, cgImage: CGImage, particles: [CoffeeParticle], grindType: CoffeeGrindType) -> UIImage? {
         print("🎨 Creating overlay for \(particles.count) particles on \(Int(originalImage.size.width))x\(Int(originalImage.size.height)) image")
         print("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height)), orientation: \(originalImage.imageOrientation.rawValue)")
         print("🔍 UIImage scale: \(originalImage.scale)")
@@ -1334,16 +1345,25 @@ class CoffeeAnalysisEngine {
             context.cgContext.setLineWidth(3.0)
             
             for particle in particles {
+                // Get color based on grind type's distribution categories
+                let colorInfo = grindType.particleColor(for: particle.size)
                 let color: UIColor
-                switch particle.size {
-                case 0..<400:
-                    color = UIColor.red.withAlphaComponent(0.8)
-                case 400..<800:
-                    color = UIColor.yellow.withAlphaComponent(0.8)
-                case 800..<1200:
-                    color = UIColor.green.withAlphaComponent(0.8)
+                
+                switch colorInfo.color {
+                case "red":
+                    color = UIColor.red.withAlphaComponent(colorInfo.alpha)
+                case "orange":
+                    color = UIColor.orange.withAlphaComponent(colorInfo.alpha)
+                case "yellow":
+                    color = UIColor.yellow.withAlphaComponent(colorInfo.alpha)
+                case "green":
+                    color = UIColor.green.withAlphaComponent(colorInfo.alpha)
+                case "blue":
+                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
+                case "purple":
+                    color = UIColor.purple.withAlphaComponent(colorInfo.alpha)
                 default:
-                    color = UIColor.blue.withAlphaComponent(0.8)
+                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
                 }
                 
                 context.cgContext.setStrokeColor(color.cgColor)
