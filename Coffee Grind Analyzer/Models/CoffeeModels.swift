@@ -179,6 +179,7 @@ struct CoffeeParticle {
     let circularity: Double // 0.0 to 1.0
     let position: CGPoint
     let brightness: Double
+    let pixels: [(x: Int, y: Int)] // Array of pixel coordinates that make up this particle
 }
 
 // MARK: - Tasting Notes

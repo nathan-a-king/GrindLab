@@ -620,7 +620,8 @@ class CoffeeAnalysisEngine {
                 area: cluster.surface,
                 circularity: min(max(circularity, 0), 1),
                 position: CGPoint(x: cluster.centroidX, y: cluster.centroidY),
-                brightness: avgBrightness
+                brightness: avgBrightness,
+                pixels: cluster.pixels.map { (x: $0.x, y: $0.y) }
             )
         }
         
@@ -1010,7 +1011,8 @@ class CoffeeAnalysisEngine {
             area: area,
             circularity: min(circularity, 1.0),
             position: CGPoint(x: centroidX, y: centroidY),
-            brightness: avgBrightness
+            brightness: avgBrightness,
+            pixels: component.map { (x: $0.x, y: $0.y) }
         )
         
         return particle
@@ -1259,53 +1261,46 @@ class CoffeeAnalysisEngine {
             context.cgContext.setLineWidth(3.0)
             
             for particle in particles {
-                // Get color based on grind type's distribution categories
-                let colorInfo = grindType.particleColor(for: particle.size)
-                let color: UIColor
+                // Create a path for all pixels in this particle
+                let path = CGMutablePath()
                 
-                switch colorInfo.color {
-                case "red":
-                    color = UIColor.red.withAlphaComponent(colorInfo.alpha)
-                case "orange":
-                    color = UIColor.orange.withAlphaComponent(colorInfo.alpha)
-                case "yellow":
-                    color = UIColor.yellow.withAlphaComponent(colorInfo.alpha)
-                case "green":
-                    color = UIColor.green.withAlphaComponent(colorInfo.alpha)
-                case "blue":
-                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
-                case "purple":
-                    color = UIColor.purple.withAlphaComponent(colorInfo.alpha)
-                default:
-                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
+                // Transform each pixel and add to path
+                for pixel in particle.pixels {
+                    let pixelPoint = CGPoint(x: pixel.x, y: pixel.y)
+                    let transformedPixel = transformCGImageToUIImageCoordinates(
+                        cgPoint: pixelPoint,
+                        cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
+                        uiImage: originalImage
+                    )
+                    
+                    // Add a small rectangle for each pixel to the path
+                    let pixelRect = CGRect(
+                        x: transformedPixel.x,
+                        y: transformedPixel.y,
+                        width: 1,
+                        height: 1
+                    )
+                    path.addRect(pixelRect)
                 }
                 
-                context.cgContext.setStrokeColor(color.cgColor)
-                
-                // Transform particle position from CGImage coordinates to UIImage display coordinates
-                let transformedPosition = transformCGImageToUIImageCoordinates(
-                    cgPoint: particle.position,
-                    cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
-                    uiImage: originalImage
-                )
-                
-                let radius = sqrt(particle.area / Double.pi)
-                let rect = CGRect(
-                    x: transformedPosition.x - radius,
-                    y: transformedPosition.y - radius,
-                    width: radius * 2,
-                    height: radius * 2
-                )
-                
-                context.cgContext.strokeEllipse(in: rect)
+                // Set the blue color with transparency for this particle
+                context.cgContext.setFillColor(UIColor(red: 0.2, green: 0.6, blue: 1.0, alpha: 0.5).cgColor)
+                context.cgContext.addPath(path)
+                context.cgContext.fillPath()
                 
                 // Add size label for larger particles
                 if particle.size > 500 {
+                    let transformedPosition = transformCGImageToUIImageCoordinates(
+                        cgPoint: particle.position,
+                        cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
+                        uiImage: originalImage
+                    )
+                    
                     let sizeText = String(format: "%.0fμm", particle.size)
                     let attributes: [NSAttributedString.Key: Any] = [
                         .font: UIFont.systemFont(ofSize: 10),
                         .foregroundColor: UIColor.white,
-                        .backgroundColor: UIColor.black.withAlphaComponent(0.5)
+                        .backgroundColor: UIColor.black.withAlphaComponent(0.7)
                     ]
                     
                     let textSize = sizeText.size(withAttributes: attributes)
@@ -1345,60 +1340,32 @@ class CoffeeAnalysisEngine {
             context.cgContext.setLineWidth(3.0)
             
             for particle in particles {
-                // Get color based on grind type's distribution categories
-                let colorInfo = grindType.particleColor(for: particle.size)
-                let color: UIColor
+                // Create a path for all pixels in this particle
+                let path = CGMutablePath()
                 
-                switch colorInfo.color {
-                case "red":
-                    color = UIColor.red.withAlphaComponent(colorInfo.alpha)
-                case "orange":
-                    color = UIColor.orange.withAlphaComponent(colorInfo.alpha)
-                case "yellow":
-                    color = UIColor.yellow.withAlphaComponent(colorInfo.alpha)
-                case "green":
-                    color = UIColor.green.withAlphaComponent(colorInfo.alpha)
-                case "blue":
-                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
-                case "purple":
-                    color = UIColor.purple.withAlphaComponent(colorInfo.alpha)
-                default:
-                    color = UIColor.blue.withAlphaComponent(colorInfo.alpha)
+                // Transform each pixel and add to path
+                for pixel in particle.pixels {
+                    let pixelPoint = CGPoint(x: pixel.x, y: pixel.y)
+                    let transformedPixel = transformCGImageToUIImageCoordinates(
+                        cgPoint: pixelPoint,
+                        cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
+                        uiImage: originalImage
+                    )
+                    
+                    // Add a small rectangle for each pixel to the path
+                    let pixelRect = CGRect(
+                        x: transformedPixel.x,
+                        y: transformedPixel.y,
+                        width: 1,
+                        height: 1
+                    )
+                    path.addRect(pixelRect)
                 }
                 
-                context.cgContext.setStrokeColor(color.cgColor)
-                
-                // Transform particle position from CGImage coordinates to UIImage display coordinates
-                let transformedPosition = transformCGImageToUIImageCoordinates(
-                    cgPoint: particle.position,
-                    cgImageSize: CGSize(width: cgImage.width, height: cgImage.height),
-                    uiImage: originalImage
-                )
-                
-                // Calculate radius in pixels from particle area (area is in pixels²)
-                let radius = sqrt(particle.area / .pi)
-                
-                // Verify transformed particle is within display bounds
-                let isInBounds = transformedPosition.x >= 0 && 
-                                transformedPosition.x < originalImage.size.width &&
-                                transformedPosition.y >= 0 && 
-                                transformedPosition.y < originalImage.size.height
-                
-                if !isInBounds {
-                    print("⚠️ Transformed particle out of bounds: CGImage=(\(Int(particle.position.x)), \(Int(particle.position.y))) -> UIImage=(\(Int(transformedPosition.x)), \(Int(transformedPosition.y))), image=\(originalImage.size)")
-                } else {
-                    print("✅ Drawing particle at CGImage(\(Int(particle.position.x)), \(Int(particle.position.y))) -> UIImage(\(Int(transformedPosition.x)), \(Int(transformedPosition.y))) with radius \(String(format: "%.1f", radius))px")
-                }
-                
-                // Draw at transformed position
-                let rect = CGRect(
-                    x: transformedPosition.x - radius,
-                    y: transformedPosition.y - radius,
-                    width: radius * 2,
-                    height: radius * 2
-                )
-                
-                context.cgContext.strokeEllipse(in: rect)
+                // Set the blue color with transparency for this particle
+                context.cgContext.setFillColor(UIColor(red: 0.2, green: 0.6, blue: 1.0, alpha: 0.5).cgColor)
+                context.cgContext.addPath(path)
+                context.cgContext.fillPath()
             }
         }
     }
