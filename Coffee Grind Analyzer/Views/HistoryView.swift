@@ -592,12 +592,12 @@ struct ComparisonHistoryRowView: View {
                                     .foregroundColor(.white.opacity(0.7))
                             }
                             
-                            // Average size on second line
+                            // Median size on second line
                             HStack(spacing: 6) {
                                 Image(systemName: "ruler")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.7))
-                                Text("\(String(format: "%.0f", analysis.results.averageSize))μm average")
+                                Text("\(String(format: "%.0f", analysis.results.medianSize))μm median")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.7))
                             }

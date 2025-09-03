@@ -648,6 +648,7 @@ struct BrewingRecommendation: Codable, Equatable {
         case improveGrinderUniformity
         case checkWaterQuality
         case useFresherBeans
+        case maintainCurrentSettings
         
         var displayText: String {
             switch self {
@@ -673,6 +674,8 @@ struct BrewingRecommendation: Codable, Equatable {
                 return "Check your water quality and mineral content"
             case .useFresherBeans:
                 return "Use fresher coffee beans (2-30 days post-roast)"
+            case .maintainCurrentSettings:
+                return "Perfect! Keep your current settings"
             }
         }
         
@@ -692,6 +695,8 @@ struct BrewingRecommendation: Codable, Equatable {
                 return "drop"
             case .useFresherBeans:
                 return "leaf"
+            case .maintainCurrentSettings:
+                return "checkmark.circle.fill"
             }
         }
     }

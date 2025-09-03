@@ -41,10 +41,34 @@ class CoffeeCompass {
         
         // Ensure we always return at least one recommendation
         if recommendations.isEmpty {
-            recommendations.append(generateDefaultRecommendation(
-                analysisResults: analysisResults,
-                flavorProfile: flavorProfile
-            ))
+            // Check if this is because everything is perfect (balanced coffee with good grind)
+            let targetRange = analysisResults.grindType.targetSizeMicrons
+            let medianSize = analysisResults.medianSize
+            let uniformity = analysisResults.uniformityScore
+            
+            if flavorProfile.overallTaste == .balanced && 
+               targetRange.contains(medianSize) && 
+               uniformity >= 50 {
+                // Everything is perfect - add a "maintain" recommendation
+                recommendations.append(BrewingRecommendation(
+                    primaryAction: .maintainCurrentSettings,
+                    secondaryActions: [],
+                    reasoning: "Excellent! Your coffee is balanced and your grind is optimal. Keep doing what you're doing!",
+                    expectedImprovement: "Already at peak performance - maintain consistency",
+                    confidence: 95,
+                    grindAnalysisFactors: [
+                        "Median size: \(String(format: "%.0f", medianSize))μm (perfect)",
+                        "Uniformity: \(String(format: "%.1f", uniformity))%",
+                        "Taste: Balanced"
+                    ]
+                ))
+            } else {
+                // Generate a default recommendation for other cases
+                recommendations.append(generateDefaultRecommendation(
+                    analysisResults: analysisResults,
+                    flavorProfile: flavorProfile
+                ))
+            }
         }
         
         return recommendations
@@ -88,7 +112,7 @@ class CoffeeCompass {
         flavorProfile: FlavorProfile
     ) -> BrewingRecommendation {
         let targetRange = analysisResults.grindType.targetSizeMicrons
-        let avgSize = analysisResults.averageSize
+        let medianSize = analysisResults.medianSize
         let uniformity = analysisResults.uniformityScore
         
         // Coffee Compass: Under-extraction = "Extract More"
@@ -97,7 +121,7 @@ class CoffeeCompass {
         let primaryAction: BrewingRecommendation.RecommendationAction
         var secondaryActions: [BrewingRecommendation.RecommendationAction] = []
         
-        if avgSize > targetRange.upperBound * 1.2 {
+        if medianSize > targetRange.upperBound * 1.2 {
             // Significantly too coarse - primary issue
             grindAdjustment = .significantly
             primaryAction = .grindFiner(amount: grindAdjustment)
@@ -105,7 +129,7 @@ class CoffeeCompass {
                 .increaseBrewTime(seconds: 30),
                 .increaseWaterTemp(celsius: 3.0)
             ]
-        } else if avgSize > targetRange.upperBound {
+        } else if medianSize > targetRange.upperBound {
             // Moderately too coarse
             grindAdjustment = .moderately
             primaryAction = .grindFiner(amount: grindAdjustment)
@@ -130,7 +154,7 @@ class CoffeeCompass {
         let reasoning = """
         \(compassGuidance)
         Your coffee shows under-extraction with sour, weak, or incomplete flavors. 
-        Average grind size: \(String(format: "%.0f", avgSize))μm (target: \(Int(targetRange.lowerBound))-\(Int(targetRange.upperBound))μm).
+        Median grind size: \(String(format: "%.0f", medianSize))μm (target: \(Int(targetRange.lowerBound))-\(Int(targetRange.upperBound))μm).
         
         Following the Coffee Compass: increase extraction through finer grind and/or longer brew time to extract more soluble compounds and achieve better balance.
         """
@@ -139,7 +163,7 @@ class CoffeeCompass {
         
         let confidence = calculateConfidence(
             uniformity: uniformity,
-            sizeDeviation: abs(avgSize - (targetRange.lowerBound + targetRange.upperBound) / 2),
+            sizeDeviation: abs(medianSize - (targetRange.lowerBound + targetRange.upperBound) / 2),
             flavorIssues: flavorProfile.flavorIssues
         )
         
@@ -150,7 +174,7 @@ class CoffeeCompass {
             expectedImprovement: expectedImprovement,
             confidence: confidence,
             grindAnalysisFactors: [
-                "Average size: \(String(format: "%.0f", avgSize))μm",
+                "Median size: \(String(format: "%.0f", medianSize))μm",
                 "Uniformity: \(String(format: "%.1f", uniformity))%",
                 "Fines: \(String(format: "%.1f", analysisResults.finesPercentage))%"
             ]
@@ -162,7 +186,7 @@ class CoffeeCompass {
         flavorProfile: FlavorProfile
     ) -> BrewingRecommendation {
         let targetRange = analysisResults.grindType.targetSizeMicrons
-        let avgSize = analysisResults.averageSize
+        let medianSize = analysisResults.medianSize
         let uniformity = analysisResults.uniformityScore
         let finesPercentage = analysisResults.finesPercentage
         
@@ -172,7 +196,7 @@ class CoffeeCompass {
         let primaryAction: BrewingRecommendation.RecommendationAction
         var secondaryActions: [BrewingRecommendation.RecommendationAction] = []
         
-        if avgSize < targetRange.lowerBound * 0.8 {
+        if medianSize < targetRange.lowerBound * 0.8 {
             // Significantly too fine - major contributor to over-extraction
             grindAdjustment = .significantly
             primaryAction = .grindCoarser(amount: grindAdjustment)
@@ -180,7 +204,7 @@ class CoffeeCompass {
                 .decreaseBrewTime(seconds: 30),
                 .decreaseWaterTemp(celsius: 4.0)
             ]
-        } else if avgSize < targetRange.lowerBound {
+        } else if medianSize < targetRange.lowerBound {
             // Moderately too fine
             grindAdjustment = .moderately
             primaryAction = .grindCoarser(amount: grindAdjustment)
@@ -210,7 +234,7 @@ class CoffeeCompass {
         let reasoning = """
         \(compassGuidance)
         Your coffee shows over-extraction with bitter, astringent, or harsh flavors. 
-        Average grind size: \(String(format: "%.0f", avgSize))μm, Fines: \(String(format: "%.1f", finesPercentage))%.
+        Median grind size: \(String(format: "%.0f", medianSize))μm, Fines: \(String(format: "%.1f", finesPercentage))%.
         
         Following the Coffee Compass: reduce extraction through coarser grind and/or shorter brew time to prevent extracting undesirable bitter compounds.
         """
@@ -219,7 +243,7 @@ class CoffeeCompass {
         
         let confidence = calculateConfidence(
             uniformity: uniformity,
-            sizeDeviation: abs(avgSize - (targetRange.lowerBound + targetRange.upperBound) / 2),
+            sizeDeviation: abs(medianSize - (targetRange.lowerBound + targetRange.upperBound) / 2),
             flavorIssues: flavorProfile.flavorIssues
         )
         
@@ -230,7 +254,7 @@ class CoffeeCompass {
             expectedImprovement: expectedImprovement,
             confidence: confidence,
             grindAnalysisFactors: [
-                "Average size: \(String(format: "%.0f", avgSize))μm",
+                "Median size: \(String(format: "%.0f", medianSize))μm",
                 "Uniformity: \(String(format: "%.1f", uniformity))%",
                 "Fines: \(String(format: "%.1f", finesPercentage))%"
             ]
@@ -241,7 +265,7 @@ class CoffeeCompass {
         analysisResults: CoffeeAnalysisResults,
         flavorProfile: FlavorProfile
     ) -> BrewingRecommendation {
-        let avgSize = analysisResults.averageSize
+        let medianSize = analysisResults.medianSize
         let uniformity = analysisResults.uniformityScore
         let targetRange = analysisResults.grindType.targetSizeMicrons
         
@@ -251,7 +275,7 @@ class CoffeeCompass {
         var secondaryActions: [BrewingRecommendation.RecommendationAction] = []
         
         // Additional extraction improvements if grind allows
-        if avgSize > targetRange.upperBound {
+        if medianSize > targetRange.upperBound {
             // Grind is also too coarse - can help with both strength and extraction
             secondaryActions = [
                 .grindFiner(amount: .moderately),
@@ -269,7 +293,7 @@ class CoffeeCompass {
         let reasoning = """
         \(compassGuidance)
         Your coffee lacks strength and body, indicating insufficient coffee-to-water ratio. 
-        Average grind size: \(String(format: "%.0f", avgSize))μm (target: \(Int(targetRange.lowerBound))-\(Int(targetRange.upperBound))μm).
+        Median grind size: \(String(format: "%.0f", medianSize))μm (target: \(Int(targetRange.lowerBound))-\(Int(targetRange.upperBound))μm).
         
         Following the Coffee Compass: increase brew ratio by using more coffee or less water to achieve proper strength and body.
         """
@@ -289,7 +313,7 @@ class CoffeeCompass {
             expectedImprovement: expectedImprovement,
             confidence: confidence,
             grindAnalysisFactors: [
-                "Average size: \(String(format: "%.0f", avgSize))μm",
+                "Median size: \(String(format: "%.0f", medianSize))μm",
                 "Uniformity: \(String(format: "%.1f", uniformity))%"
             ]
         )
@@ -301,7 +325,7 @@ class CoffeeCompass {
     ) -> BrewingRecommendation {
         let uniformity = analysisResults.uniformityScore
         let finesPercentage = analysisResults.finesPercentage
-        let avgSize = analysisResults.averageSize
+        let medianSize = analysisResults.medianSize
         let targetRange = analysisResults.grindType.targetSizeMicrons
         
         // Coffee Compass: Harsh coffee = "Less Coffee" (decrease brew ratio)
@@ -324,7 +348,7 @@ class CoffeeCompass {
                 .decreaseWaterTemp(celsius: 3.0),
                 .decreaseDose(grams: 1.5)
             ]
-        } else if avgSize < targetRange.lowerBound {
+        } else if medianSize < targetRange.lowerBound {
             // Grind too fine contributing to harshness
             primaryAction = .grindCoarser(amount: .moderately)
             secondaryActions = [
@@ -354,7 +378,7 @@ class CoffeeCompass {
         
         let confidence = calculateConfidence(
             uniformity: uniformity,
-            sizeDeviation: abs(avgSize - (targetRange.lowerBound + targetRange.upperBound) / 2),
+            sizeDeviation: abs(medianSize - (targetRange.lowerBound + targetRange.upperBound) / 2),
             flavorIssues: flavorProfile.flavorIssues
         )
         
@@ -365,7 +389,7 @@ class CoffeeCompass {
             expectedImprovement: expectedImprovement,
             confidence: confidence,
             grindAnalysisFactors: [
-                "Average size: \(String(format: "%.0f", avgSize))μm",
+                "Median size: \(String(format: "%.0f", medianSize))μm",
                 "Uniformity: \(String(format: "%.1f", uniformity))%",
                 "Fines: \(String(format: "%.1f", finesPercentage))%"
             ]
@@ -382,19 +406,19 @@ class CoffeeCompass {
         
         // Check if grind size is significantly off target
         let targetRange = analysisResults.grindType.targetSizeMicrons
-        let avgSize = analysisResults.averageSize
+        let medianSize = analysisResults.medianSize
         let targetCenter = (targetRange.lowerBound + targetRange.upperBound) / 2
-        let sizeDeviation = abs(avgSize - targetCenter) / targetCenter
+        let sizeDeviation = abs(medianSize - targetCenter) / targetCenter
         
         if sizeDeviation > 0.3 && flavorProfile.overallTaste == .balanced {
             // Size is significantly off but taste is balanced - suggest optimization
-            let action: BrewingRecommendation.RecommendationAction = avgSize > targetCenter ?
+            let action: BrewingRecommendation.RecommendationAction = medianSize > targetCenter ?
                 .grindFiner(amount: .moderately) : .grindCoarser(amount: .moderately)
             
             let rec = BrewingRecommendation(
                 primaryAction: action,
                 secondaryActions: [],
-                reasoning: "Your grind size (\(String(format: "%.0f", avgSize))μm) is outside the optimal range for \(analysisResults.grindType.displayName). Adjusting closer to the target range may improve extraction consistency.",
+                reasoning: "Your grind size (\(String(format: "%.0f", medianSize))μm) is outside the optimal range for \(analysisResults.grindType.displayName). Adjusting closer to the target range may improve extraction consistency.",
                 expectedImprovement: "More consistent extraction, potential flavor improvement",
                 confidence: 70,
                 grindAnalysisFactors: ["Size deviation: \(String(format: "%.1f", sizeDeviation * 100))%"]
@@ -438,15 +462,15 @@ class CoffeeCompass {
     ) -> BrewingRecommendation {
         // Provide a general recommendation based on grind analysis alone
         let targetRange = analysisResults.grindType.targetSizeMicrons
-        let avgSize = analysisResults.averageSize
+        let medianSize = analysisResults.medianSize
         let uniformity = analysisResults.uniformityScore
         
         var primaryAction: BrewingRecommendation.RecommendationAction
         var reasoning: String
         
-        if !targetRange.contains(avgSize) {
+        if !targetRange.contains(medianSize) {
             // Size is off target
-            if avgSize < targetRange.lowerBound {
+            if medianSize < targetRange.lowerBound {
                 primaryAction = .grindCoarser(amount: .moderately)
                 reasoning = "Your grind is finer than the target range for \(analysisResults.grindType.displayName). Grinding coarser will help achieve the optimal extraction."
             } else {
@@ -458,19 +482,39 @@ class CoffeeCompass {
             primaryAction = .improveGrinderUniformity
             reasoning = "Your grind uniformity is low, which can lead to uneven extraction. Consider upgrading your grinder for better consistency."
         } else {
-            // Everything looks good
-            primaryAction = .grindFiner(amount: .slightly)
-            reasoning = "Your grind looks good for \(analysisResults.grindType.displayName). Minor adjustments can be made based on taste preference."
+            // Everything looks good - balanced coffee with grind in range
+            // Check if flavor is also balanced
+            if flavorProfile.overallTaste == .balanced {
+                // Perfect! No changes needed
+                primaryAction = .maintainCurrentSettings
+                reasoning = "Excellent! Your coffee is balanced and your grind is in the optimal range for \(analysisResults.grindType.displayName). You've achieved the perfect extraction!"
+                
+                return BrewingRecommendation(
+                    primaryAction: primaryAction,
+                    secondaryActions: [],
+                    reasoning: reasoning,
+                    expectedImprovement: "Already optimal - maintain current settings",
+                    confidence: 95,
+                    grindAnalysisFactors: [
+                        "Median size: \(String(format: "%.0f", medianSize))μm (in target range)",
+                        "Uniformity: \(String(format: "%.1f", uniformity))% (good)"
+                    ]
+                )
+            } else {
+                // Grind is good but there might be other factors to adjust
+                primaryAction = .grindFiner(amount: .slightly)
+                reasoning = "Your grind is within the optimal range for \(analysisResults.grindType.displayName). Consider minor adjustments to other brewing parameters based on taste."
+            }
         }
         
         return BrewingRecommendation(
             primaryAction: primaryAction,
             secondaryActions: [],
             reasoning: reasoning,
-            expectedImprovement: "Better extraction and flavor balance",
+            expectedImprovement: "Fine-tune to personal preference",
             confidence: 75,
             grindAnalysisFactors: [
-                "Average size: \(String(format: "%.0f", avgSize))μm",
+                "Median size: \(String(format: "%.0f", medianSize))μm",
                 "Uniformity: \(String(format: "%.1f", uniformity))%"
             ]
         )

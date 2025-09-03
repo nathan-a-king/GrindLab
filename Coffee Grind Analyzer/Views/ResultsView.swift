@@ -165,7 +165,7 @@ struct ResultsView: View {
             // Debug logging
             print("📝 ResultsView data check:")
             print("   - From History: \(isFromHistory)")
-            let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+            let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
             print("   - Size Match: \(isInRange ? "In Range" : "Out of Range")")
             print("   - Distribution keys: \(results.sizeDistribution.keys.sorted())")
             print("   - Distribution values: \(results.sizeDistribution.values.map { String(format: "%.1f", $0) })")
@@ -223,7 +223,7 @@ struct ResultsView: View {
                 Spacer()
                 
                 VStack {
-                    let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                    let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
                     Text(isInRange ? "In Range" : "Out of Range")
                         .font(.title2)
                         .fontWeight(.bold)
@@ -235,7 +235,7 @@ struct ResultsView: View {
                 }
             }
             
-            let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+            let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
             ProgressView(value: isInRange ? 1.0 : 0.0)
                 .tint(isInRange ? .green : .red)
         }
@@ -254,9 +254,9 @@ struct ResultsView: View {
             GridItem(.flexible())
         ], spacing: 16) {
             metricCard(
-                title: "Average Size",
-                value: String(format: "%.1f μm", results.averageSize),
-                subtitle: "Target: \(results.grindType.targetSizeRange)",
+                title: "Particle Size",
+                value: String(format: "%.0f μm", results.medianSize),
+                subtitle: "Median (Avg: \(String(format: "%.0f", results.averageSize)) μm)",
                 color: .brown,
                 icon: "ruler"
             )
@@ -340,7 +340,7 @@ struct ResultsView: View {
             
             // Show quick grind assessment
             VStack(alignment: .leading, spacing: 4) {
-                let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
                 let uniformityGood = results.uniformityScore >= 60
                 
                 HStack {
@@ -382,8 +382,8 @@ struct ResultsView: View {
             VStack(spacing: 24) {
                 detailSection("Particle Statistics") {
                     VStack(spacing: 8) {
-                        DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
                         DetailRow(label: "Median Size", value: String(format: "%.1f μm", results.medianSize))
+                        DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
                         DetailRow(label: "Standard Deviation", value: String(format: "%.1f μm", results.standardDeviation))
                         DetailRow(label: "Coefficient of Variation", value: String(format: "%.1f%%", (results.standardDeviation / results.averageSize) * 100))
                     }
@@ -402,7 +402,7 @@ struct ResultsView: View {
                         DetailRow(label: "Target Size", value: results.grindType.targetSizeRange)
                         DetailRow(label: "Ideal Fines", value: "\(Int(results.grindType.idealFinesPercentage.lowerBound))-\(Int(results.grindType.idealFinesPercentage.upperBound))%")
                         
-                        let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                        let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
                         DetailRow(
                             label: "Size Match",
                             value: isInRange ? "✓ In Range" : "✗ Out of Range",
@@ -1109,8 +1109,8 @@ struct ShareSheet: UIViewControllerRepresentable {
         Date: \(formatter.string(from: results.timestamp))
         
         📊 Key Metrics:
-        • Size Match: \(results.grindType.targetSizeMicrons.contains(results.averageSize) ? "In Range" : "Out of Range")
-        • Average Size: \(String(format: "%.1f", results.averageSize))μm
+        • Size Match: \(results.grindType.targetSizeMicrons.contains(results.medianSize) ? "In Range" : "Out of Range")
+        • Median Size: \(String(format: "%.1f", results.medianSize))μm
         • Particles Detected: \(results.particleCount)
         • Fines: \(String(format: "%.1f", results.finesPercentage))%
         • Confidence: \(Int(results.confidence))%
@@ -1185,7 +1185,7 @@ struct SaveAnalysisDialog: View {
                     Text("Size Match")
                         .foregroundColor(.white)
                     Spacer()
-                    let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
+                    let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
                     Text(isInRange ? "In Range" : "Out of Range")
                         .foregroundColor(isInRange ? .green : .red)
                         .fontWeight(.semibold)

@@ -20,7 +20,7 @@ struct RecommendationView: View {
         self.flavorProfile = flavorProfile
         
         print("🔵 RecommendationView INIT called")
-        print("   - Analysis avg size: \(analysisResults.averageSize)")
+        print("   - Analysis median size: \(analysisResults.medianSize)")
         print("   - Flavor profile: \(flavorProfile.overallTaste.rawValue)")
         
         // Set appearance for navigation bar
@@ -149,8 +149,8 @@ struct RecommendationView: View {
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
                 GrindMetricCard(
-                    title: "Average Size",
-                    value: "\(String(format: "%.0f", analysisResults.averageSize))μm",
+                    title: "Median Size",
+                    value: "\(String(format: "%.0f", analysisResults.medianSize))μm",
                     target: analysisResults.grindType.targetSizeRange,
                     color: grindSizeColor
                 )
@@ -184,11 +184,11 @@ struct RecommendationView: View {
     
     private var grindSizeColor: Color {
         let targetRange = analysisResults.grindType.targetSizeMicrons
-        let avgSize = analysisResults.averageSize
+        let medianSize = analysisResults.medianSize
         
-        if targetRange.contains(avgSize) {
+        if targetRange.contains(medianSize) {
             return .green
-        } else if avgSize < targetRange.lowerBound * 0.8 || avgSize > targetRange.upperBound * 1.2 {
+        } else if medianSize < targetRange.lowerBound * 0.8 || medianSize > targetRange.upperBound * 1.2 {
             return .red
         } else {
             return .orange

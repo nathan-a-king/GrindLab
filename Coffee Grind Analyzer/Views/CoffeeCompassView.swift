@@ -439,7 +439,7 @@ struct CoffeeCompassPosition {
     }
     
     var coordinates: CGPoint? {
-        let compassSize: CGFloat = 280
+        let compassSize: CGFloat = 320 // Match the actual compass size in CoffeeCompassView
         let center = CGPoint(x: compassSize/2, y: compassSize/2)
         let radius = compassSize/2 - 40 // Leave space for center circle
         
@@ -463,7 +463,7 @@ struct CoffeeCompassPosition {
         let result: CGPoint
         switch taste {
         case .balanced:
-            result = center // Stay in the center
+            result = center // Always stay perfectly centered for balanced coffee
         case .underExtracted:
             // Top-left quadrant - SOUR/WEAK (position 0.28, 0.28)
             result = CGPoint(
