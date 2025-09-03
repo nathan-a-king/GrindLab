@@ -994,52 +994,63 @@ struct ImageComparisonView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
-                if let originalImage = results.image,
-                   let processedImage = results.processedImage {
-                    
-                    Picker("Image Type", selection: $showingOriginal) {
-                        Text("Original").tag(true)
-                        Text("Processed").tag(false)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding()
-                    
-                    ScrollView([.horizontal, .vertical]) {
-                        Image(uiImage: showingOriginal ? originalImage : processedImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                    }
-                    .background(Color.black)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        if showingOriginal {
-                            Text("Original captured image showing the coffee grind sample")
-                        } else {
-                            Text("Processed image with detected particles highlighted in color:")
-                            
-                            let legendItems = results.grindType.imageLegendItems
-                            
-                            VStack(alignment: .leading, spacing: 6) {
-                                ForEach(legendItems) { item in
-                                    legendItem(color: colorFromString(item.color), label: item.label)
-                                }
-                            }
-                            .font(.caption)
+            ZStack {
+                // Brown background to match the rest of the app
+                Color.brown.opacity(0.7)
+                    .ignoresSafeArea()
+                
+                VStack {
+                    if let originalImage = results.image,
+                       let processedImage = results.processedImage {
+                        
+                        Picker("Image Type", selection: $showingOriginal) {
+                            Text("Original").tag(true)
+                            Text("Processed").tag(false)
                         }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding()
+                        
+                        ScrollView([.horizontal, .vertical]) {
+                            Image(uiImage: showingOriginal ? originalImage : processedImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        }
+                        .background(Color.black)
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            if showingOriginal {
+                                Text("Original captured image showing the coffee grind sample")
+                                    .foregroundColor(.white)
+                            } else {
+                                Text("Processed image with detected particles highlighted in blue")
+                                    .foregroundColor(.white)
+                                
+                                // Only show legend for non-blue highlighting (removed since all particles are blue now)
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.brown.opacity(0.5))
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .padding(.horizontal)
+                        
+                        Spacer()
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6))
                 }
             }
             .navigationTitle("Image Comparison")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") {
                         dismiss()
                     }
+                    .foregroundColor(.white)
                 }
             }
         }
