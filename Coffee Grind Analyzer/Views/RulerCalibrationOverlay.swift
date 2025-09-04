@@ -7,7 +7,7 @@ struct RulerCalibrationOverlay: View {
     @Binding var isDragging: Bool
     
     var lineWidth: CGFloat = 3
-    var color: Color = .red
+    var color: Color = Color(red: 0.8, green: 0.5, blue: 0.2)
     
     // Track which handle is being dragged
     @State private var draggingHandle: DragHandle?
@@ -179,32 +179,69 @@ struct RulerCalibrationOverlay: View {
                                          height: offset.height + dragOffset.height)
                     )
                     
-                    // Draw line
+                    // Draw line with gradient effect
                     Path { path in
                         path.move(to: viewStart)
                         path.addLine(to: viewEnd)
                     }
-                    .stroke(color, lineWidth: lineWidth)
+                    .stroke(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: lineWidth
+                    )
                     
                     // Draw start point handle (larger when dragging)
                     Circle()
-                        .fill(color)
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.7)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                         .frame(
                             width: draggingHandle == .start ? 16 : 12,
                             height: draggingHandle == .start ? 16 : 12
                         )
                         .position(viewStart)
-                        .shadow(color: .black.opacity(0.3), radius: 2, x: 1, y: 1)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                .frame(
+                                    width: draggingHandle == .start ? 16 : 12,
+                                    height: draggingHandle == .start ? 16 : 12
+                                )
+                                .position(viewStart)
+                        )
+                        .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 2)
                     
                     // Draw end point handle (larger when dragging)
                     Circle()
-                        .fill(color)
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.7)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                         .frame(
                             width: draggingHandle == .end ? 16 : 12,
                             height: draggingHandle == .end ? 16 : 12
                         )
                         .position(viewEnd)
-                        .shadow(color: .black.opacity(0.3), radius: 2, x: 1, y: 1)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                .frame(
+                                    width: draggingHandle == .end ? 16 : 12,
+                                    height: draggingHandle == .end ? 16 : 12
+                                )
+                                .position(viewEnd)
+                        )
+                        .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 2)
                     
                     // Draw grab areas to make handles easier to tap
                     Circle()
@@ -229,11 +266,18 @@ struct RulerCalibrationOverlay: View {
                     Text("\(Int(pixelDistance)) pixels")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.black.opacity(0.7))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.brown.opacity(0.8))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                         .foregroundColor(.white)
-                        .cornerRadius(6)
+                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                         .position(midPoint)
                 }
                 
@@ -244,11 +288,18 @@ struct RulerCalibrationOverlay: View {
                             Text(String(format: "%.1fx", totalZoom * currentZoom))
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.black.opacity(0.6))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.brown.opacity(0.7))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
                                 .foregroundColor(.white)
-                                .cornerRadius(6)
+                                .shadow(color: .black.opacity(0.2), radius: 3)
                             
                             Button(action: {
                                 withAnimation(.spring()) {
@@ -260,11 +311,27 @@ struct RulerCalibrationOverlay: View {
                                 Text("Reset")
                                     .font(.caption)
                                     .fontWeight(.semibold)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.blue.opacity(0.8))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [
+                                                        Color(red: 0.8, green: 0.5, blue: 0.2),
+                                                        Color(red: 0.7, green: 0.4, blue: 0.15)
+                                                    ],
+                                                    startPoint: .top,
+                                                    endPoint: .bottom
+                                                )
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                            )
+                                    )
                                     .foregroundColor(.white)
-                                    .cornerRadius(6)
+                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                             }
                             
                             Spacer()
@@ -277,44 +344,70 @@ struct RulerCalibrationOverlay: View {
                 
                 // Draw instructions
                 if startPoint == nil {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         Image(systemName: "ruler")
                             .font(.title2)
                             .foregroundColor(.white)
                         
                         Text("Tap or drag to measure 1 inch on the ruler")
-                            .font(.caption)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                         
                         Text("Line appears above your finger")
-                            .font(.caption2)
-                            .foregroundColor(.white.opacity(0.7))
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
                         
                         if totalZoom == 1.0 {
                             Text("Pinch to zoom for precision")
-                                .font(.caption2)
-                                .foregroundColor(.green)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(Color(red: 0.9, green: 0.7, blue: 0.4))
                         }
                     }
-                    .padding()
-                    .background(Color.black.opacity(0.7))
-                    .cornerRadius(12)
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.brown.opacity(0.85),
+                                        Color.brown.opacity(0.95)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
                     .position(x: container.width / 2, y: container.height - 100)
                 } else if startPoint != nil && endPoint != nil {
-                    VStack(spacing: 4) {
-                        Text("Drag the red circles to adjust")
-                            .font(.caption2)
+                    VStack(spacing: 6) {
+                        Text("Drag the circles to adjust")
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(.white)
                         
                         Text("Tap anywhere to start over")
                             .font(.caption2)
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(.white.opacity(0.8))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.black.opacity(0.7))
-                    .cornerRadius(8)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.brown.opacity(0.85))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 2)
                     .position(x: container.width / 2, y: 40)
                 }
             }

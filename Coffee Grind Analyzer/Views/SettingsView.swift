@@ -398,23 +398,29 @@ struct CalibrationView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    instructionSection
-                    
-                    if let image = calibrationImage {
-                        rulerImageSection(image: image)
-                    } else {
-                        placeholderImageSection
+            ZStack {
+                // Match Settings view background
+                Color.brown.opacity(0.7)
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        instructionSection
+                        
+                        if let image = calibrationImage {
+                            rulerImageSection(image: image)
+                        } else {
+                            placeholderImageSection
+                        }
+                        
+                        if isValidMeasurement {
+                            calculationResultSection
+                        }
+                        
+                        Spacer(minLength: 40)
                     }
-                    
-                    if isValidMeasurement {
-                        calculationResultSection
-                    }
-                    
-                    Spacer(minLength: 40)
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Ruler Calibration")
             .navigationBarTitleDisplayMode(.inline)
@@ -453,72 +459,70 @@ struct CalibrationView: View {
     // MARK: - View Components
     
     private var instructionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Ruler Calibration")
-                .font(.headline)
-            
-            VStack(alignment: .leading, spacing: 8) {
+        SettingsCard(title: "Instructions") {
+            VStack(alignment: .leading, spacing: 10) {
                 Label("Take a photo of a ruler or measuring tape", systemImage: "1.circle.fill")
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
                 
                 Label("Pinch to zoom for precise alignment", systemImage: "2.circle.fill")
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
                 
                 Label("Drag a line over exactly 1 inch", systemImage: "3.circle.fill")
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
                 
                 Label("The app will count pixels automatically", systemImage: "4.circle.fill")
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
                 
                 Label("Save the calibration factor", systemImage: "5.circle.fill")
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
             }
             .font(.subheadline)
-            .foregroundColor(.secondary)
             
-            Text("💡 For best results, use a clear ruler with distinct inch markings and good lighting")
-                .font(.caption)
-                .foregroundColor(.blue)
-                .padding(.top, 4)
-            
-            Text("🔍 Pinch to zoom in for more precise measurements")
-                .font(.caption)
-                .foregroundColor(.green)
-                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("For best results, use a clear ruler with distinct inch markings and good lighting")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(.top, 8)
+                
+                Text("Pinch to zoom in for more precise measurements")
+                    .font(.caption)
+                    .foregroundColor(Color(red: 0.9, green: 0.7, blue: 0.4))
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     private var placeholderImageSection: some View {
         Button(action: { showingImagePicker = true }) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.1))
-                .frame(height: 200)
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.brown.opacity(0.3))
+                .frame(height: 250)
                 .overlay(
-                    VStack(spacing: 12) {
+                    VStack(spacing: 16) {
                         Image(systemName: "ruler")
-                            .font(.system(size: 40))
-                            .foregroundColor(.blue)
+                            .font(.system(size: 48))
+                            .foregroundColor(.white)
                         
                         Text("Select Ruler Photo")
                             .font(.headline)
-                            .foregroundColor(.blue)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
                         
                         Text("Take a photo of a ruler or measuring tape")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.8))
                     }
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5]))
-                        .foregroundColor(.blue.opacity(0.3))
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
+                        .foregroundColor(.white.opacity(0.4))
                 )
+                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
         }
     }
     
     private func rulerImageSection(image: UIImage) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             RulerCalibrationOverlay(
                 image: image,
                 startPoint: $startPoint,
@@ -526,65 +530,98 @@ struct CalibrationView: View {
                 isDragging: $isDragging
             )
             .frame(height: 350)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.blue.opacity(0.3), lineWidth: 2)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             )
+            .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
             
             HStack {
-                Button("Change Image") {
-                    showingImagePicker = true
+                Button(action: { showingImagePicker = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "photo.on.rectangle")
+                        Text("Change Image")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.brown.opacity(0.6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                    )
                 }
-                .font(.caption)
-                .foregroundColor(.blue)
                 
                 Spacer()
                 
                 if startPoint != nil || endPoint != nil {
-                    Button("Clear Measurement") {
+                    Button(action: {
                         startPoint = nil
                         endPoint = nil
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "xmark.circle")
+                            Text("Clear")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.red.opacity(0.7))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                        )
                     }
-                    .font(.caption)
-                    .foregroundColor(.red)
                 }
             }
             
             if pixelDistance > 0 {
                 Text("Measured: \(Int(pixelDistance)) pixels")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.8))
             }
         }
     }
     
     
     private var calculationResultSection: some View {
-        VStack(spacing: 12) {
-            Text("Calibration Result")
-                .font(.headline)
-            
-            VStack(spacing: 8) {
+        SettingsCard(title: "Calibration Result") {
+            VStack(spacing: 12) {
                 Text(String(format: "%.2f μm/pixel", calculatedFactor))
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color(red: 0.9, green: 0.7, blue: 0.4))
                 
                 Text("Based on 1 inch = \(Int(pixelDistance)) pixels")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.subheadline)
+                    .foregroundColor(.white)
                 
                 Text("1 inch = 25.4 mm = 25,400 μm")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
                     .italic()
             }
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(12)
     }
     
     

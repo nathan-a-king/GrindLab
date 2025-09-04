@@ -17,7 +17,6 @@ struct ContentView: View {
     @State private var settings = AnalysisSettings.load()
     
     @State private var showingResults = false
-    @State private var analysisResults: CoffeeAnalysisResults?
     @State private var detailResults: CoffeeAnalysisResults?
     @State private var showingSettings = false
     @State private var selectedGrindType: CoffeeGrindType?
@@ -26,7 +25,6 @@ struct ContentView: View {
     @State private var showingGallery = false
     @State private var errorMessage: String?
     @State private var showingError = false
-    @State private var dragOffset: CGFloat = 0
     @State private var pressedCard: CoffeeGrindType? = nil
     
     var body: some View {
@@ -290,7 +288,7 @@ struct ContentView: View {
     
     private func recentResultCard(_ analysis: SavedCoffeeAnalysis) -> some View {
         Button(action: {
-            analysisResults = analysis.results
+            detailResults = analysis.results
             showingResults = true
         }) {
             VStack(alignment: .leading, spacing: 10) {
@@ -360,46 +358,6 @@ struct ContentView: View {
                 Spacer(minLength: 0)
             }
             
-            // Results preview as overlay
-            if let results = analysisResults {
-                VStack {
-                    Spacer()
-                    resultsPreview(results: results)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .padding(.bottom, 50) // Position midway between camera preview and controls
-                        .offset(y: dragOffset)
-                        .gesture(
-                            DragGesture()
-                                .onChanged { gesture in
-                                    // Only allow downward dragging
-                                    if gesture.translation.height > 0 {
-                                        dragOffset = gesture.translation.height
-                                    }
-                                }
-                                .onEnded { gesture in
-                                    // Swipe down to dismiss (threshold: 50 points downward)
-                                    if gesture.translation.height > 50 {
-                                        // Animate card sliding down before dismissing
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            dragOffset = 300 // Slide off screen
-                                        }
-                                        // Then dismiss after animation
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                            analysisResults = nil
-                                            dragOffset = 0
-                                        }
-                                    } else {
-                                        // Snap back if not swiped far enough
-                                        withAnimation(.easeOut(duration: 0.2)) {
-                                            dragOffset = 0
-                                        }
-                                    }
-                                }
-                        )
-                }
-                .allowsHitTesting(true)
-            }
-            
             if isAnalyzing {
                 analysisOverlay
             }
@@ -411,7 +369,6 @@ struct ContentView: View {
                 Button("Back") {
                     showingCamera = false
                     selectedGrindType = nil
-                    analysisResults = nil
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -482,111 +439,6 @@ struct ContentView: View {
         .padding(.horizontal, 16)
     }
     
-    private func resultsPreview(results: CoffeeAnalysisResults) -> some View {
-        VStack(spacing: 16) {
-            // Drag handle and header
-            VStack(spacing: 12) {
-                // Visual drag handle
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.white.opacity(0.4))
-                    .frame(width: 40, height: 4)
-                
-                HStack {
-                    Button("Dismiss") {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            analysisResults = nil
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-                    
-                    Spacer()
-                    
-                    Text("Analysis Results")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    Button("View Details") {
-                        // Store results for detail view before clearing card
-                        detailResults = results
-                        showingResults = true
-                        // Clear results so card doesn't appear when user returns
-                        analysisResults = nil
-                    }
-                    .foregroundColor(.blue)
-                    .font(.caption)
-                }
-            }
-            
-            HStack(spacing: 16) {
-                let isInRange = results.grindType.targetSizeMicrons.contains(results.averageSize)
-                resultCard(
-                    title: "Size Match",
-                    value: isInRange ? "In Range" : "Out of Range",
-                    color: isInRange ? .green : .red
-                )
-                
-                resultCard(
-                    title: "Avg Size",
-                    value: String(format: "%.1fμm", results.averageSize),
-                    color: .blue
-                )
-                
-                resultCard(
-                    title: "Fines",
-                    value: "\(Int(results.finesPercentage))%",
-                    color: .orange
-                )
-                
-                resultCard(
-                    title: "Particles",
-                    value: "\(results.particleCount)",
-                    color: .purple
-                )
-            }
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.12),
-                            Color.white.opacity(0.08)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(.ultraThinMaterial)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
-        .padding(.horizontal, 20)
-    }
-    
-    private func resultCard(title: String, value: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(color)
-                .fixedSize(horizontal: false, vertical: true)
-            
-            Text(title)
-                .font(.caption2)
-                .foregroundColor(.white.opacity(0.7))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
-    }
     
     private var analysisOverlay: some View {
         ZStack {
@@ -641,9 +493,9 @@ struct ContentView: View {
             
             switch result {
             case .success(let results):
-                withAnimation(.spring()) {
-                    self.analysisResults = results
-                }
+                // Go directly to results view instead of showing preview
+                detailResults = results
+                showingResults = true
                 
             case .failure(let error):
                 errorMessage = error.localizedDescription
