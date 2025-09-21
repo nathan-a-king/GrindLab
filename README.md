@@ -11,6 +11,12 @@ GrindLab is an iOS/macOS application built with SwiftUI that analyzes coffee gri
 
 Grind size has the largest impact on extraction quality, but measuring it consistently has always been a challenge. Most of us eyeball it or rely on grinder settings that can vary from day to day. GrindLab aims to change that by turning your iPhone's camera into a precise measurement tool, giving you the data you need to dial in the perfect cup.
 
+<div style="text-align: center;">
+  <img src="grindlab.png" alt="GrindLab UI" style="display: inline-block; width: 300px; height: auto;">
+  <img src="analysis-phone.png" alt="GrindLab UI" style="display: inline-block; width: 300px; height: auto;">
+</div>
+<br>
+
 ## Key Features
 
 ### 📸 **Advanced Image Analysis**
