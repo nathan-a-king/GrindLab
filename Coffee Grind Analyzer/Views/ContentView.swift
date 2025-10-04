@@ -46,11 +46,17 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             // Main Analysis Tab
             NavigationView {
-                Group {
-                    if showingCamera, let grindType = selectedGrindType {
-                        cameraView(for: grindType)
-                    } else {
-                        grindSelectionView
+                ZStack {
+                    Group {
+                        if showingCamera, let grindType = selectedGrindType {
+                            cameraView(for: grindType)
+                        } else {
+                            grindSelectionView
+                        }
+                    }
+
+                    if isAnalyzing {
+                        analysisOverlay
                     }
                 }
             }
@@ -391,10 +397,6 @@ struct ContentView: View {
                 // Add spacer to prevent results from affecting layout
                 Spacer(minLength: 0)
             }
-
-            if isAnalyzing {
-                analysisOverlay
-            }
         }
         .navigationTitle(grindType.displayName)
         .navigationBarTitleDisplayMode(.inline)
@@ -521,7 +523,11 @@ struct ContentView: View {
     
     private func analyzeImage(_ image: UIImage, grindType: CoffeeGrindType) {
         isAnalyzing = true
-        
+
+        // Remove camera view from ZStack after image capture
+        showingCamera = false
+        selectedGrindType = nil
+
         analysisEngine.analyzeGrind(image: image, grindType: grindType) { result in
             isAnalyzing = false
             
