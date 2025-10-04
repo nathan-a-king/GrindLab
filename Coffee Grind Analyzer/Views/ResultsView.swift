@@ -12,7 +12,9 @@ struct ResultsView: View {
     let baseResults: CoffeeAnalysisResults
     let isFromHistory: Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.tabSelection) private var tabSelection
     @EnvironmentObject private var historyManager: CoffeeAnalysisHistoryManager
+    @EnvironmentObject private var brewState: BrewAppState
     
     @State private var selectedTab = 0
     @State private var showingImageComparison = false
@@ -332,11 +334,18 @@ struct ResultsView: View {
             Text("Get personalized brewing recommendations based on your grind analysis and taste feedback")
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.8))
-            
-            Button("How did it taste?") {
-                showingFlavorProfile = true
+
+            HStack(spacing: 12) {
+                Button("Start Brewing") {
+                    startBrewingWorkflow()
+                }
+                .buttonStyle(ImprovementButtonStyle(color: .brown, isSecondary: false))
+
+                Button("How did it taste?") {
+                    showingFlavorProfile = true
+                }
+                .buttonStyle(ImprovementButtonStyle(color: .blue, isSecondary: false))
             }
-            .buttonStyle(ImprovementButtonStyle(color: .blue, isSecondary: false))
             
             // Show quick grind assessment
             VStack(alignment: .leading, spacing: 4) {
@@ -953,6 +962,43 @@ struct ResultsView: View {
                 .shadow(radius: 4)
         }
     }
+
+    // MARK: - Brewing Workflow
+
+    private func startBrewingWorkflow() {
+        // Get or create SavedCoffeeAnalysis
+        let savedAnalysis: SavedCoffeeAnalysis
+
+        if isFromHistory,
+           let existingAnalysis = historyManager.savedAnalyses.first(where: { $0.results.timestamp == results.timestamp }) {
+            // Use existing saved analysis
+            savedAnalysis = existingAnalysis
+        } else {
+            // Create temporary SavedCoffeeAnalysis for the brewing workflow
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            let dateString = formatter.string(from: results.timestamp)
+            let name = "\(results.grindType.displayName) - \(dateString)"
+
+            savedAnalysis = SavedCoffeeAnalysis(
+                name: name,
+                results: results,
+                savedDate: Date(),
+                notes: nil,
+                originalImagePath: nil,
+                processedImagePath: nil
+            )
+        }
+
+        // Set grind context in brew state
+        brewState.setGrindContext(savedAnalysis)
+
+        // Switch to Brew tab (index 1)
+        tabSelection?.wrappedValue = 1
+
+        // Dismiss the results view
+        dismiss()
+    }
 }
 
 // MARK: - Detail Row
@@ -1138,7 +1184,7 @@ struct SaveAnalysisDialog: View {
                 // Match History view background
                 Color.brown.opacity(0.7)
                     .ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(spacing: 20) {
                         analysisInfoCard
@@ -1147,6 +1193,7 @@ struct SaveAnalysisDialog: View {
                     .padding(.horizontal)
                     .padding(.top)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Save Analysis")
             .navigationBarTitleDisplayMode(.inline)
@@ -1156,7 +1203,7 @@ struct SaveAnalysisDialog: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveAnalysis()
