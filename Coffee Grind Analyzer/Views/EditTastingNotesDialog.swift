@@ -62,38 +62,43 @@ struct EditTastingNotesDialog: View {
         NavigationView {
             Form {
                 analysisInfoSection
-                
+
                 if savedAnalysis.results.tastingNotes != nil {
                     removeNotesSection
                 }
-                
+
                 if !removeTastingNotes {
                     tastingNotesForm
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Color.brown.opacity(0.7))
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(hasExistingNotes ? "Edit Tasting Notes" : "Add Tasting Notes")
             .navigationBarTitleDisplayMode(.inline)
-            .onTapGesture {
-                // Dismiss keyboard when tapping outside text fields
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveTastingNotes()
                     }
                     .fontWeight(.semibold)
                 }
+
+                ToolbarItem(placement: .keyboard) {
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                }
             }
         }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
     
     private var hasExistingNotes: Bool {

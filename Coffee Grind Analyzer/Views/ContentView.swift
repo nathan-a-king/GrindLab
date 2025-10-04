@@ -8,14 +8,28 @@
 import SwiftUI
 import AVFoundation
 
+// MARK: - Environment Keys
+
+private struct TabSelectionKey: EnvironmentKey {
+    static let defaultValue: Binding<Int>? = nil
+}
+
+extension EnvironmentValues {
+    var tabSelection: Binding<Int>? {
+        get { self[TabSelectionKey.self] }
+        set { self[TabSelectionKey.self] = newValue }
+    }
+}
+
 // MARK: - Main Content View
 
 struct ContentView: View {
     @StateObject private var camera = CoffeeCamera()
     @StateObject private var historyManager = CoffeeAnalysisHistoryManager()
+    @StateObject private var brewState = BrewAppState()
     @State private var analysisEngine = CoffeeAnalysisEngine()
     @State private var settings = AnalysisSettings.load()
-    
+
     @State private var showingResults = false
     @State private var detailResults: CoffeeAnalysisResults?
     @State private var showingSettings = false
@@ -26,9 +40,10 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var pressedCard: CoffeeGrindType? = nil
-    
+    @State private var selectedTab = 0
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             // Main Analysis Tab
             NavigationView {
                 Group {
@@ -39,11 +54,22 @@ struct ContentView: View {
                     }
                 }
             }
+            .ignoresSafeArea(.keyboard)
             .tabItem {
                 Image(systemName: "camera.fill")
                 Text("Analyze")
             }
-            
+            .tag(0)
+
+            // Brew Tab (NEW!)
+            BrewTabView()
+                .environmentObject(brewState)
+                .tabItem {
+                    Image(systemName: "timer")
+                    Text("Brew")
+                }
+                .tag(1)
+
             // History Tab
             HistoryView()
                 .environmentObject(historyManager)
@@ -51,14 +77,21 @@ struct ContentView: View {
                     Image(systemName: "clock.arrow.circlepath")
                     Text("History")
                 }
+                .tag(2)
         }
+        .ignoresSafeArea(.keyboard)
+        .environmentObject(brewState)
         .sheet(isPresented: $showingSettings) {
             SettingsView(settings: $settings)
+                .presentationBackground(.ultraThinMaterial)
         }
         .sheet(isPresented: $showingResults) {
             if let results = detailResults {
                 ResultsView(results: results, isFromHistory: false)
                     .environmentObject(historyManager)
+                    .environmentObject(brewState)
+                    .environment(\.tabSelection, $selectedTab)
+                    .presentationBackground(.ultraThinMaterial)
                     .onDisappear {
                         // Clear detail results when sheet is dismissed
                         detailResults = nil
@@ -71,6 +104,7 @@ struct ContentView: View {
                     analyzeImage(image, grindType: grindType)
                 }
             }
+            .presentationBackground(.ultraThinMaterial)
         }
         .alert("Analysis Error", isPresented: $showingError) {
             Button("OK") {
@@ -343,21 +377,21 @@ struct ContentView: View {
                 endPoint: .bottom
             )
             .ignoresSafeArea()
-            
+
             VStack(spacing: 24) {
                 cameraHeader(grindType: grindType)
                 cameraPreviewSection
-                
+
                 CameraControls(
                     camera: camera,
                     onCapture: capturePhoto,
                     onGallery: { showingGallery = true }
                 )
-                
+
                 // Add spacer to prevent results from affecting layout
                 Spacer(minLength: 0)
             }
-            
+
             if isAnalyzing {
                 analysisOverlay
             }
