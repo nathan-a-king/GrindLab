@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		43088AFD2E607011009FF6E3 /* Icon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 43088AFC2E607011009FF6E3 /* Icon.icon */; };
-		4389E9822E918EA8002A62F4 /* CountUsableLOC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4389E9812E918EA8002A62F4 /* CountUsableLOC.swift */; };
+		43CD569D2E9202C70083F13B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43CD569C2E9202C70083F13B /* WidgetKit.framework */; };
+		43CD569F2E9202C70083F13B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43CD569E2E9202C70083F13B /* SwiftUI.framework */; };
+		43CD56AE2E9202C80083F13B /* BrewActivityWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,7 +28,28 @@
 			remoteGlobalIDString = 433824322E56BBDC00EC93E5;
 			remoteInfo = "Coffee Grind Analyzer";
 		};
+		43CD56AC2E9202C80083F13B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4338242B2E56BBDC00EC93E5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 43CD56992E9202C70083F13B;
+			remoteInfo = BrewActivityWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		43CD56AF2E9202C80083F13B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				43CD56AE2E9202C80083F13B /* BrewActivityWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		43088AFC2E607011009FF6E3 /* Icon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Icon.icon; sourceTree = "<group>"; };
@@ -34,7 +57,21 @@
 		433824402E56BBDD00EC93E5 /* GrindLabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4389E9812E918EA8002A62F4 /* CountUsableLOC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountUsableLOC.swift; sourceTree = "<group>"; };
+		43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BrewActivityWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		43CD569C2E9202C70083F13B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		43CD569E2E9202C70083F13B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		43LIVE0012E918EA8002A62F4 /* GrindLab.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GrindLab.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		43CD56B22E9202C80083F13B /* Exceptions for "BrewActivityWidget" folder in "BrewActivityWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 43CD56992E9202C70083F13B /* BrewActivityWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		433824352E56BBDC00EC93E5 /* Coffee Grind Analyzer */ = {
@@ -50,6 +87,14 @@
 		4338244D2E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Coffee Grind AnalyzerUITests";
+			sourceTree = "<group>";
+		};
+		43CD56A02E9202C70083F13B /* BrewActivityWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				43CD56B22E9202C80083F13B /* Exceptions for "BrewActivityWidget" folder in "BrewActivityWidgetExtension" target */,
+			);
+			path = BrewActivityWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -76,6 +121,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		43CD56972E9202C70083F13B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				43CD569F2E9202C70083F13B /* SwiftUI.framework in Frameworks */,
+				43CD569D2E9202C70083F13B /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -86,8 +140,11 @@
 				433824432E56BBDD00EC93E5 /* Coffee Grind AnalyzerTests */,
 				4338244D2E56BBDD00EC93E5 /* Coffee Grind AnalyzerUITests */,
 				43088AFC2E607011009FF6E3 /* Icon.icon */,
+				43CD56A02E9202C70083F13B /* BrewActivityWidget */,
+				43CD569B2E9202C70083F13B /* Frameworks */,
 				433824342E56BBDC00EC93E5 /* Products */,
 				4389E9812E918EA8002A62F4 /* CountUsableLOC.swift */,
+				43LIVE0012E918EA8002A62F4 /* GrindLab.entitlements */,
 			);
 			sourceTree = "<group>";
 		};
@@ -97,8 +154,18 @@
 				433824332E56BBDC00EC93E5 /* GrindLab.app */,
 				433824402E56BBDD00EC93E5 /* GrindLabTests.xctest */,
 				4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */,
+				43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		43CD569B2E9202C70083F13B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				43CD569C2E9202C70083F13B /* WidgetKit.framework */,
+				43CD569E2E9202C70083F13B /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -111,10 +178,12 @@
 				4338242F2E56BBDC00EC93E5 /* Sources */,
 				433824302E56BBDC00EC93E5 /* Frameworks */,
 				433824312E56BBDC00EC93E5 /* Resources */,
+				43CD56AF2E9202C80083F13B /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				43CD56AD2E9202C80083F13B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				433824352E56BBDC00EC93E5 /* Coffee Grind Analyzer */,
@@ -172,6 +241,28 @@
 			productReference = 4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		43CD56992E9202C70083F13B /* BrewActivityWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 43CD56B32E9202C80083F13B /* Build configuration list for PBXNativeTarget "BrewActivityWidgetExtension" */;
+			buildPhases = (
+				43CD56962E9202C70083F13B /* Sources */,
+				43CD56972E9202C70083F13B /* Frameworks */,
+				43CD56982E9202C70083F13B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				43CD56A02E9202C70083F13B /* BrewActivityWidget */,
+			);
+			name = BrewActivityWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = BrewActivityWidgetExtension;
+			productReference = 43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -193,6 +284,9 @@
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 433824322E56BBDC00EC93E5;
 					};
+					43CD56992E9202C70083F13B = {
+						CreatedOnToolsVersion = 26.0;
+					};
 				};
 			};
 			buildConfigurationList = 4338242E2E56BBDC00EC93E5 /* Build configuration list for PBXProject "GrindLab" */;
@@ -212,6 +306,7 @@
 				433824322E56BBDC00EC93E5 /* GrindLab */,
 				4338243F2E56BBDD00EC93E5 /* GrindLabTests */,
 				433824492E56BBDD00EC93E5 /* GrindLabUITests */,
+				43CD56992E9202C70083F13B /* BrewActivityWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -239,6 +334,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		43CD56982E9202C70083F13B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -246,7 +348,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4389E9822E918EA8002A62F4 /* CountUsableLOC.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -258,6 +359,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		433824462E56BBDD00EC93E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		43CD56962E9202C70083F13B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -276,6 +384,11 @@
 			isa = PBXTargetDependency;
 			target = 433824322E56BBDC00EC93E5 /* GrindLab */;
 			targetProxy = 4338244B2E56BBDD00EC93E5 /* PBXContainerItemProxy */;
+		};
+		43CD56AD2E9202C80083F13B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 43CD56992E9202C70083F13B /* BrewActivityWidgetExtension */;
+			targetProxy = 43CD56AC2E9202C80083F13B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -406,17 +519,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = GrindLab.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G8ZY6VN35B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to analyze coffee grind uniformity by taking photos of your coffee grounds.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -439,17 +554,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = GrindLab.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G8ZY6VN35B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to analyze coffee grind uniformity by taking photos of your coffee grounds.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -551,6 +668,66 @@
 			};
 			name = Release;
 		};
+		43CD56B02E9202C80083F13B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8ZY6VN35B;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BrewActivityWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BrewActivityWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nateking.Coffee-Grind-Analyzer.BrewActivityWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		43CD56B12E9202C80083F13B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G8ZY6VN35B;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BrewActivityWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BrewActivityWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nateking.Coffee-Grind-Analyzer.BrewActivityWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -586,6 +763,15 @@
 			buildConfigurations = (
 				4338245B2E56BBDD00EC93E5 /* Debug */,
 				4338245C2E56BBDD00EC93E5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		43CD56B32E9202C80083F13B /* Build configuration list for PBXNativeTarget "BrewActivityWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				43CD56B02E9202C80083F13B /* Debug */,
+				43CD56B12E9202C80083F13B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
