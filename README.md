@@ -46,6 +46,18 @@ Grind size has the largest impact on extraction quality, but measuring it consis
 - Compare analyses to dial in consistency
 - Export and share your data
 
+### ⏱️ **Brew Timer & Recipes**
+- Built-in timer with haptic feedback for precise brewing control
+- Pre-loaded recipes for various brewing methods
+- Step-by-step brewing guides with timing instructions
+- Custom recipe creation and management
+
+### 📲 **Live Activities**
+- Real-time timer updates on your Lock Screen and Dynamic Island
+- Track brewing progress without opening the app
+- At-a-glance time remaining and current brew step
+- Seamless iOS integration for the perfect brewing experience
+
 ## Getting Started
 
 ### Requirements
@@ -88,10 +100,13 @@ open "Coffee Grind Analyzer.xcodeproj"
 ```
 Coffee Grind Analyzer/
 ├── Analysis/          # Image processing and analysis engine
-├── Camera/           # Camera capture and preview
-├── Models/           # Data models and persistence
-├── Views/            # SwiftUI views and components
-└── Assets.xcassets/  # Icons and resources
+├── Camera/            # Camera capture and preview
+├── Models/            # Data models and persistence
+├── Services/          # Business logic and service layer
+├── ViewModels/        # View models for MVVM architecture
+├── Views/             # SwiftUI views and components
+│   └── BrewTab/       # Timer, recipes, and brewing features
+└── Assets.xcassets/   # Icons and resources
 ```
 
 ## Contributing
