@@ -25,6 +25,7 @@ struct ResultsView: View {
     @State private var showingEditTastingNotes = false
     @State private var showingFlavorProfile = false
     @State private var flavorProfile: FlavorProfile?
+    @State private var showingUnsavedWarning = false
     
     init(results: CoffeeAnalysisResults, isFromHistory: Bool = false) {
         self.baseResults = results
@@ -158,6 +159,17 @@ struct ResultsView: View {
             Button("OK") { }
         } message: {
             Text("Your coffee grind analysis has been saved successfully.")
+        }
+        .alert("Save Analysis?", isPresented: $showingUnsavedWarning) {
+            Button("Save First") {
+                showingSaveDialog = true
+            }
+            Button("Continue Without Saving") {
+                startBrewingWorkflow()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This analysis hasn't been saved yet. Save it now to keep track of your grind data and brewing results.")
         }
         .onAppear {
             print("📝 ResultsView body appeared - isFromHistory: \(isFromHistory)")
@@ -323,7 +335,16 @@ struct ResultsView: View {
     
     private var coffeeImprovementSection: some View {
         Button(action: {
-            startBrewingWorkflow()
+            // Check if analysis is actually saved in history
+            let isSaved = historyManager.savedAnalyses.contains(where: { $0.results.timestamp == results.timestamp })
+
+            if !isSaved {
+                // Show warning if analysis hasn't been saved
+                showingUnsavedWarning = true
+            } else {
+                // Already saved, proceed directly
+                startBrewingWorkflow()
+            }
         }) {
             HStack {
                 Spacer()

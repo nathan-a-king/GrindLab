@@ -21,6 +21,8 @@ final class TimerVM: ObservableObject {
     private var targetDate: Date?
     private var brewActivity: Activity<BrewActivityAttributes>?
 
+    var onBrewComplete: (() -> Void)?
+
     init() {
         requestNotificationAuth()
     }
@@ -84,6 +86,8 @@ final class TimerVM: ObservableObject {
         if let recipe = recipe {
             notify(title: "Brew complete", body: "\(recipe.name) is ready ☕️")
         }
+        // Notify view that brewing is complete
+        onBrewComplete?()
     }
 
     private func tick() {
