@@ -15,7 +15,7 @@ struct BrewTabView: View {
         NavigationView {
             ZStack {
                 if showingTimer {
-                    BrewTimerView()
+                    BrewTimerView(showingTimer: $showingTimer)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
                                 Button("Recipes") {

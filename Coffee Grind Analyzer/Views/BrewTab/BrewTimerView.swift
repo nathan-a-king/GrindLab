@@ -14,6 +14,7 @@ struct BrewTimerView: View {
     @EnvironmentObject var brewState: BrewAppState
     @EnvironmentObject var historyManager: CoffeeAnalysisHistoryManager
     @StateObject private var vm = TimerVM()
+    @Binding var showingTimer: Bool
     @State private var keepAwake = true
     @State private var showingTastingNotesPrompt = false
     @State private var showingTastingNotesDialog = false
@@ -69,9 +70,19 @@ struct BrewTimerView: View {
                         }
                     } else {
                         print("🔔 Exists in history: false")
+                        // No grind analysis in history, reset immediately
+                        DispatchQueue.main.async {
+                            showingTimer = false
+                            brewState.selectedRecipe = nil
+                        }
                     }
                 } else {
                     print("🔔 No current grind analysis")
+                    // No grind analysis, reset immediately
+                    DispatchQueue.main.async {
+                        showingTimer = false
+                        brewState.selectedRecipe = nil
+                    }
                 }
             }
         }
@@ -87,7 +98,11 @@ struct BrewTimerView: View {
             Button("Yes") {
                 showingTastingNotesDialog = true
             }
-            Button("Not Now", role: .cancel) { }
+            Button("Not Now", role: .cancel) {
+                // User declined tasting notes, reset immediately
+                showingTimer = false
+                brewState.selectedRecipe = nil
+            }
         } message: {
             if hasExistingTastingNotes {
                 Text("This analysis already has tasting notes. Would you like to update them?")
@@ -95,7 +110,11 @@ struct BrewTimerView: View {
                 Text("Would you like to add tasting notes for this brew?")
             }
         }
-        .sheet(isPresented: $showingTastingNotesDialog) {
+        .sheet(isPresented: $showingTastingNotesDialog, onDismiss: {
+            // Reset brew workflow state after tasting notes dialog is dismissed
+            showingTimer = false
+            brewState.selectedRecipe = nil
+        }) {
             if let analysis = brewState.currentGrindAnalysis {
                 EditTastingNotesDialog(savedAnalysis: analysis) { _, tastingNotes in
                     // Find the actual saved analysis by timestamp (ID might not match)
