@@ -18,7 +18,8 @@ struct BrewActivityAttributes: ActivityAttributes {
         var currentStepNote: String?
         var stepIndex: Int
         var totalSteps: Int
-        var remainingTime: TimeInterval
+        var targetDate: Date
+        var remainingTime: TimeInterval  // Keep for paused state display
         var stepDuration: TimeInterval
         var isRunning: Bool
     }
@@ -65,10 +66,17 @@ struct BrewActivityWidgetLiveActivity: Widget {
                             .font(.headline)
                             .fontWeight(.semibold)
 
-                        Text(timeString(context.state.remainingTime))
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(.brown)
+                        if context.state.isRunning {
+                            Text(context.state.targetDate, style: .timer)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(.brown)
+                        } else {
+                            Text(timeString(context.state.remainingTime))
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(.brown)
+                        }
 
                         if let note = context.state.currentStepNote {
                             Text(note)
@@ -98,11 +106,19 @@ struct BrewActivityWidgetLiveActivity: Widget {
                     .foregroundColor(.brown)
             } compactTrailing: {
                 // Compact trailing (right side of notch)
-                Text(timeString(context.state.remainingTime))
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-                    .foregroundColor(.brown)
+                if context.state.isRunning {
+                    Text(context.state.targetDate, style: .timer)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                        .foregroundColor(.brown)
+                } else {
+                    Text(timeString(context.state.remainingTime))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                        .foregroundColor(.brown)
+                }
             } minimal: {
                 // Minimal presentation
                 Image(systemName: context.state.isRunning ? "cup.and.saucer.fill" : "pause.circle.fill")
@@ -111,15 +127,15 @@ struct BrewActivityWidgetLiveActivity: Widget {
         }
     }
 
+    private func progressValue(for state: BrewActivityAttributes.ContentState) -> Double {
+        guard state.stepDuration > 0 else { return 0 }
+        return 1 - (state.remainingTime / state.stepDuration)
+    }
+
     private func timeString(_ time: TimeInterval) -> String {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
-    }
-
-    private func progressValue(for state: BrewActivityAttributes.ContentState) -> Double {
-        guard state.stepDuration > 0 else { return 0 }
-        return 1 - (state.remainingTime / state.stepDuration)
     }
 }
 
@@ -148,10 +164,17 @@ struct LockScreenLiveActivityView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Spacer()
-                    Text(timeString(context.state.remainingTime))
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .monospacedDigit()
+                    if context.state.isRunning {
+                        Text(context.state.targetDate, style: .timer)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                    } else {
+                        Text(timeString(context.state.remainingTime))
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                    }
                 }
 
                 ProgressView(value: progressValue(for: context.state))
@@ -180,15 +203,15 @@ struct LockScreenLiveActivityView: View {
         .activitySystemActionForegroundColor(.brown)
     }
 
+    private func progressValue(for state: BrewActivityAttributes.ContentState) -> Double {
+        guard state.stepDuration > 0 else { return 0 }
+        return 1 - (state.remainingTime / state.stepDuration)
+    }
+
     private func timeString(_ time: TimeInterval) -> String {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
-    }
-
-    private func progressValue(for state: BrewActivityAttributes.ContentState) -> Double {
-        guard state.stepDuration > 0 else { return 0 }
-        return 1 - (state.remainingTime / state.stepDuration)
     }
 }
 
@@ -202,6 +225,7 @@ struct LockScreenLiveActivityView: View {
         currentStepNote: "40g water",
         stepIndex: 0,
         totalSteps: 4,
+        targetDate: Date().addingTimeInterval(30),
         remainingTime: 30,
         stepDuration: 45,
         isRunning: true
@@ -211,6 +235,7 @@ struct LockScreenLiveActivityView: View {
         currentStepNote: "to 200g",
         stepIndex: 1,
         totalSteps: 4,
+        targetDate: Date().addingTimeInterval(15),
         remainingTime: 15,
         stepDuration: 30,
         isRunning: false

@@ -94,11 +94,6 @@ final class TimerVM: ObservableObject {
         guard let target = targetDate else { return }
         remaining = max(0, target.timeIntervalSinceNow)
 
-        // Update Live Activity periodically (every second)
-        if Int(remaining) != Int(remaining + 0.05) {
-            updateLiveActivityState()
-        }
-
         if remaining == 0 { nextStep() }
     }
 
@@ -174,6 +169,7 @@ final class TimerVM: ObservableObject {
                 currentStepNote: step.note,
                 stepIndex: stepIndex,
                 totalSteps: recipe.steps.count,
+                targetDate: targetDate ?? Date().addingTimeInterval(remaining),
                 remainingTime: remaining,
                 stepDuration: step.duration,
                 isRunning: isRunning
@@ -207,6 +203,7 @@ final class TimerVM: ObservableObject {
             currentStepNote: step.note,
             stepIndex: stepIndex,
             totalSteps: recipe.steps.count,
+            targetDate: targetDate ?? Date().addingTimeInterval(remaining),
             remainingTime: remaining,
             stepDuration: step.duration,
             isRunning: isRunning
