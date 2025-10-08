@@ -113,7 +113,14 @@ final class TimerVM: ObservableObject {
         let step = recipe.steps[stepIndex]
         let content = UNMutableNotificationContent()
         content.title = step.title + " done"
-        content.body = step.note ?? "Next step"
+
+        // Check if this is the final step
+        if stepIndex == recipe.steps.count - 1 {
+            content.body = "Brew complete!"
+        } else {
+            content.body = step.note ?? "Next step"
+        }
+
         content.sound = .default
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: remaining, repeats: false)
         let req = UNNotificationRequest(identifier: "step-\(step.id)", content: content, trigger: trigger)
