@@ -70,6 +70,7 @@ struct ContentView: View {
             // Brew Tab (NEW!)
             BrewTabView()
                 .environmentObject(brewState)
+                .environmentObject(historyManager)
                 .tabItem {
                     Image(systemName: "timer")
                     Text("Brew")
@@ -79,6 +80,8 @@ struct ContentView: View {
             // History Tab
             HistoryView()
                 .environmentObject(historyManager)
+                .environmentObject(brewState)
+                .environment(\.tabSelection, $selectedTab)
                 .tabItem {
                     Image(systemName: "clock.arrow.circlepath")
                     Text("History")

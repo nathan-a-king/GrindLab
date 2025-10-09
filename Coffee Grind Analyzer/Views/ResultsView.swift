@@ -25,6 +25,7 @@ struct ResultsView: View {
     @State private var showingEditTastingNotes = false
     @State private var showingFlavorProfile = false
     @State private var flavorProfile: FlavorProfile?
+    @State private var showingUnsavedWarning = false
     
     init(results: CoffeeAnalysisResults, isFromHistory: Bool = false) {
         self.baseResults = results
@@ -158,6 +159,17 @@ struct ResultsView: View {
             Button("OK") { }
         } message: {
             Text("Your coffee grind analysis has been saved successfully.")
+        }
+        .alert("Save Analysis?", isPresented: $showingUnsavedWarning) {
+            Button("Save First") {
+                showingSaveDialog = true
+            }
+            Button("Continue Without Saving") {
+                startBrewingWorkflow()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This analysis hasn't been saved yet. Save it now to keep track of your grind data and brewing results.")
         }
         .onAppear {
             print("📝 ResultsView body appeared - isFromHistory: \(isFromHistory)")
@@ -322,6 +334,39 @@ struct ResultsView: View {
     }
     
     private var coffeeImprovementSection: some View {
+        Button(action: {
+            // Check if analysis is actually saved in history
+            let isSaved = historyManager.savedAnalyses.contains(where: { $0.results.timestamp == results.timestamp })
+
+            if !isSaved {
+                // Show warning if analysis hasn't been saved
+                showingUnsavedWarning = true
+            } else {
+                // Already saved, proceed directly
+                startBrewingWorkflow()
+            }
+        }) {
+            HStack {
+                Spacer()
+                Image(systemName: "timer")
+                    .font(.title2)
+                Text("Start Brewing")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            .foregroundColor(.white)
+            .padding()
+        }
+        .background(Color.brown.opacity(0.5))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+        )
+        .shadow(radius: 4)
+
+        /* ORIGINAL SMART SUGGESTIONS SECTION - KEPT FOR REFERENCE
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Smart Suggestions")
@@ -330,7 +375,7 @@ struct ResultsView: View {
                     .foregroundColor(.white)
                 Spacer()
             }
-            
+
             Text("Get personalized brewing recommendations based on your grind analysis and taste feedback")
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.8))
@@ -346,12 +391,12 @@ struct ResultsView: View {
                 }
                 .buttonStyle(ImprovementButtonStyle(color: .blue, isSecondary: false))
             }
-            
+
             // Show quick grind assessment
             VStack(alignment: .leading, spacing: 4) {
                 let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
                 let uniformityGood = results.uniformityScore >= 60
-                
+
                 HStack {
                     Image(systemName: isInRange ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                         .foregroundColor(isInRange ? .green : .orange)
@@ -359,7 +404,7 @@ struct ResultsView: View {
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.9))
                 }
-                
+
                 HStack {
                     Image(systemName: uniformityGood ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                         .foregroundColor(uniformityGood ? .green : .orange)
@@ -382,6 +427,7 @@ struct ResultsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
         )
+        */
     }
     
     // MARK: - Details Tab

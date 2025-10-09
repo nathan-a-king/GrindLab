@@ -9,6 +9,8 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject private var historyManager: CoffeeAnalysisHistoryManager
+    @EnvironmentObject private var brewState: BrewAppState
+    @Environment(\.tabSelection) private var tabSelection
     @StateObject private var comparisonManager = ComparisonManager()
     
     @State private var searchText = ""
@@ -225,6 +227,8 @@ struct HistoryView: View {
         .sheet(item: $analysisToPresent) { analysis in
             ResultsView(results: analysis.results, isFromHistory: true)
                 .environmentObject(historyManager)
+                .environmentObject(brewState)
+                .environment(\.tabSelection, tabSelection)
                 .onAppear {
                     print("✅ History sheet appeared successfully for: \(analysis.name)")
                 }
