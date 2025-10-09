@@ -21,6 +21,8 @@ final class TimerVM: ObservableObject {
     private var targetDate: Date?
     private var brewActivity: Activity<BrewActivityAttributes>?
 
+    var onBrewComplete: (() -> Void)?
+
     init() {
         requestNotificationAuth()
     }
@@ -84,16 +86,13 @@ final class TimerVM: ObservableObject {
         if let recipe = recipe {
             notify(title: "Brew complete", body: "\(recipe.name) is ready ☕️")
         }
+        // Notify view that brewing is complete
+        onBrewComplete?()
     }
 
     private func tick() {
         guard let target = targetDate else { return }
         remaining = max(0, target.timeIntervalSinceNow)
-
-        // Update Live Activity periodically (every second)
-        if Int(remaining) != Int(remaining + 0.05) {
-            updateLiveActivityState()
-        }
 
         if remaining == 0 { nextStep() }
     }
@@ -114,7 +113,14 @@ final class TimerVM: ObservableObject {
         let step = recipe.steps[stepIndex]
         let content = UNMutableNotificationContent()
         content.title = step.title + " done"
-        content.body = step.note ?? "Next step"
+
+        // Check if this is the final step
+        if stepIndex == recipe.steps.count - 1 {
+            content.body = "Brew complete!"
+        } else {
+            content.body = step.note ?? "Next step"
+        }
+
         content.sound = .default
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: remaining, repeats: false)
         let req = UNNotificationRequest(identifier: "step-\(step.id)", content: content, trigger: trigger)
@@ -170,6 +176,7 @@ final class TimerVM: ObservableObject {
                 currentStepNote: step.note,
                 stepIndex: stepIndex,
                 totalSteps: recipe.steps.count,
+                targetDate: targetDate ?? Date().addingTimeInterval(remaining),
                 remainingTime: remaining,
                 stepDuration: step.duration,
                 isRunning: isRunning
@@ -203,6 +210,7 @@ final class TimerVM: ObservableObject {
             currentStepNote: step.note,
             stepIndex: stepIndex,
             totalSteps: recipe.steps.count,
+            targetDate: targetDate ?? Date().addingTimeInterval(remaining),
             remainingTime: remaining,
             stepDuration: step.duration,
             isRunning: isRunning

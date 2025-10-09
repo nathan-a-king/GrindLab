@@ -12,9 +12,13 @@ import UIKit
 
 struct BrewTimerView: View {
     @EnvironmentObject var brewState: BrewAppState
+    @EnvironmentObject var historyManager: CoffeeAnalysisHistoryManager
     @StateObject private var vm = TimerVM()
+    @Binding var showingTimer: Bool
     @State private var keepAwake = true
-    @State private var showingTastingNotes = false
+    @State private var showingTastingNotesPrompt = false
+    @State private var showingTastingNotesDialog = false
+    @State private var hasExistingTastingNotes = false
 
     var body: some View {
         ZStack {
@@ -45,6 +49,42 @@ struct BrewTimerView: View {
             if vm.recipe?.id != brewState.selectedRecipe?.id {
                 vm.setRecipe(brewState.selectedRecipe)
             }
+
+            // Set up completion callback
+            vm.onBrewComplete = {
+                print("🔔 Brew completed callback triggered")
+                // Only prompt for tasting notes if there's a linked analysis that exists in history
+                if let analysis = brewState.currentGrindAnalysis {
+                    print("🔔 Current grind analysis exists: \(analysis.name)")
+                    // Check by timestamp since ID might not match if it was a temporary object
+                    if let savedAnalysis = historyManager.savedAnalyses.first(where: {
+                        $0.results.timestamp == analysis.results.timestamp
+                    }) {
+                        print("🔔 Exists in history: true")
+                        DispatchQueue.main.async {
+                            // Check if tasting notes already exist
+                            hasExistingTastingNotes = savedAnalysis.results.tastingNotes != nil
+                            print("🔔 Has existing tasting notes: \(hasExistingTastingNotes)")
+                            print("🔔 Showing tasting notes prompt")
+                            showingTastingNotesPrompt = true
+                        }
+                    } else {
+                        print("🔔 Exists in history: false")
+                        // No grind analysis in history, reset immediately
+                        DispatchQueue.main.async {
+                            showingTimer = false
+                            brewState.selectedRecipe = nil
+                        }
+                    }
+                } else {
+                    print("🔔 No current grind analysis")
+                    // No grind analysis, reset immediately
+                    DispatchQueue.main.async {
+                        showingTimer = false
+                        brewState.selectedRecipe = nil
+                    }
+                }
+            }
         }
         .onDisappear {
             #if canImport(UIKit)
@@ -53,6 +93,41 @@ struct BrewTimerView: View {
         }
         .onChange(of: brewState.selectedRecipe) { _, newRecipe in
             vm.setRecipe(newRecipe)
+        }
+        .alert(hasExistingTastingNotes ? "Update Tasting Notes?" : "Add Tasting Notes?", isPresented: $showingTastingNotesPrompt) {
+            Button("Yes") {
+                showingTastingNotesDialog = true
+            }
+            Button("Not Now", role: .cancel) {
+                // User declined tasting notes, reset immediately
+                showingTimer = false
+                brewState.selectedRecipe = nil
+            }
+        } message: {
+            if hasExistingTastingNotes {
+                Text("This analysis already has tasting notes. Would you like to update them?")
+            } else {
+                Text("Would you like to add tasting notes for this brew?")
+            }
+        }
+        .sheet(isPresented: $showingTastingNotesDialog, onDismiss: {
+            // Reset brew workflow state after tasting notes dialog is dismissed
+            showingTimer = false
+            brewState.selectedRecipe = nil
+        }) {
+            if let analysis = brewState.currentGrindAnalysis {
+                EditTastingNotesDialog(savedAnalysis: analysis) { _, tastingNotes in
+                    // Find the actual saved analysis by timestamp (ID might not match)
+                    if let savedAnalysis = historyManager.savedAnalyses.first(where: {
+                        $0.results.timestamp == analysis.results.timestamp
+                    }) {
+                        historyManager.updateAnalysisTastingNotes(
+                            analysisId: savedAnalysis.id,
+                            tastingNotes: tastingNotes
+                        )
+                    }
+                }
+            }
         }
     }
 
