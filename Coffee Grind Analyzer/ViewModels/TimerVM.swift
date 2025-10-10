@@ -93,6 +93,7 @@ final class TimerVM: ObservableObject {
         isRunning = false
         invalidateTimer()
         remaining = 0
+        targetDate = nil  // Clear targetDate to prevent counting up
         clearScheduledNotifications()
         endLiveActivity()
         if let recipe = recipe {
