@@ -73,8 +73,20 @@ final class TimerVM: ObservableObject {
         stepIndex += 1
         guard stepIndex < recipe.steps.count else { finish(); return }
         remaining = recipe.steps[stepIndex].duration
-        updateLiveActivityState()
-        if isRunning { start() }
+
+        if isRunning {
+            // Reset targetDate before updating Live Activity
+            targetDate = Date().addingTimeInterval(remaining)
+            scheduleStepNotification()
+            updateLiveActivityState()
+            // Restart the timer with the new targetDate
+            timerCancellable = Timer
+                .publish(every: 0.05, on: .main, in: .common)
+                .autoconnect()
+                .sink { [weak self] _ in self?.tick() }
+        } else {
+            updateLiveActivityState()
+        }
     }
 
     private func finish() {
