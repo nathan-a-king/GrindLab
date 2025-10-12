@@ -271,7 +271,7 @@ struct BrewTimerView: View {
                 controlButton(
                     label: "Next",
                     icon: "forward.end.fill",
-                    action: vm.nextStep,
+                    action: { Task { await vm.nextStep() } },
                     isPrimary: false
                 )
             }

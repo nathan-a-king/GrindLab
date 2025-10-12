@@ -46,15 +46,24 @@ final class TimerVM: ObservableObject {
         endLiveActivity()
     }
 
-    func toggle() { isRunning ? pause() : start() }
+    func toggle() {
+        if isRunning {
+            pause()
+        } else {
+            Task { await start() }
+        }
+    }
 
-    func start() {
+    func start() async {
         guard let recipe = recipe,
               recipe.steps.indices.contains(stepIndex) else { return }
         isRunning = true
-        targetDate = Date().addingTimeInterval(remaining)
+        let buffer: TimeInterval = 0.05
+        targetDate = Date().addingTimeInterval(remaining + buffer)
         scheduleStepNotification()
         startOrUpdateLiveActivity()
+        // If activity already exists, push an immediate update before starting timer
+        await updateLiveActivityState()
         timerCancellable = Timer
             .publish(every: 0.05, on: .main, in: .common)
             .autoconnect()
@@ -65,31 +74,37 @@ final class TimerVM: ObservableObject {
         isRunning = false
         invalidateTimer()
         clearScheduledNotifications()
-        updateLiveActivityState()
+        // Keep a consistent target date so the Live Activity doesn't drift while paused
+        targetDate = Date().addingTimeInterval(remaining)
+        Task { await updateLiveActivityState() }
     }
 
-    func nextStep() {
+    func nextStep() async {
         guard let recipe = recipe else { return }
         stepIndex += 1
-        guard stepIndex < recipe.steps.count else { finish(); return }
+        guard stepIndex < recipe.steps.count else { await finish(); return }
         remaining = recipe.steps[stepIndex].duration
 
         if isRunning {
+            // Ensure no overlapping timers
+            invalidateTimer()
+
             // Reset targetDate before updating Live Activity
-            targetDate = Date().addingTimeInterval(remaining)
+            let buffer: TimeInterval = 0.05
+            targetDate = Date().addingTimeInterval(remaining + buffer)
             scheduleStepNotification()
-            updateLiveActivityState()
+            await updateLiveActivityState()
             // Restart the timer with the new targetDate
             timerCancellable = Timer
                 .publish(every: 0.05, on: .main, in: .common)
                 .autoconnect()
                 .sink { [weak self] _ in self?.tick() }
         } else {
-            updateLiveActivityState()
+            await updateLiveActivityState()
         }
     }
 
-    private func finish() {
+    private func finish() async {
         isRunning = false
         invalidateTimer()
         remaining = 0
@@ -107,7 +122,12 @@ final class TimerVM: ObservableObject {
         guard let target = targetDate else { return }
         remaining = max(0, target.timeIntervalSinceNow)
 
-        if remaining == 0 { nextStep() }
+        if remaining <= 0.001 {
+            remaining = 0
+            Task { [weak self] in
+                await self?.nextStep()
+            }
+        }
     }
 
     private func invalidateTimer() {
@@ -183,13 +203,19 @@ final class TimerVM: ObservableObject {
             // Check activity state
             print("🔍 ActivityAuthorizationInfo.areActivitiesEnabled: \(ActivityAuthorizationInfo().areActivitiesEnabled)")
 
+            if targetDate == nil {
+                targetDate = Date().addingTimeInterval(remaining)
+            }
+
+            guard let targetDate = targetDate else { return }
+
             let attributes = BrewActivityAttributes(recipeName: recipe.name)
             let contentState = BrewActivityAttributes.ContentState(
                 currentStepTitle: step.title,
                 currentStepNote: step.note,
                 stepIndex: stepIndex,
                 totalSteps: recipe.steps.count,
-                targetDate: targetDate ?? Date().addingTimeInterval(remaining),
+                targetDate: targetDate,
                 remainingTime: remaining,
                 stepDuration: step.duration,
                 isRunning: isRunning
@@ -208,14 +234,15 @@ final class TimerVM: ObservableObject {
         } else {
             // Update existing Live Activity
             print("🔄 Updating existing Live Activity...")
-            updateLiveActivityState()
+            Task { await updateLiveActivityState() }
         }
     }
 
-    private func updateLiveActivityState() {
+    @MainActor private func updateLiveActivityState() async {
         guard let recipe = recipe,
               recipe.steps.indices.contains(stepIndex),
-              let activity = brewActivity else { return }
+              let activity = brewActivity,
+              let targetDate = targetDate else { return }
 
         let step = recipe.steps[stepIndex]
         let contentState = BrewActivityAttributes.ContentState(
@@ -223,15 +250,13 @@ final class TimerVM: ObservableObject {
             currentStepNote: step.note,
             stepIndex: stepIndex,
             totalSteps: recipe.steps.count,
-            targetDate: targetDate ?? Date().addingTimeInterval(remaining),
+            targetDate: targetDate,
             remainingTime: remaining,
             stepDuration: step.duration,
             isRunning: isRunning
         )
 
-        Task {
-            await activity.update(.init(state: contentState, staleDate: nil))
-        }
+        await activity.update(.init(state: contentState, staleDate: nil))
     }
 
     private func endLiveActivity() {
@@ -243,3 +268,4 @@ final class TimerVM: ObservableObject {
         }
     }
 }
+
