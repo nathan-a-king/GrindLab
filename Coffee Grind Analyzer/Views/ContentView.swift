@@ -45,7 +45,7 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // Main Analysis Tab
-            NavigationView {
+            NavigationStack {
                 ZStack {
                     Group {
                         if showingCamera, let grindType = selectedGrindType {
@@ -144,23 +144,13 @@ struct ContentView: View {
     }
     
     // MARK: - Grind Selection View
-    
+
     private var grindSelectionView: some View {
         ZStack {
             backgroundGradient
-            
+
             ScrollView {
-                VStack(spacing: 32) {
-                    headerSection
-                        .padding(.top, 20) // Add some top padding
-                    
-                    grindTypeCards
-                    
-                    // Settings button at bottom
-                    // Settings button removed - now in toolbar
-                }
-                .padding(.horizontal, 30)
-                .padding(.bottom, 40)
+                grindSelectionContent
             }
         }
         .navigationBarHidden(true)
@@ -170,6 +160,26 @@ struct ContentView: View {
                     Image(systemName: "gearshape.fill")
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var grindSelectionContent: some View {
+        GeometryReader { geometry in
+            let isLandscape = geometry.size.width > geometry.size.height
+
+            VStack(spacing: isLandscape ? 20 : 32) {
+                headerSection
+                    .padding(.top, isLandscape ? 10 : 20)
+
+                grindTypeCards(isLandscape: isLandscape)
+
+                // Settings button at bottom
+                // Settings button removed - now in toolbar
+            }
+            .padding(.horizontal, isLandscape ? 20 : 30)
+            .padding(.bottom, isLandscape ? 20 : 40)
+            .frame(width: geometry.size.width)
         }
     }
     
@@ -204,20 +214,25 @@ struct ContentView: View {
         .padding(.horizontal, 16)
     }
     
-    private var grindTypeCards: some View {
-        LazyVGrid(columns: [
+    private func grindTypeCards(isLandscape: Bool) -> some View {
+        let columns = [
             GridItem(.flexible()),
             GridItem(.flexible())
-        ], spacing: 16) {
+        ]
+
+        return LazyVGrid(columns: columns, spacing: 16) {
             ForEach(CoffeeGrindType.allCases, id: \.self) { grindType in
-                grindTypeCard(for: grindType)
+                grindTypeCard(for: grindType, isCompact: isLandscape)
             }
         }
     }
     
-    private func grindTypeCard(for type: CoffeeGrindType) -> some View {
+    private func grindTypeCard(for type: CoffeeGrindType, isCompact: Bool = false) -> some View {
         let (icon, _) = iconAndColor(for: type)
         let isPressed = pressedCard == type
+        let minHeight: CGFloat = isCompact ? 100 : 140
+        let iconSize: CGFloat = isCompact ? 24 : 32
+        let padding: CGFloat = isCompact ? 12 : 16
 
         return ZStack {
             // Shadow layer (separate from the button)
@@ -227,23 +242,27 @@ struct ContentView: View {
                 .allowsHitTesting(false)            // so it doesn't steal taps
 
             // Card content (no Button, just the visual)
-            VStack(spacing: 12) {
+            VStack(spacing: isCompact ? 8 : 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 32))
+                    .font(.system(size: iconSize))
                     .foregroundColor(.white)
 
                 Text(type.displayName)
-                    .font(.headline).fontWeight(.semibold)
+                    .font(isCompact ? .subheadline : .headline)
+                    .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
+                    .lineLimit(isCompact ? 1 : 2)
+                    .minimumScaleFactor(0.8)
 
                 Text("Target: \(type.targetSizeRange)")
                     .font(.caption2)
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
+                    .lineLimit(isCompact ? 1 : 2)
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 140, alignment: .center)
+            .padding(padding)
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .center)
             .background(cardBackgroundView)
             // Keep the visual rounded shape consistent for hit-testing/rasterization:
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -252,24 +271,24 @@ struct ContentView: View {
                     .stroke(Color.white.opacity(0.2), lineWidth: 1)
             )
         }
-        .frame(maxWidth: .infinity, minHeight: 140)
+        .frame(maxWidth: .infinity, minHeight: minHeight)
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .onTapGesture {
             // Haptic feedback
             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
             impactFeedback.impactOccurred()
-            
+
             // Quick bounce animation
             withAnimation(.easeInOut(duration: 0.1)) {
                 pressedCard = type
             }
-            
+
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 withAnimation(.easeOut(duration: 0.15)) {
                     pressedCard = nil
                 }
             }
-            
+
             // Navigate after animation completes
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                 selectedGrindType = type
@@ -373,32 +392,28 @@ struct ContentView: View {
     }
     
     // MARK: - Camera View
-    
+
     private func cameraView(for grindType: CoffeeGrindType) -> some View {
-        ZStack {
-            // Modern gradient background instead of black
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.15, green: 0.12, blue: 0.10), // Dark coffee brown
-                    Color(red: 0.08, green: 0.06, blue: 0.05)  // Almost black brown
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+        GeometryReader { geometry in
+            let isLandscape = geometry.size.width > geometry.size.height
 
-            VStack(spacing: 24) {
-                cameraHeader(grindType: grindType)
-                cameraPreviewSection
-
-                CameraControls(
-                    camera: camera,
-                    onCapture: capturePhoto,
-                    onGallery: { showingGallery = true }
+            ZStack {
+                // Modern gradient background instead of black
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.15, green: 0.12, blue: 0.10), // Dark coffee brown
+                        Color(red: 0.08, green: 0.06, blue: 0.05)  // Almost black brown
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
+                .ignoresSafeArea()
 
-                // Add spacer to prevent results from affecting layout
-                Spacer(minLength: 0)
+                if isLandscape {
+                    cameraViewLandscape(grindType: grindType, geometry: geometry)
+                } else {
+                    cameraViewPortrait(grindType: grindType)
+                }
             }
         }
         .navigationTitle(grindType.displayName)
@@ -422,6 +437,52 @@ struct ContentView: View {
         .onDisappear {
             camera.stopSession()
         }
+    }
+
+    private func cameraViewPortrait(grindType: CoffeeGrindType) -> some View {
+        VStack(spacing: 24) {
+            cameraHeader(grindType: grindType)
+            cameraPreviewSection
+
+            CameraControls(
+                camera: camera,
+                onCapture: capturePhoto,
+                onGallery: { showingGallery = true }
+            )
+
+            // Add spacer to prevent results from affecting layout
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func cameraViewLandscape(grindType: CoffeeGrindType, geometry: GeometryProxy) -> some View {
+        HStack(spacing: 16) {
+            // Left side: Camera preview
+            VStack(spacing: 8) {
+                let safeMaxHeight = max(100, geometry.size.height - 100)
+                cameraPreviewSectionLandscape(maxHeight: safeMaxHeight)
+            }
+            .frame(maxWidth: geometry.size.width * 0.65)
+            .padding(.leading, 16)
+
+            // Right side: Header and controls
+            VStack(spacing: 24) {
+                cameraHeader(grindType: grindType)
+
+                Spacer()
+
+                CameraControlsLandscape(
+                    camera: camera,
+                    onCapture: capturePhoto,
+                    onGallery: { showingGallery = true }
+                )
+
+                Spacer()
+            }
+            .frame(maxWidth: geometry.size.width * 0.35)
+            .padding(.trailing, 16)
+        }
+        .padding(.vertical, 8)
     }
     
     private func cameraHeader(grindType: CoffeeGrindType) -> some View {
@@ -476,6 +537,50 @@ struct ContentView: View {
             )
         }
         .padding(.horizontal, 16)
+    }
+
+    private func cameraPreviewSectionLandscape(maxHeight: CGFloat) -> some View {
+        ZStack {
+            Group {
+                if camera.authorizationStatus == .authorized {
+                    CoffeeGrindCameraPreview(session: camera.session) { devicePoint in
+                        guard camera.isSessionRunning else { return }
+                        camera.focusAt(point: devicePoint)
+                    }
+                    .aspectRatio(4/3, contentMode: .fit)
+                    .frame(maxHeight: maxHeight)
+                } else {
+                    CameraPermissionView {
+                        camera.checkPermissions()
+                    }
+                    .aspectRatio(4/3, contentMode: .fit)
+                    .frame(maxHeight: maxHeight)
+                    .onTapGesture {
+                        // Prevent any unintended tap handling
+                    }
+                }
+            }
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.3), radius: 15, x: 0, y: 5)
+            .overlay(
+                GridOverlay(isVisible: camera.showGrid)
+                    .aspectRatio(4/3, contentMode: .fit)
+                    .frame(maxHeight: maxHeight)
+                    .cornerRadius(20)
+                    .allowsHitTesting(false)
+            )
+        }
     }
     
     

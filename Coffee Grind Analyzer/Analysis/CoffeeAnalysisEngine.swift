@@ -812,7 +812,6 @@ class CoffeeAnalysisEngine {
         var particles: [CoffeeParticle] = []
         var componentsFound = 0
         var componentsAccepted = 0
-        let totalPixels = width * height
         var pixelsProcessed = 0
         
         for y in 0..<height {
@@ -1372,15 +1371,31 @@ class CoffeeAnalysisEngine {
     
     #if DEBUG
     private func saveDebugImage(_ pixelData: [UInt8], width: Int, height: Int, filename: String) {
-        // Create debug image from binary data
+        // Create debug image from binary data (safely scoped pointer)
+        var mutablePixels = pixelData // make a mutable copy
         let colorSpace = CGColorSpaceCreateDeviceGray()
-        guard let context = CGContext(data: UnsafeMutablePointer(mutating: pixelData), width: width, height: height, bitsPerComponent: 8, bytesPerRow: width, space: colorSpace, bitmapInfo: CGImageAlphaInfo.none.rawValue),
-              let cgImage = context.makeImage() else {
+        var generatedImage: UIImage?
+        
+        mutablePixels.withUnsafeMutableBytes { rawBuffer in
+            guard let baseAddress = rawBuffer.baseAddress else { return }
+            let context = CGContext(
+                data: baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: width,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.none.rawValue
+            )
+            if let cgImage = context?.makeImage() {
+                generatedImage = UIImage(cgImage: cgImage)
+            }
+        }
+        
+        guard let image = generatedImage else {
             print("⚠️ Failed to create debug image")
             return
         }
-        
-        let image = UIImage(cgImage: cgImage)
         
         // Save to documents directory for inspection
         if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
@@ -1469,3 +1484,4 @@ class CoffeeAnalysisEngine {
         print("📍 Analysis region cleared")
     }
 }
+

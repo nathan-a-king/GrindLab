@@ -106,18 +106,28 @@ struct BrewActivityWidgetLiveActivity: Widget {
                     .foregroundColor(.brown)
             } compactTrailing: {
                 // Compact trailing (right side of notch)
-                if context.state.isRunning {
-                    Text(context.state.targetDate, style: .timer)
+                HStack(spacing: 6) {
+                    Text(context.state.currentStepTitle)
                         .font(.caption2)
-                        .fontWeight(.semibold)
-                        .monospacedDigit()
-                        .foregroundColor(.brown)
-                } else {
-                    Text(timeString(context.state.remainingTime))
+                        .foregroundColor(.secondary)
+
+                    Text("•")
                         .font(.caption2)
-                        .fontWeight(.semibold)
-                        .monospacedDigit()
-                        .foregroundColor(.brown)
+                        .foregroundColor(.secondary)
+
+                    if context.state.isRunning {
+                        Text(context.state.targetDate, style: .timer)
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                            .foregroundColor(.brown)
+                    } else {
+                        Text(timeString(context.state.remainingTime))
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                            .foregroundColor(.brown)
+                    }
                 }
             } minimal: {
                 // Minimal presentation

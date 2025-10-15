@@ -26,15 +26,7 @@ struct BrewTimerView: View {
                 .ignoresSafeArea()
 
             if let recipe = vm.recipe {
-                ScrollView {
-                    VStack(spacing: 32) {
-                        recipeInfoCard(recipe)
-                        timerCard
-                        controlsCard
-                        settingsCard
-                    }
-                    .padding()
-                }
+                brewTimerContent(recipe: recipe)
             } else {
                 emptyStateView
             }
@@ -131,6 +123,45 @@ struct BrewTimerView: View {
         }
     }
 
+    @ViewBuilder
+    private func brewTimerContent(recipe: Recipe) -> some View {
+        GeometryReader { geometry in
+            let isLandscape = geometry.size.width > geometry.size.height
+
+            ScrollView {
+                if isLandscape {
+                    HStack(alignment: .top, spacing: 20) {
+                        // Left side: Timer
+                        VStack(spacing: 20) {
+                            timerCard
+                            controlsCard
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        // Right side: Recipe info and settings
+                        VStack(spacing: 20) {
+                            recipeInfoCard(recipe)
+                            settingsCard
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(width: geometry.size.width)
+                } else {
+                    VStack(spacing: 32) {
+                        recipeInfoCard(recipe)
+                        timerCard
+                        controlsCard
+                        settingsCard
+                    }
+                    .padding()
+                    .frame(width: geometry.size.width)
+                }
+            }
+        }
+    }
+
     private var emptyStateView: some View {
         VStack(spacing: 24) {
             Image(systemName: "timer")
@@ -214,6 +245,8 @@ struct BrewTimerView: View {
                     Text(currentStep.title)
                         .font(.headline)
                         .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
 
                     Text(timeString(vm.remaining))
                         .font(.system(size: 48, weight: .semibold, design: .rounded))
@@ -224,12 +257,15 @@ struct BrewTimerView: View {
                         Text(note)
                             .font(.footnote)
                             .foregroundColor(.white.opacity(0.7))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
                     }
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Remaining time \(timeString(vm.remaining)) for \(currentStep.title)")
             }
-            .frame(width: 260, height: 260)
+            .frame(width: 240, height: 240)
 
             if let recipe = vm.recipe {
                 Text("Step \(vm.stepIndex + 1) of \(recipe.steps.count)")
@@ -271,7 +307,7 @@ struct BrewTimerView: View {
                 controlButton(
                     label: "Next",
                     icon: "forward.end.fill",
-                    action: vm.nextStep,
+                    action: { Task { await vm.nextStep() } },
                     isPrimary: false
                 )
             }
