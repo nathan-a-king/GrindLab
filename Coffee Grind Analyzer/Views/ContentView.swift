@@ -128,11 +128,11 @@ struct ContentView: View {
             // Update analysis engine when settings change
             analysisEngine = CoffeeAnalysisEngine(settings: settings)
         }
-        .onChange(of: settings) { _ in
+        .onChange(of: settings) {
             analysisEngine = CoffeeAnalysisEngine(settings: settings)
         }
-        .onChange(of: showingCamera) { isShowing in
-            if isShowing {
+        .onChange(of: showingCamera) { oldValue, newValue in
+            if newValue {
                 // Give camera a moment to initialize when switching to camera view
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     if !camera.isSessionRunning {

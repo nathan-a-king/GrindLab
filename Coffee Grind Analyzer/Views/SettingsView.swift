@@ -45,12 +45,12 @@ struct SettingsView: View {
         .sheet(isPresented: $showingHelp) {
             HelpView()
         }
-        .onChange(of: settings.analysisMode) { _ in saveSettings() }
-        .onChange(of: settings.contrastThreshold) { _ in saveSettings() }
-        .onChange(of: settings.minParticleSize) { _ in saveSettings() }
-        .onChange(of: settings.maxParticleSize) { _ in saveSettings() }
-        .onChange(of: settings.enableAdvancedFiltering) { _ in saveSettings() }
-        .onChange(of: settings.calibrationFactor) { _ in saveSettings() }
+        .onChange(of: settings.analysisMode) { saveSettings() }
+        .onChange(of: settings.contrastThreshold) { saveSettings() }
+        .onChange(of: settings.minParticleSize) { saveSettings() }
+        .onChange(of: settings.maxParticleSize) { saveSettings() }
+        .onChange(of: settings.enableAdvancedFiltering) { saveSettings() }
+        .onChange(of: settings.calibrationFactor) { saveSettings() }
     }
 
     @ViewBuilder
@@ -287,7 +287,7 @@ struct SettingsView: View {
                 
                 Button(action: {
                     print("🎯 Generating grid test image...")
-                    let (image, particles) = AnalysisValidation.createGridTestImage()
+                    let (_, particles) = AnalysisValidation.createGridTestImage()
                     print("✅ Created test image with \(particles.count) particles")
                 }) {
                     HStack {
@@ -300,7 +300,7 @@ struct SettingsView: View {
                 
                 Button(action: {
                     print("🎲 Generating random test image...")
-                    let (image, particles) = AnalysisValidation.createTestImage()
+                    let (_, particles) = AnalysisValidation.createTestImage()
                     print("✅ Created test image with \(particles.count) particles")
                 }) {
                     HStack {

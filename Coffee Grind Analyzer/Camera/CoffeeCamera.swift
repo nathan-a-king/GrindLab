@@ -414,9 +414,10 @@ class CoffeeCamera: NSObject, ObservableObject {
                 settings.isHighResolutionPhotoEnabled = self.photoOutput.isHighResolutionCaptureEnabled
             }
             
-            // Auto-stabilization
-            if self.photoOutput.isStillImageStabilizationSupported {
-                settings.isAutoStillImageStabilizationEnabled = true
+            // Photo quality prioritization (replaces deprecated auto-stabilization)
+            // This provides better image stabilization and quality
+            if #available(iOS 13.0, *) {
+                settings.photoQualityPrioritization = .quality
             }
             
             print("Capturing photo with settings: \(settings)")
@@ -438,7 +439,13 @@ class CoffeeCamera: NSObject, ObservableObject {
     }
     
     func canToggleCamera() -> Bool {
-        return AVCaptureDevice.devices(for: .video).count > 1
+        // Use AVCaptureDeviceDiscoverySession (modern API since iOS 10.0)
+        let discoverySession = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera],
+            mediaType: .video,
+            position: .unspecified
+        )
+        return discoverySession.devices.count > 1
     }
     
     func switchCamera() {
