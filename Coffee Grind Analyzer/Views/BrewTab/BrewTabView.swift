@@ -12,7 +12,7 @@ struct BrewTabView: View {
     @State private var showingTimer = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 if showingTimer {
                     BrewTimerView(showingTimer: $showingTimer)

@@ -270,18 +270,22 @@ class CoffeeCamera: NSObject, ObservableObject {
                     
                     if let connection = self.photoOutput.connection(with: .video) {
                         print("✅ Video connection found and active: \(connection.isActive)")
-                        
+
                         // Configure connection
-                        if connection.isVideoOrientationSupported {
-                            connection.videoOrientation = .portrait
+                        if #available(iOS 17.0, *) {
+                            // Use rotation angle API on iOS 17+
+                            if connection.isVideoRotationAngleSupported(90) {
+                                connection.videoRotationAngle = 90
+                            }
+                        } else {
+                            // Fallback to orientation API on earlier iOS versions
+                            if connection.isVideoOrientationSupported {
+                                connection.videoOrientation = .portrait
+                            }
                         }
+
                         if connection.isVideoStabilizationSupported {
                             connection.preferredVideoStabilizationMode = .auto
-                        }
-                        
-                        // Configure photo output settings
-                        if self.photoOutput.isHighResolutionCaptureEnabled {
-                            self.photoOutput.isHighResolutionCaptureEnabled = true
                         }
                         
                     } else {
@@ -397,8 +401,18 @@ class CoffeeCamera: NSObject, ObservableObject {
                 settings.flashMode = .off
             }
             
-            // High resolution capture
-            settings.isHighResolutionPhotoEnabled = self.photoOutput.isHighResolutionCaptureEnabled
+            // High resolution capture using modern API
+            if #available(iOS 16.0, *) {
+                // Prefer the photo output's maximum supported dimensions when available
+                let supportedMax = self.photoOutput.maxPhotoDimensions
+                // Only assign if dimensions look valid (non-zero)
+                if supportedMax.width > 0 && supportedMax.height > 0 {
+                    settings.maxPhotoDimensions = supportedMax
+                }
+            } else {
+                // Fallback for iOS < 16: keep previous behavior
+                settings.isHighResolutionPhotoEnabled = self.photoOutput.isHighResolutionCaptureEnabled
+            }
             
             // Auto-stabilization
             if self.photoOutput.isStillImageStabilizationSupported {

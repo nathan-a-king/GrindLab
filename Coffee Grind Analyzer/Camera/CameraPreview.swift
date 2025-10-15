@@ -317,20 +317,20 @@ struct CaptureButton: View {
     let isCapturing: Bool
     let isEnabled: Bool
     let onCapture: () -> Void
-    
+
     var body: some View {
         Button(action: onCapture) {
             ZStack {
                 Circle()
                     .stroke(Color.white, lineWidth: 4)
                     .frame(width: 70, height: 70)
-                
+
                 Circle()
                     .fill(isEnabled ? Color.white : Color.gray)
                     .frame(width: 60, height: 60)
                     .scaleEffect(isCapturing ? 0.8 : 1.0)
                     .animation(.easeInOut(duration: 0.1), value: isCapturing)
-                
+
                 if isCapturing {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .black))
@@ -338,6 +338,91 @@ struct CaptureButton: View {
             }
         }
         .disabled(!isEnabled)
+    }
+}
+
+// MARK: - Camera Controls Landscape
+
+struct CameraControlsLandscape: View {
+    @ObservedObject var camera: CoffeeCamera
+    let onCapture: () -> Void
+    let onGallery: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Centered capture button
+            CaptureButton(
+                isCapturing: camera.isCapturing,
+                isEnabled: camera.isSessionRunning && !camera.isCapturing,
+                onCapture: onCapture
+            )
+
+            // Control buttons stacked vertically
+            VStack(spacing: 16) {
+                if camera.hasFlash() {
+                    controlButton(
+                        icon: camera.isFlashOn ? "bolt.fill" : "bolt.slash.fill",
+                        label: "Flash",
+                        isActive: camera.isFlashOn,
+                        action: { camera.toggleFlash() }
+                    )
+                }
+
+                controlButton(
+                    icon: "grid",
+                    label: "Grid",
+                    isActive: camera.showGrid,
+                    action: { camera.toggleGrid() }
+                )
+
+                controlButton(
+                    icon: "photo.stack",
+                    label: "Gallery",
+                    isActive: false,
+                    action: onGallery
+                )
+
+                if camera.canToggleCamera() {
+                    controlButton(
+                        icon: "camera.rotate",
+                        label: "Switch",
+                        isActive: false,
+                        action: { camera.switchCamera() }
+                    )
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 15)
+    }
+
+    private func controlButton(
+        icon: String,
+        label: String,
+        isActive: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(isActive ? .yellow : .white)
+                    .frame(width: 24)
+
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(isActive ? .yellow : .white)
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.white.opacity(isActive ? 0.2 : 0.1))
+            )
+        }
+        .disabled(!camera.isSessionRunning)
     }
 }
 

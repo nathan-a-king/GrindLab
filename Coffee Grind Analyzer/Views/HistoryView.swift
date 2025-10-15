@@ -70,7 +70,7 @@ struct HistoryView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // Much darker brown background to match RecommendationView
                 Color.brown.opacity(0.7)
@@ -543,7 +543,14 @@ struct ComparisonHistoryRowView: View {
     let onTap: () -> Void
     let onDelete: () -> Void
     let onEditTastingNotes: () -> Void
-    
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.verticalSizeClass) var verticalSizeClass
+
+    private var isLandscape: Bool {
+        // On iPhone in landscape, both size classes are compact
+        horizontalSizeClass == .compact && verticalSizeClass == .compact
+    }
+
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 12) {
@@ -556,7 +563,7 @@ struct ComparisonHistoryRowView: View {
                                 RoundedRectangle(cornerRadius: 6)
                                     .fill(Color.brown)
                                     .frame(width: 24, height: 24)
-                                
+
                                 Image(systemName: "checkmark")
                                     .font(.caption)
                                     .foregroundColor(.white)
@@ -569,7 +576,7 @@ struct ComparisonHistoryRowView: View {
                         }
                     }
                     .frame(width: 50)
-                    
+
                     // Analysis details with better spacing
                     VStack(alignment: .leading, spacing: 10) {
                         // Title and grind type
@@ -578,32 +585,57 @@ struct ComparisonHistoryRowView: View {
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .lineLimit(1)
-                            
+
                             Text(analysis.results.grindType.displayName)
                                 .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.8))
                         }
-                        
-                        // Metrics stacked vertically - each on its own line
-                        VStack(alignment: .leading, spacing: 6) {
-                            // Particles on first line
-                            HStack(spacing: 6) {
-                                Image(systemName: "circle.grid.3x3")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
-                                Text("\(analysis.results.particleCount) particles")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
+
+                        // Metrics - horizontal in landscape, vertical in portrait
+                        if isLandscape {
+                            HStack(spacing: 16) {
+                                // Particles
+                                HStack(spacing: 6) {
+                                    Image(systemName: "circle.grid.3x3")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text("\(analysis.results.particleCount) particles")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
+
+                                // Median size
+                                HStack(spacing: 6) {
+                                    Image(systemName: "ruler")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text("\(String(format: "%.0f", analysis.results.medianSize))μm median")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
                             }
-                            
-                            // Median size on second line
-                            HStack(spacing: 6) {
-                                Image(systemName: "ruler")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
-                                Text("\(String(format: "%.0f", analysis.results.medianSize))μm median")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
+                        } else {
+                            // Metrics stacked vertically - each on its own line
+                            VStack(alignment: .leading, spacing: 6) {
+                                // Particles on first line
+                                HStack(spacing: 6) {
+                                    Image(systemName: "circle.grid.3x3")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text("\(analysis.results.particleCount) particles")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
+
+                                // Median size on second line
+                                HStack(spacing: 6) {
+                                    Image(systemName: "ruler")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text("\(String(format: "%.0f", analysis.results.medianSize))μm median")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
                             }
                         }
                         

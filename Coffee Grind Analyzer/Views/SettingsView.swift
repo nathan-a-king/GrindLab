@@ -23,24 +23,9 @@ struct SettingsView: View {
                 // Match History view background
                 Color.brown.opacity(0.7)
                     .ignoresSafeArea()
-                
+
                 ScrollView {
-                    VStack(spacing: 20) {
-                        analysisSection
-                        
-                        if settings.analysisMode == .advanced {
-                            advancedSection
-                        }
-                        
-                        calibrationSection
-                        aboutSection
-                        
-                        #if DEBUG
-                        debugSection
-                        #endif
-                    }
-                    .padding(.horizontal)
-                    .padding(.top)
+                    settingsContent
                 }
             }
             .navigationTitle("Settings")
@@ -67,7 +52,56 @@ struct SettingsView: View {
         .onChange(of: settings.enableAdvancedFiltering) { _ in saveSettings() }
         .onChange(of: settings.calibrationFactor) { _ in saveSettings() }
     }
-    
+
+    @ViewBuilder
+    private var settingsContent: some View {
+        GeometryReader { geometry in
+            let isLandscape = geometry.size.width > geometry.size.height
+
+            Group {
+                if isLandscape {
+                    // Landscape: 2-column grid
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        analysisSection
+
+                        calibrationSection
+
+                        if settings.analysisMode == .advanced {
+                            advancedSection
+                        }
+
+                        aboutSection
+
+                        #if DEBUG
+                        debugSection
+                        #endif
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                } else {
+                    // Portrait: stacked layout
+                    VStack(spacing: 20) {
+                        analysisSection
+
+                        if settings.analysisMode == .advanced {
+                            advancedSection
+                        }
+
+                        calibrationSection
+                        aboutSection
+
+                        #if DEBUG
+                        debugSection
+                        #endif
+                    }
+                    .padding(.horizontal)
+                    .padding(.top)
+                }
+            }
+            .frame(width: geometry.size.width)
+        }
+    }
+
     private var analysisSection: some View {
         SettingsCard(title: "Analysis Settings") {
             VStack(spacing: 20) {
