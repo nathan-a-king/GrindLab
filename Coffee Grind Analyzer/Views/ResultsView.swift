@@ -189,67 +189,65 @@ struct ResultsView: View {
     // MARK: - Overview Tab
 
     private var overviewTab: some View {
-        ScrollView {
-            overviewTabContent
-        }
-        .background(Color.brown.opacity(0.7))
-        .onAppear {
-            print("📊 Overview tab ScrollView appeared")
+        GeometryReader { geometry in
+            let isLandscape = geometry.size.width > geometry.size.height
+
+            ScrollView {
+                overviewTabContent(isLandscape: isLandscape)
+                    .frame(minHeight: geometry.size.height)
+            }
+            .background(Color.brown.opacity(0.7))
+            .onAppear {
+                print("📊 Overview tab ScrollView appeared")
+            }
         }
     }
 
     @ViewBuilder
-    private var overviewTabContent: some View {
-        GeometryReader { geometry in
-            let isLandscape = geometry.size.width > geometry.size.height
-
-            Group {
-                if isLandscape {
-                    // Landscape: 2-column layout
-                    HStack(alignment: .top, spacing: 16) {
-                        VStack(spacing: 16) {
-                            summaryCard
-                            metricsGrid
-                        }
-                        .frame(maxWidth: .infinity)
-
-                        VStack(spacing: 16) {
-                            if let tastingNotes = results.tastingNotes {
-                                TastingNotesDisplayView(tastingNotes: tastingNotes)
-                                    .id(tastingNotes)
-                            }
-                            coffeeImprovementSection
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                } else {
-                    // Portrait: stacked layout (original)
-                    VStack(spacing: 24) {
-                        summaryCard
-                            .onAppear { print("📊 Summary card appeared") }
-
-                        metricsGrid
-                            .onAppear { print("📊 Metrics grid appeared") }
-
-                        // Add tasting notes display if available
-                        if let tastingNotes = results.tastingNotes {
-                            TastingNotesDisplayView(tastingNotes: tastingNotes)
-                                .onAppear { print("📊 Tasting notes section appeared") }
-                                .id(tastingNotes) // Force refresh when tasting notes change
-                        }
-
-                        // Coffee improvement section
-                        coffeeImprovementSection
-                    }
-                    .padding()
-                    .onAppear {
-                        print("📊 Overview tab content appeared")
-                    }
+    private func overviewTabContent(isLandscape: Bool) -> some View {
+        if isLandscape {
+            // Landscape: 2-column layout
+            HStack(alignment: .top, spacing: 16) {
+                VStack(spacing: 16) {
+                    summaryCard
+                    metricsGrid
                 }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 16) {
+                    if let tastingNotes = results.tastingNotes {
+                        TastingNotesDisplayView(tastingNotes: tastingNotes)
+                            .id(tastingNotes)
+                    }
+                    coffeeImprovementSection
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(width: geometry.size.width)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        } else {
+            // Portrait: stacked layout (original)
+            VStack(spacing: 24) {
+                summaryCard
+                    .onAppear { print("📊 Summary card appeared") }
+
+                metricsGrid
+                    .onAppear { print("📊 Metrics grid appeared") }
+
+                // Add tasting notes display if available
+                if let tastingNotes = results.tastingNotes {
+                    TastingNotesDisplayView(tastingNotes: tastingNotes)
+                        .onAppear { print("📊 Tasting notes section appeared") }
+                        .id(tastingNotes) // Force refresh when tasting notes change
+                }
+
+                // Coffee improvement section
+                coffeeImprovementSection
+            }
+            .padding()
+            .onAppear {
+                print("📊 Overview tab content appeared")
+            }
         }
     }
     
@@ -466,110 +464,108 @@ struct ResultsView: View {
     // MARK: - Details Tab
 
     private var detailsTab: some View {
-        ScrollView {
-            detailsTabContent
-        }
-        .background(Color.brown.opacity(0.7))
-    }
-
-    @ViewBuilder
-    private var detailsTabContent: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
 
-            Group {
-                if isLandscape {
-                    // Landscape: 2-column grid
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        detailSection("Particle Statistics") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Median Size", value: String(format: "%.1f μm", results.medianSize))
-                                DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
-                                DetailRow(label: "Standard Deviation", value: String(format: "%.1f μm", results.standardDeviation))
-                                DetailRow(label: "Coefficient of Variation", value: String(format: "%.1f%%", (results.standardDeviation / results.averageSize) * 100))
-                            }
-                        }
+            ScrollView {
+                detailsTabContent(isLandscape: isLandscape)
+                    .frame(minHeight: geometry.size.height)
+            }
+            .background(Color.brown.opacity(0.7))
+        }
+    }
 
-                        detailSection("Size Distribution") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Fines (<400μm)", value: String(format: "%.1f%%", results.finesPercentage))
-                                DetailRow(label: "Boulders (>1400μm)", value: String(format: "%.1f%%", results.bouldersPercentage))
-                                DetailRow(label: "Medium (400-1400μm)", value: String(format: "%.1f%%", 100 - results.finesPercentage - results.bouldersPercentage))
-                            }
-                        }
-
-                        detailSection("Target Ranges") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Target Size", value: results.grindType.targetSizeRange)
-                                DetailRow(label: "Ideal Fines", value: "\(Int(results.grindType.idealFinesPercentage.lowerBound))-\(Int(results.grindType.idealFinesPercentage.upperBound))%")
-
-                                let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
-                                DetailRow(
-                                    label: "Size Match",
-                                    value: isInRange ? "✓ In Range" : "✗ Out of Range",
-                                    valueColor: isInRange ? .green : .red
-                                )
-                            }
-                        }
-
-                        detailSection("Analysis Info") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Particles Detected", value: "\(results.particleCount)")
-                                DetailRow(label: "Confidence Level", value: String(format: "%.0f%%", results.confidence))
-                                DetailRow(label: "Analysis Time", value: results.timestamp.formatted(date: .omitted, time: .shortened))
-                                DetailRow(label: "Grind Type", value: results.grindType.displayName)
-                            }
-                        }
+    @ViewBuilder
+    private func detailsTabContent(isLandscape: Bool) -> some View {
+        if isLandscape {
+            // Landscape: 2-column grid
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                detailSection("Particle Statistics") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Median Size", value: String(format: "%.1f μm", results.medianSize))
+                        DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
+                        DetailRow(label: "Standard Deviation", value: String(format: "%.1f μm", results.standardDeviation))
+                        DetailRow(label: "Coefficient of Variation", value: String(format: "%.1f%%", (results.standardDeviation / results.averageSize) * 100))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                } else {
-                    // Portrait: stacked layout
-                    VStack(spacing: 24) {
-                        detailSection("Particle Statistics") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Median Size", value: String(format: "%.1f μm", results.medianSize))
-                                DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
-                                DetailRow(label: "Standard Deviation", value: String(format: "%.1f μm", results.standardDeviation))
-                                DetailRow(label: "Coefficient of Variation", value: String(format: "%.1f%%", (results.standardDeviation / results.averageSize) * 100))
-                            }
-                        }
+                }
 
-                        detailSection("Size Distribution") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Fines (<400μm)", value: String(format: "%.1f%%", results.finesPercentage))
-                                DetailRow(label: "Boulders (>1400μm)", value: String(format: "%.1f%%", results.bouldersPercentage))
-                                DetailRow(label: "Medium (400-1400μm)", value: String(format: "%.1f%%", 100 - results.finesPercentage - results.bouldersPercentage))
-                            }
-                        }
-
-                        detailSection("Target Ranges") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Target Size", value: results.grindType.targetSizeRange)
-                                DetailRow(label: "Ideal Fines", value: "\(Int(results.grindType.idealFinesPercentage.lowerBound))-\(Int(results.grindType.idealFinesPercentage.upperBound))%")
-
-                                let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
-                                DetailRow(
-                                    label: "Size Match",
-                                    value: isInRange ? "✓ In Range" : "✗ Out of Range",
-                                    valueColor: isInRange ? .green : .red
-                                )
-                            }
-                        }
-
-                        detailSection("Analysis Info") {
-                            VStack(spacing: 8) {
-                                DetailRow(label: "Particles Detected", value: "\(results.particleCount)")
-                                DetailRow(label: "Confidence Level", value: String(format: "%.0f%%", results.confidence))
-                                DetailRow(label: "Analysis Time", value: results.timestamp.formatted(date: .omitted, time: .shortened))
-                                DetailRow(label: "Grind Type", value: results.grindType.displayName)
-                            }
-                        }
+                detailSection("Size Distribution") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Fines (<400μm)", value: String(format: "%.1f%%", results.finesPercentage))
+                        DetailRow(label: "Boulders (>1400μm)", value: String(format: "%.1f%%", results.bouldersPercentage))
+                        DetailRow(label: "Medium (400-1400μm)", value: String(format: "%.1f%%", 100 - results.finesPercentage - results.bouldersPercentage))
                     }
-                    .padding()
+                }
+
+                detailSection("Target Ranges") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Target Size", value: results.grindType.targetSizeRange)
+                        DetailRow(label: "Ideal Fines", value: "\(Int(results.grindType.idealFinesPercentage.lowerBound))-\(Int(results.grindType.idealFinesPercentage.upperBound))%")
+
+                        let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
+                        DetailRow(
+                            label: "Size Match",
+                            value: isInRange ? "✓ In Range" : "✗ Out of Range",
+                            valueColor: isInRange ? .green : .red
+                        )
+                    }
+                }
+
+                detailSection("Analysis Info") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Particles Detected", value: "\(results.particleCount)")
+                        DetailRow(label: "Confidence Level", value: String(format: "%.0f%%", results.confidence))
+                        DetailRow(label: "Analysis Time", value: results.timestamp.formatted(date: .omitted, time: .shortened))
+                        DetailRow(label: "Grind Type", value: results.grindType.displayName)
+                    }
                 }
             }
-            .frame(width: geometry.size.width)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        } else {
+            // Portrait: stacked layout
+            VStack(spacing: 24) {
+                detailSection("Particle Statistics") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Median Size", value: String(format: "%.1f μm", results.medianSize))
+                        DetailRow(label: "Average Size", value: String(format: "%.1f μm", results.averageSize))
+                        DetailRow(label: "Standard Deviation", value: String(format: "%.1f μm", results.standardDeviation))
+                        DetailRow(label: "Coefficient of Variation", value: String(format: "%.1f%%", (results.standardDeviation / results.averageSize) * 100))
+                    }
+                }
+
+                detailSection("Size Distribution") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Fines (<400μm)", value: String(format: "%.1f%%", results.finesPercentage))
+                        DetailRow(label: "Boulders (>1400μm)", value: String(format: "%.1f%%", results.bouldersPercentage))
+                        DetailRow(label: "Medium (400-1400μm)", value: String(format: "%.1f%%", 100 - results.finesPercentage - results.bouldersPercentage))
+                    }
+                }
+
+                detailSection("Target Ranges") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Target Size", value: results.grindType.targetSizeRange)
+                        DetailRow(label: "Ideal Fines", value: "\(Int(results.grindType.idealFinesPercentage.lowerBound))-\(Int(results.grindType.idealFinesPercentage.upperBound))%")
+
+                        let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
+                        DetailRow(
+                            label: "Size Match",
+                            value: isInRange ? "✓ In Range" : "✗ Out of Range",
+                            valueColor: isInRange ? .green : .red
+                        )
+                    }
+                }
+
+                detailSection("Analysis Info") {
+                    VStack(spacing: 8) {
+                        DetailRow(label: "Particles Detected", value: "\(results.particleCount)")
+                        DetailRow(label: "Confidence Level", value: String(format: "%.0f%%", results.confidence))
+                        DetailRow(label: "Analysis Time", value: results.timestamp.formatted(date: .omitted, time: .shortened))
+                        DetailRow(label: "Grind Type", value: results.grindType.displayName)
+                    }
+                }
+            }
+            .padding()
         }
     }
 
@@ -1054,76 +1050,74 @@ struct ResultsView: View {
     // MARK: - Images Tab
 
     private var imagesTab: some View {
-        ScrollView {
-            imagesTabContent
-        }
-        .background(Color.brown.opacity(0.7))
-    }
-
-    @ViewBuilder
-    private var imagesTabContent: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
 
-            Group {
-                if isLandscape {
-                    // Landscape: Side-by-side images
-                    VStack(spacing: 16) {
-                        HStack(alignment: .top, spacing: 16) {
-                            if let originalImage = results.image {
-                                imageSection(
-                                    title: "Original Image",
-                                    image: originalImage,
-                                    subtitle: "Captured photo"
-                                )
-                                .frame(maxWidth: .infinity)
-                            }
-
-                            if let processedImage = results.processedImage {
-                                imageSection(
-                                    title: "Processed Image",
-                                    image: processedImage,
-                                    subtitle: "With particle detection overlay"
-                                )
-                                .frame(maxWidth: .infinity)
-                            }
-                        }
-
-                        Button("Compare Images") {
-                            showingImageComparison = true
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                } else {
-                    // Portrait: Stacked images
-                    VStack(spacing: 20) {
-                        if let originalImage = results.image {
-                            imageSection(
-                                title: "Original Image",
-                                image: originalImage,
-                                subtitle: "Captured photo"
-                            )
-                        }
-
-                        if let processedImage = results.processedImage {
-                            imageSection(
-                                title: "Processed Image",
-                                image: processedImage,
-                                subtitle: "With particle detection overlay"
-                            )
-                        }
-
-                        Button("Compare Images") {
-                            showingImageComparison = true
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .padding()
-                }
+            ScrollView {
+                imagesTabContent(isLandscape: isLandscape)
+                    .frame(minHeight: geometry.size.height)
             }
-            .frame(width: geometry.size.width)
+            .background(Color.brown.opacity(0.7))
+        }
+    }
+
+    @ViewBuilder
+    private func imagesTabContent(isLandscape: Bool) -> some View {
+        if isLandscape {
+            // Landscape: Side-by-side images
+            VStack(spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
+                    if let originalImage = results.image {
+                        imageSection(
+                            title: "Original Image",
+                            image: originalImage,
+                            subtitle: "Captured photo"
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+
+                    if let processedImage = results.processedImage {
+                        imageSection(
+                            title: "Processed Image",
+                            image: processedImage,
+                            subtitle: "With particle detection overlay"
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+
+                Button("Compare Images") {
+                    showingImageComparison = true
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        } else {
+            // Portrait: Stacked images
+            VStack(spacing: 20) {
+                if let originalImage = results.image {
+                    imageSection(
+                        title: "Original Image",
+                        image: originalImage,
+                        subtitle: "Captured photo"
+                    )
+                }
+
+                if let processedImage = results.processedImage {
+                    imageSection(
+                        title: "Processed Image",
+                        image: processedImage,
+                        subtitle: "With particle detection overlay"
+                    )
+                }
+
+                Button("Compare Images") {
+                    showingImageComparison = true
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding()
         }
     }
 
