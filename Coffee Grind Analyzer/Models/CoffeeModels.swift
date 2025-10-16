@@ -571,7 +571,16 @@ struct FlavorProfile: Codable, Equatable, Identifiable {
     let intensity: TasteIntensity
     let notes: String?
     let timestamp: Date
-    
+
+    // Exclude id from Codable to avoid warning about immutable property with initial value
+    enum CodingKeys: String, CodingKey {
+        case overallTaste
+        case flavorIssues
+        case intensity
+        case notes
+        case timestamp
+    }
+
     enum OverallTaste: String, CaseIterable, Codable {
         case balanced = "Balanced"
         case underExtracted = "Sour/Under-extracted"

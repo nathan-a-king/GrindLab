@@ -173,7 +173,7 @@ struct HistoryView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if comparisonManager.canStartComparison {
                         Button("Compare (\(comparisonManager.selectedAnalyses.count))") {
-                            if let comparison = comparisonManager.createComparison(from: historyManager) {
+                            if comparisonManager.createComparison(from: historyManager) != nil {
                                 showingComparison = true
                             }
                         }
@@ -378,7 +378,7 @@ struct HistoryView: View {
                 
                 if comparisonManager.canStartComparison {
                     Button("Compare") {
-                        if let comparison = comparisonManager.createComparison(from: historyManager) {
+                        if comparisonManager.createComparison(from: historyManager) != nil {
                             showingComparison = true
                         }
                     }

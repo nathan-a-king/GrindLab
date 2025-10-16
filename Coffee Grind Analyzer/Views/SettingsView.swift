@@ -19,23 +19,28 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationView {
-            ZStack {
-                // Match History view background
-                Color.brown.opacity(0.7)
-                    .ignoresSafeArea()
+            GeometryReader { geometry in
+                let isLandscape = geometry.size.width > geometry.size.height
 
-                ScrollView {
-                    settingsContent
-                }
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                ZStack {
+                    // Match History view background
+                    Color.brown.opacity(0.7)
+                        .ignoresSafeArea()
+
+                    ScrollView {
+                        settingsContent(isLandscape: isLandscape)
+                            .frame(minHeight: geometry.size.height)
                     }
-                    .fontWeight(.semibold)
+                }
+                .navigationTitle("Settings")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
             }
         }
@@ -45,60 +50,53 @@ struct SettingsView: View {
         .sheet(isPresented: $showingHelp) {
             HelpView()
         }
-        .onChange(of: settings.analysisMode) { _ in saveSettings() }
-        .onChange(of: settings.contrastThreshold) { _ in saveSettings() }
-        .onChange(of: settings.minParticleSize) { _ in saveSettings() }
-        .onChange(of: settings.maxParticleSize) { _ in saveSettings() }
-        .onChange(of: settings.enableAdvancedFiltering) { _ in saveSettings() }
-        .onChange(of: settings.calibrationFactor) { _ in saveSettings() }
+        .onChange(of: settings.analysisMode) { saveSettings() }
+        .onChange(of: settings.contrastThreshold) { saveSettings() }
+        .onChange(of: settings.minParticleSize) { saveSettings() }
+        .onChange(of: settings.maxParticleSize) { saveSettings() }
+        .onChange(of: settings.enableAdvancedFiltering) { saveSettings() }
+        .onChange(of: settings.calibrationFactor) { saveSettings() }
     }
 
     @ViewBuilder
-    private var settingsContent: some View {
-        GeometryReader { geometry in
-            let isLandscape = geometry.size.width > geometry.size.height
+    private func settingsContent(isLandscape: Bool) -> some View {
+        if isLandscape {
+            // Landscape: 2-column grid
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                analysisSection
 
-            Group {
-                if isLandscape {
-                    // Landscape: 2-column grid
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        analysisSection
+                calibrationSection
 
-                        calibrationSection
-
-                        if settings.analysisMode == .advanced {
-                            advancedSection
-                        }
-
-                        aboutSection
-
-                        #if DEBUG
-                        debugSection
-                        #endif
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                } else {
-                    // Portrait: stacked layout
-                    VStack(spacing: 20) {
-                        analysisSection
-
-                        if settings.analysisMode == .advanced {
-                            advancedSection
-                        }
-
-                        calibrationSection
-                        aboutSection
-
-                        #if DEBUG
-                        debugSection
-                        #endif
-                    }
-                    .padding(.horizontal)
-                    .padding(.top)
+                if settings.analysisMode == .advanced {
+                    advancedSection
                 }
+
+                aboutSection
+
+                #if DEBUG
+                debugSection
+                #endif
             }
-            .frame(width: geometry.size.width)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        } else {
+            // Portrait: stacked layout
+            VStack(spacing: 20) {
+                analysisSection
+
+                if settings.analysisMode == .advanced {
+                    advancedSection
+                }
+
+                calibrationSection
+                aboutSection
+
+                #if DEBUG
+                debugSection
+                #endif
+            }
+            .padding(.horizontal)
+            .padding(.top)
         }
     }
 
@@ -287,7 +285,7 @@ struct SettingsView: View {
                 
                 Button(action: {
                     print("🎯 Generating grid test image...")
-                    let (image, particles) = AnalysisValidation.createGridTestImage()
+                    let (_, particles) = AnalysisValidation.createGridTestImage()
                     print("✅ Created test image with \(particles.count) particles")
                 }) {
                     HStack {
@@ -300,7 +298,7 @@ struct SettingsView: View {
                 
                 Button(action: {
                     print("🎲 Generating random test image...")
-                    let (image, particles) = AnalysisValidation.createTestImage()
+                    let (_, particles) = AnalysisValidation.createTestImage()
                     print("✅ Created test image with \(particles.count) particles")
                 }) {
                     HStack {
