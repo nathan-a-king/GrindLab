@@ -30,6 +30,7 @@ struct ContentView: View {
     @State private var analysisEngine = CoffeeAnalysisEngine()
     @State private var settings = AnalysisSettings.load()
 
+    @AppStorage("hasSeenWelcomeTips") private var hasSeenWelcomeTips = false
     @State private var showingResults = false
     @State private var detailResults: CoffeeAnalysisResults?
     @State private var showingSettings = false
@@ -41,6 +42,8 @@ struct ContentView: View {
     @State private var showingError = false
     @State private var pressedCard: CoffeeGrindType? = nil
     @State private var selectedTab = 0
+    @State private var showingWelcomeTips = false
+    @State private var showingWelcomeHelp = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -115,6 +118,26 @@ struct ContentView: View {
             }
             .presentationBackground(.ultraThinMaterial)
         }
+        .sheet(isPresented: $showingWelcomeTips) {
+            WelcomeTipsView(
+                onContinue: {
+                    hasSeenWelcomeTips = true
+                    showingWelcomeTips = false
+                },
+                onOpenHelp: {
+                    hasSeenWelcomeTips = true
+                    showingWelcomeTips = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        showingWelcomeHelp = true
+                    }
+                }
+            )
+            .presentationBackground(.ultraThinMaterial)
+        }
+        .sheet(isPresented: $showingWelcomeHelp) {
+            HelpView()
+                .presentationBackground(.ultraThinMaterial)
+        }
         .alert("Analysis Error", isPresented: $showingError) {
             Button("OK") {
                 errorMessage = nil
@@ -124,9 +147,15 @@ struct ContentView: View {
         }
         .onAppear {
             camera.checkPermissions()
-            
+
             // Update analysis engine when settings change
             analysisEngine = CoffeeAnalysisEngine(settings: settings)
+
+            if !hasSeenWelcomeTips {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    showingWelcomeTips = true
+                }
+            }
         }
         .onChange(of: settings) {
             analysisEngine = CoffeeAnalysisEngine(settings: settings)
@@ -621,4 +650,3 @@ struct ContentView_Previews: PreviewProvider {
     }
 }
 #endif
-

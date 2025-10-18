@@ -715,56 +715,69 @@ struct SettingsCard<Content: View>: View {
 
 struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    helpSection(
-                        title: "Getting Started",
-                        items: [
-                            "Choose your grind type (Filter, Espresso, etc.)",
-                            "Place coffee on a white or contrasting surface",
-                            "Ensure good, even lighting",
-                            "Capture or select an image",
-                            "Wait for analysis to complete"
-                        ]
-                    )
-                    
-                    helpSection(
-                        title: "Best Practices",
-                        items: [
-                            "Use natural light when possible",
-                            "Avoid shadows on the coffee",
-                            "Spread coffee evenly in a thin layer",
-                            "Keep camera steady during capture",
-                            "Clean camera lens for best results"
-                        ]
-                    )
-                    
-                    helpSection(
-                        title: "Understanding Results",
-                        items: [
-                            "Uniformity Score: Higher is better (0-100%)",
-                            "Average Size: Mean particle size in microns",
-                            "Fines: Small particles that can cause over-extraction",
-                            "Boulders: Large particles that under-extract",
-                            "Confidence: Reliability of the analysis"
-                        ]
-                    )
-                    
-                    helpSection(
-                        title: "Troubleshooting",
-                        items: [
-                            "Poor results? Check lighting and contrast",
-                            "No particles detected? Use white background",
-                            "Inaccurate sizes? Calibrate the app",
-                            "App crashes? Restart and try again",
-                            "Still having issues? Check app permissions"
-                        ]
-                    )
+            ZStack {
+                // Match Settings view background
+                Color.brown.opacity(0.7)
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        helpSection(
+                            title: "Getting Started",
+                            items: [
+                                "Choose your grind type (Filter, Espresso, etc.)",
+                                "Place coffee on a white or contrasting surface",
+                                "Ensure good, even lighting",
+                                "Capture or select an image",
+                                "Wait for analysis to complete"
+                            ]
+                        )
+                        
+                        helpSection(
+                            title: "Calibration",
+                            items: [
+                                "For accurate results, all analysis photos must be taken from the same distance as the calibration photo.",
+                                "Changing the capture distance requires a new calibration to ensure consistent measurements."
+                            ]
+                        )
+
+                        helpSection(
+                            title: "Best Practices",
+                            items: [
+                                "Use natural light when possible",
+                                "Avoid shadows on the coffee",
+                                "Spread coffee evenly in a thin layer",
+                                "Keep camera steady during capture"
+                            ]
+                        )
+
+                        helpSection(
+                            title: "Understanding Results",
+                            items: [
+                                "Uniformity Score: Higher is better (0-100%)",
+                                "Average Size: Mean particle size in microns",
+                                "Fines: Small particles that can cause over-extraction",
+                                "Boulders: Large particles that under-extract",
+                                "Confidence: Reliability of the analysis"
+                            ]
+                        )
+
+                        helpSection(
+                            title: "Troubleshooting",
+                            items: [
+                                "Poor results? Check lighting and contrast",
+                                "No particles detected? Use white background",
+                                "Inaccurate sizes? Calibrate the app",
+                                "App crashes? Restart and try again",
+                                "Still having issues? Check app permissions"
+                            ]
+                        )
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Help & Tips")
             .navigationBarTitleDisplayMode(.inline)
@@ -773,36 +786,42 @@ struct HelpView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .fontWeight(.semibold)
                 }
             }
         }
     }
-    
+
     private func helpSection(title: String, items: [String]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.primary)
-            
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                     HStack(alignment: .top, spacing: 12) {
                         Text("•")
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color(red: 0.9, green: 0.7, blue: 0.4))
                             .fontWeight(.bold)
-                        
+
                         Text(item)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white)
                             .fixedSize(horizontal: false, vertical: true)
-                        
+
                         Spacer()
                     }
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.brown.opacity(0.5))
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
     }
 }
 
