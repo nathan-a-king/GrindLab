@@ -1538,34 +1538,4 @@ struct ResultsView_Previews: PreviewProvider {
     }
 }
 
-// MARK: - Save Card Component
-
-struct SaveCard<Content: View>: View {
-    let title: String
-    let content: Content
-    
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            
-            content
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.brown.opacity(0.5))
-                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
-        )
-    }
-}
-
 #endif
