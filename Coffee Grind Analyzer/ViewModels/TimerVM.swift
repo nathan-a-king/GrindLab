@@ -16,6 +16,7 @@ final class TimerVM: ObservableObject {
     @Published var stepIndex: Int = 0
     @Published var remaining: TimeInterval = 0
     @Published var isRunning = false
+    @Published private(set) var notificationStatus: UNAuthorizationStatus = .notDetermined
 
     private var timerCancellable: AnyCancellable?
     private var targetDate: Date?
@@ -24,7 +25,9 @@ final class TimerVM: ObservableObject {
     var onBrewComplete: (() -> Void)?
 
     init() {
-        requestNotificationAuth()
+        Task { [weak self] in
+            await self?.refreshNotificationStatus()
+        }
     }
 
     func setRecipe(_ recipe: Recipe?) {
@@ -136,11 +139,39 @@ final class TimerVM: ObservableObject {
     }
 
     // MARK: Notifications
-    private func requestNotificationAuth() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    private var isNotificationAuthorized: Bool {
+        switch notificationStatus {
+        case .authorized, .provisional:
+            return true
+        default:
+            if #available(iOS 14.0, *) {
+                return notificationStatus == .ephemeral
+            }
+            return false
+        }
+    }
+
+    func requestNotificationPermission() async -> Bool {
+        do {
+            let granted = try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
+            await refreshNotificationStatus()
+            return granted
+        } catch {
+            print("🔕 Notification permission request failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    func refreshNotificationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        await MainActor.run {
+            notificationStatus = settings.authorizationStatus
+        }
     }
 
     private func scheduleStepNotification() {
+        guard isNotificationAuthorized else { return }
         guard let recipe = recipe,
               recipe.steps.indices.contains(stepIndex) else { return }
         let step = recipe.steps[stepIndex]
@@ -165,6 +196,7 @@ final class TimerVM: ObservableObject {
     }
 
     private func notify(title: String, body: String) {
+        guard isNotificationAuthorized else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
@@ -268,4 +300,3 @@ final class TimerVM: ObservableObject {
         }
     }
 }
-

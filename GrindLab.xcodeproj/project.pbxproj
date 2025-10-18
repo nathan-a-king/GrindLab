@@ -528,6 +528,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = GrindLab;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to analyze coffee grind uniformity by taking photos of your coffee grounds.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs photo library access so you can import coffee grind images for analysis.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -565,6 +566,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = GrindLab;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to analyze coffee grind uniformity by taking photos of your coffee grounds.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs photo library access so you can import coffee grind images for analysis.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

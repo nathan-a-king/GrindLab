@@ -550,7 +550,7 @@ struct ContentView: View {
                 Text("This may take a few seconds")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
-            }
+            }   
             .padding(30)
             .background(
                 RoundedRectangle(cornerRadius: 16)
