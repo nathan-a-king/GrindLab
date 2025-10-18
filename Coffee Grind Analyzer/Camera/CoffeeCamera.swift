@@ -9,6 +9,7 @@ import SwiftUI
 import AVFoundation
 import UIKit
 import Combine
+import OSLog
 
 // MARK: - Camera Manager
 
@@ -26,6 +27,7 @@ class CoffeeCamera: NSObject, ObservableObject {
     private var captureDevice: AVCaptureDevice?
     private var captureCompletion: ((Result<UIImage, CoffeeAnalysisError>) -> Void)?
     private var cancellables = Set<AnyCancellable>()
+    private let logger = Logger(subsystem: "com.nateking.GrindLab", category: "Camera")
     
     override init() {
         super.init()
@@ -78,18 +80,16 @@ class CoffeeCamera: NSObject, ObservableObject {
     }
     
     private func configureCaptureSession() {
-        print("🔧 Starting camera configuration...")
+        logger.debug("Configuring camera session")
         
         session.beginConfiguration()
         
         // Remove existing inputs and outputs
         for input in session.inputs {
             session.removeInput(input)
-            print("Removed input: \(input)")
         }
         for output in session.outputs {
             session.removeOutput(output)
-            print("Removed output: \(output)")
         }
         
         // Configure camera device - Try to get the best camera for macro photography
@@ -102,11 +102,11 @@ class CoffeeCamera: NSObject, ObservableObject {
             
             // Check if this device supports macro (minimum focus distance < 5cm)
             if let ultraWide = device, ultraWide.minimumFocusDistance < 50 {
-                print("✅ Using ultra-wide camera with macro capability")
+                logger.info("Using ultra-wide camera with macro capability")
             } else {
                 // Fall back to wide angle camera if ultra-wide doesn't support macro
                 device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
-                print("ℹ️ Using standard wide angle camera")
+                logger.debug("Using standard wide angle camera")
             }
         } else {
             // For older devices, use the standard wide angle camera
@@ -114,13 +114,13 @@ class CoffeeCamera: NSObject, ObservableObject {
         }
         
         guard let cameraDevice = device else {
-            print("❌ Failed to get camera device")
+            logger.error("Failed to acquire camera device")
             session.commitConfiguration()
             return
         }
         
-        print("✅ Got camera device: \(cameraDevice.localizedName)")
-        print("📏 Minimum focus distance: \(cameraDevice.minimumFocusDistance)mm")
+        logger.debug("Selected camera: \(cameraDevice.localizedName, privacy: .public)")
+        logger.debug("Minimum focus distance: \(cameraDevice.minimumFocusDistance, privacy: .public)mm")
         captureDevice = cameraDevice
         
         do {
@@ -128,32 +128,32 @@ class CoffeeCamera: NSObject, ObservableObject {
             let input = try AVCaptureDeviceInput(device: cameraDevice)
             
             guard session.canAddInput(input) else {
-                print("❌ Cannot add camera input")
+                logger.error("Cannot add camera input to session")
                 session.commitConfiguration()
                 return
             }
             
             session.addInput(input)
-            print("✅ Camera input added successfully")
+            logger.debug("Camera input added")
             
             // Create and add photo output
             photoOutput = AVCapturePhotoOutput()
             
             guard session.canAddOutput(photoOutput) else {
-                print("❌ Cannot add photo output")
+                logger.error("Cannot add photo output to session")
                 session.commitConfiguration()
                 return
             }
             
             session.addOutput(photoOutput)
-            print("✅ Photo output added successfully")
+            logger.debug("Photo output added")
             
             // Set session preset
             if session.canSetSessionPreset(.photo) {
                 session.sessionPreset = .photo
-                print("✅ Session preset set to photo")
+                logger.debug("Session preset set to photo")
             } else {
-                print("⚠️ Cannot set photo preset")
+                logger.warning("Unable to set session preset to photo")
             }
             
             // Configure device settings while still in configuration
@@ -162,7 +162,6 @@ class CoffeeCamera: NSObject, ObservableObject {
             // Optimize for macro/close-up photography
             if cameraDevice.isFocusModeSupported(.continuousAutoFocus) {
                 cameraDevice.focusMode = .continuousAutoFocus
-                print("✅ Continuous autofocus enabled")
             }
             
             // Set focus range restriction for close-up shots if available (iOS 15+)
@@ -170,7 +169,6 @@ class CoffeeCamera: NSObject, ObservableObject {
                 if cameraDevice.isAutoFocusRangeRestrictionSupported {
                     // Restrict focus to near range for better macro performance
                     cameraDevice.autoFocusRangeRestriction = .near
-                    print("✅ Focus range restricted to near (macro mode)")
                 }
             }
             
@@ -180,7 +178,6 @@ class CoffeeCamera: NSObject, ObservableObject {
                 // We'll use auto-focus but this helps bias it toward close objects
                 let closeFocusPosition: Float = 0.8
                 cameraDevice.setFocusModeLocked(lensPosition: closeFocusPosition, completionHandler: nil)
-                print("✅ Initial focus position set for close-up: \(closeFocusPosition)")
                 
                 // Then switch back to auto for continuous adjustment
                 if cameraDevice.isFocusModeSupported(.continuousAutoFocus) {
@@ -199,49 +196,32 @@ class CoffeeCamera: NSObject, ObservableObject {
             // Enable high-quality capture for better detail
             if cameraDevice.activeFormat.isHighPhotoQualitySupported {
                 cameraDevice.automaticallyAdjustsVideoHDREnabled = false
-                print("✅ High photo quality supported")
             }
             
             cameraDevice.unlockForConfiguration()
-            print("✅ Device settings configured")
+            logger.debug("Device configuration complete")
             
             // Commit all changes at once
             session.commitConfiguration()
-            print("✅ Session configuration committed")
-            
-            // Verify configuration
-            print("📊 Final verification:")
-            print("   Inputs: \(session.inputs.count)")
-            print("   Outputs: \(session.outputs.count)")
-            
-            for input in session.inputs {
-                if let deviceInput = input as? AVCaptureDeviceInput {
-                    print("   Input device: \(deviceInput.device.localizedName)")
-                }
-            }
+            logger.debug("Session committed with \(self.session.inputs.count, privacy: .public) inputs and \(self.session.outputs.count, privacy: .public) outputs")
             
             // Start session
             startSession()
             
         } catch {
-            print("❌ Camera configuration error: \(error)")
+            logger.error("Camera configuration error: \(error.localizedDescription, privacy: .public)")
             session.commitConfiguration()
         }
     }
     
     func startSession() {
         guard !session.isRunning else {
-            print("Session already running")
+            logger.debug("Camera session already running")
             return
         }
         
-        // Double-check our configuration before starting
-        print("📊 Pre-start verification:")
-        print("   Inputs: \(session.inputs.count)")
-        print("   Outputs: \(session.outputs.count)")
-        
         if session.inputs.isEmpty || session.outputs.isEmpty {
-            print("❌ Session has no inputs or outputs - reconfiguring...")
+            logger.error("Camera session has no inputs or outputs; reconfiguring")
             configureCaptureSession()
             return
         }
@@ -249,27 +229,17 @@ class CoffeeCamera: NSObject, ObservableObject {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let self = self else { return }
             
-            print("🚀 Starting camera session...")
+            self.logger.debug("Starting camera session")
             self.session.startRunning()
             
             DispatchQueue.main.async {
                 self.isSessionRunning = self.session.isRunning
-                print("📱 Session running: \(self.isSessionRunning)")
+                self.logger.info("Camera session running: \(self.isSessionRunning)")
                 
                 // Wait a moment for connections to be established
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    print("🔍 Checking connections after start...")
-                    print("   Total connections: \(self.photoOutput.connections.count)")
-                    print("   Session inputs: \(self.session.inputs.count)")
-                    print("   Session outputs: \(self.session.outputs.count)")
-                    
-                    for (index, connection) in self.photoOutput.connections.enumerated() {
-                        let mediaTypes = connection.inputPorts.map { $0.mediaType.rawValue }
-                        print("   Connection \(index): media types \(mediaTypes), active: \(connection.isActive)")
-                    }
-                    
                     if let connection = self.photoOutput.connection(with: .video) {
-                        print("✅ Video connection found and active: \(connection.isActive)")
+                        self.logger.debug("Video connection active: \(connection.isActive)")
 
                         // Configure connection
                         if #available(iOS 17.0, *) {
@@ -287,12 +257,11 @@ class CoffeeCamera: NSObject, ObservableObject {
                         if connection.isVideoStabilizationSupported {
                             connection.preferredVideoStabilizationMode = .auto
                         }
-                        
                     } else {
-                        print("❌ Still no video connection found after session start")
+                        self.logger.error("No active video connection after session start")
                         
                         // Last resort: try to recreate the session
-                        print("🔄 Attempting to recreate session...")
+                        self.logger.info("Recreating camera session")
                         self.session.stopRunning()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self.configureCaptureSession()
@@ -359,7 +328,7 @@ class CoffeeCamera: NSObject, ObservableObject {
             // iOS provides its own native focus feedback
             
         } catch {
-            print("Focus error: \(error)")
+            logger.error("Focus configuration failed: \(error.localizedDescription, privacy: .public)")
         }
     }
     
@@ -381,7 +350,7 @@ class CoffeeCamera: NSObject, ObservableObject {
             // Check if we have an active connection
             guard let videoConnection = self.photoOutput.connection(with: .video),
                   videoConnection.isActive else {
-                print("Available connections: \(self.photoOutput.connections)")
+                self.logger.error("No active camera connection when attempting capture")
                 completion(.failure(.cameraError("No active camera connection. Try waiting a moment and try again.")))
                 return
             }
@@ -420,8 +389,7 @@ class CoffeeCamera: NSObject, ObservableObject {
                 settings.photoQualityPrioritization = .quality
             }
             
-            print("Capturing photo with settings: \(settings)")
-            print("Video connection active: \(videoConnection.isActive)")
+            self.logger.debug("Capturing photo. Video connection active: \(videoConnection.isActive)")
             
             self.photoOutput.capturePhoto(with: settings, delegate: self)
             
@@ -483,7 +451,7 @@ class CoffeeCamera: NSObject, ObservableObject {
                 }
                 
             } catch {
-                print("Camera switch error: \(error)")
+                logger.error("Camera switch failed: \(error.localizedDescription, privacy: .public)")
                 // Add back the original input if switching failed
                 if self.session.canAddInput(currentInput) {
                     self.session.addInput(currentInput)

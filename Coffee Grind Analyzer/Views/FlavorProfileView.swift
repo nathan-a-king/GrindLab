@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+import OSLog
+
+private let flavorProfileLogger = Logger(subsystem: "com.nateking.GrindLab", category: "FlavorProfileView")
 
 struct FlavorProfileView: View {
     @Binding var flavorProfile: FlavorProfile?
@@ -56,9 +59,8 @@ struct FlavorProfileView: View {
                 )
             }
             .onAppear {
-                print("🎭 Sheet appeared")
-                print("   - Using profile with taste: \(profile.overallTaste.rawValue)")
-                print("   - Profile issues: \(profile.flavorIssues.map { $0.rawValue })")
+                flavorProfileLogger.debug("Recommendations sheet appeared for taste: \(profile.overallTaste.rawValue, privacy: .public)")
+                flavorProfileLogger.debug("Flavor issues: \(profile.flavorIssues.map { $0.rawValue }, privacy: .public)")
             }
         }
     }
@@ -182,7 +184,7 @@ struct FlavorProfileView: View {
     }
     
     private func generateRecommendations() {
-        print("🚀 FlavorProfileView generateRecommendations() called")
+        flavorProfileLogger.debug("generateRecommendations invoked")
         
         let profile = FlavorProfile(
             overallTaste: selectedTaste,
@@ -192,7 +194,7 @@ struct FlavorProfileView: View {
             timestamp: Date()
         )
         
-        print("   - Created profile with taste: \(profile.overallTaste.rawValue)")
+        flavorProfileLogger.debug("Generated profile with taste: \(profile.overallTaste.rawValue, privacy: .public)")
         
         // Set both the binding and the local state
         flavorProfile = profile
@@ -201,7 +203,7 @@ struct FlavorProfileView: View {
         // because we're using sheet(item:) which presents when the item becomes non-nil
         profileForRecommendations = profile
         
-        print("   - Profile set for recommendations sheet")
+        flavorProfileLogger.debug("Profile assigned for recommendations sheet")
     }
     
     private func skipRecommendations() {

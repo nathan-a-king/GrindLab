@@ -6,6 +6,9 @@
 //
 
 import Foundation
+import OSLog
+
+private let settingsPersistenceLogger = Logger(subsystem: "com.nateking.GrindLab", category: "Settings")
 
 // MARK: - Simple Settings Extension
 
@@ -14,35 +17,30 @@ extension AnalysisSettings {
     
     /// Save current settings to UserDefaults
     func save() {
-        print("💾 AnalysisSettings.save() called")
-        print("📊 Saving values:")
-        print("   Analysis Mode: \(analysisMode.displayName)")
-        print("   Contrast: \(contrastThreshold)")
-        print("   Min Particle: \(minParticleSize)")
-        print("   Calibration: \(calibrationFactor)")
+        settingsPersistenceLogger.debug("Saving analysis settings (mode: \(analysisMode.displayName, privacy: .public), contrast: \(contrastThreshold, privacy: .public), min particle: \(minParticleSize, privacy: .public), calibration: \(calibrationFactor, privacy: .public))")
         
         let encoder = JSONEncoder()
         if let encoded = try? encoder.encode(self) {
             UserDefaults.standard.set(encoded, forKey: Self.settingsKey)
-            print("✅ Settings saved to UserDefaults")
+            settingsPersistenceLogger.info("Settings persisted to UserDefaults")
         } else {
-            print("❌ Failed to encode settings")
+            settingsPersistenceLogger.error("Failed to encode analysis settings for persistence")
         }
     }
     
     /// Load settings from UserDefaults
     static func load() -> AnalysisSettings {
         guard let data = UserDefaults.standard.data(forKey: settingsKey) else {
-            print("📱 No saved settings found, using defaults")
+            settingsPersistenceLogger.info("No saved settings found; using defaults")
             return AnalysisSettings()
         }
-        
+
         let decoder = JSONDecoder()
         if let settings = try? decoder.decode(AnalysisSettings.self, from: data) {
-            print("📱 Settings loaded successfully")
+            settingsPersistenceLogger.info("Settings loaded from persistence")
             return settings
         } else {
-            print("⚠️ Failed to decode settings, using defaults")
+            settingsPersistenceLogger.error("Failed to decode persisted settings; reverting to defaults")
             return AnalysisSettings()
         }
     }
@@ -50,7 +48,7 @@ extension AnalysisSettings {
     /// Reset to defaults
     static func resetToDefaults() {
         UserDefaults.standard.removeObject(forKey: settingsKey)
-        print("🔄 Settings reset to defaults")
+        settingsPersistenceLogger.info("Settings reset to defaults")
     }
 }
 

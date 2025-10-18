@@ -7,6 +7,9 @@
 
 import SwiftUI
 import Charts
+import OSLog
+
+private let resultsLogger = Logger(subsystem: "com.nateking.GrindLab", category: "ResultsView")
 
 struct ResultsView: View {
     let baseResults: CoffeeAnalysisResults
@@ -172,17 +175,17 @@ struct ResultsView: View {
             Text("This analysis hasn't been saved yet. Save it now to keep track of your grind data and brewing results.")
         }
         .onAppear {
-            print("📝 ResultsView body appeared - isFromHistory: \(isFromHistory)")
+            resultsLogger.debug("📝 ResultsView body appeared - isFromHistory: \(isFromHistory)")
             
             // Debug logging for chart data
             
             // Debug logging
-            print("📝 ResultsView data check:")
-            print("   - From History: \(isFromHistory)")
+            resultsLogger.debug("📝 ResultsView data check:")
+            resultsLogger.debug("   - From History: \(isFromHistory)")
             let isInRange = results.grindType.targetSizeMicrons.contains(results.medianSize)
-            print("   - Size Match: \(isInRange ? "In Range" : "Out of Range")")
-            print("   - Distribution keys: \(results.sizeDistribution.keys.sorted())")
-            print("   - Distribution values: \(results.sizeDistribution.values.map { String(format: "%.1f", $0) })")
+            resultsLogger.debug("   - Size Match: \(isInRange ? "In Range" : "Out of Range")")
+            resultsLogger.debug("   - Distribution keys: \(results.sizeDistribution.keys.sorted())")
+            resultsLogger.debug("   - Distribution values: \(results.sizeDistribution.values.map { String(format: "%.1f", $0) })")
         }
     }
     
@@ -198,7 +201,7 @@ struct ResultsView: View {
             }
             .background(Color.brown.opacity(0.7))
             .onAppear {
-                print("📊 Overview tab ScrollView appeared")
+                resultsLogger.debug("📊 Overview tab ScrollView appeared")
             }
         }
     }
@@ -229,15 +232,15 @@ struct ResultsView: View {
             // Portrait: stacked layout (original)
             VStack(spacing: 24) {
                 summaryCard
-                    .onAppear { print("📊 Summary card appeared") }
+                    .onAppear { resultsLogger.debug("📊 Summary card appeared") }
 
                 metricsGrid
-                    .onAppear { print("📊 Metrics grid appeared") }
+                    .onAppear { resultsLogger.debug("📊 Metrics grid appeared") }
 
                 // Add tasting notes display if available
                 if let tastingNotes = results.tastingNotes {
                     TastingNotesDisplayView(tastingNotes: tastingNotes)
-                        .onAppear { print("📊 Tasting notes section appeared") }
+                        .onAppear { resultsLogger.debug("📊 Tasting notes section appeared") }
                         .id(tastingNotes) // Force refresh when tasting notes change
                 }
 
@@ -246,7 +249,7 @@ struct ResultsView: View {
             }
             .padding()
             .onAppear {
-                print("📊 Overview tab content appeared")
+                resultsLogger.debug("📊 Overview tab content appeared")
             }
         }
     }
@@ -682,7 +685,7 @@ struct ResultsView: View {
                 }
                 .onAppear {
                     // Force a small delay to ensure Charts framework is ready
-                    print("📊 Chart appeared for analysis")
+                    resultsLogger.debug("📊 Chart appeared for analysis")
                 }
                 .id("chart-\(results.timestamp.timeIntervalSince1970)-\(results.particles.count)") // Unique ID per analysis
             }
@@ -713,33 +716,33 @@ struct ResultsView: View {
     }
     
     private func prepareChartData() -> [(microns: Double, percentage: Double, label: String)] {
-        print("🔷 DEBUG prepareChartData START")
-        print("🔷 Has chartDataPoints: \(results.chartDataPoints != nil)")
-        print("🔷 chartDataPoints count: \(results.chartDataPoints?.count ?? 0)")
-        print("🔷 Has particles: \(!results.particles.isEmpty)")
-        print("🔷 Particles count: \(results.particles.count)")
+        resultsLogger.debug("🔷 DEBUG prepareChartData START")
+        resultsLogger.debug("🔷 Has chartDataPoints: \(results.chartDataPoints != nil)")
+        resultsLogger.debug("🔷 chartDataPoints count: \(results.chartDataPoints?.count ?? 0)")
+        resultsLogger.debug("🔷 Has particles: \(!results.particles.isEmpty)")
+        resultsLogger.debug("🔷 Particles count: \(results.particles.count)")
         
         // First priority: Use EXACT saved chart data points if available
         if let savedChartData = results.chartDataPoints, !savedChartData.isEmpty {
-            print("✅ DEBUG: Using EXACT saved chart data with \(savedChartData.count) points")
+            resultsLogger.debug("✅ DEBUG: Using EXACT saved chart data with \(savedChartData.count) points")
             let nonZero = savedChartData.filter { $0.percentage > 0 }
-            print("✅ DEBUG: Non-zero points: \(nonZero.count)")
+            resultsLogger.debug("✅ DEBUG: Non-zero points: \(nonZero.count)")
             for point in nonZero.prefix(5) {
-                print("✅ DEBUG: Using saved point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
+                resultsLogger.debug("✅ DEBUG: Using saved point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
             }
             
             let returnData = savedChartData.map { point in
                 (microns: point.microns, percentage: point.percentage, label: point.label)
             }
-            print("🔷 DEBUG prepareChartData END - returning saved data")
+            resultsLogger.debug("🔷 DEBUG prepareChartData END - returning saved data")
             return returnData
         }
         // Second priority: Compute from actual particles if available
         else if !results.particles.isEmpty {
-            print("📊 DEBUG: Computing chart data from \(results.particles.count) particles")
+            resultsLogger.debug("📊 DEBUG: Computing chart data from \(results.particles.count) particles")
             let minSize = results.particles.map { $0.size }.min() ?? 0
             let maxSize = results.particles.map { $0.size }.max() ?? 0
-            print("📊 DEBUG: Particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm")
+            resultsLogger.debug("📊 DEBUG: Particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm")
             // Use actual particle data for more accurate distribution
             let sizeRanges = createGranularSizeRanges()
             let computedData = sizeRanges.compactMap { range in
@@ -753,23 +756,23 @@ struct ResultsView: View {
                 
                 let label = "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm"
                 if particlesInRange.count > 0 {
-                    print("📊 DEBUG: Computing range \(label): \(particlesInRange.count) particles (\(String(format: "%.1f", percentage))%)")
+                    resultsLogger.debug("📊 DEBUG: Computing range \(label): \(particlesInRange.count) particles (\(String(format: "%.1f", percentage))%)")
                 }
                 return (microns: midpoint, percentage: percentage, label: label)
             }
             
             let nonZero = computedData.filter { $0.percentage > 0 }
-            print("📊 DEBUG: Computed \(computedData.count) total points, \(nonZero.count) non-zero")
+            resultsLogger.debug("📊 DEBUG: Computed \(computedData.count) total points, \(nonZero.count) non-zero")
             for point in nonZero.prefix(5) {
-                print("📊 DEBUG: Computed point - \(point.label): \(String(format: "%.1f", point.percentage))%")
+                resultsLogger.debug("📊 DEBUG: Computed point - \(point.label): \(String(format: "%.1f", point.percentage))%")
             }
-            print("🔷 DEBUG prepareChartData END - returning computed data")
+            resultsLogger.debug("🔷 DEBUG prepareChartData END - returning computed data")
             
             return computedData
         } else {
             // Third priority: Use stored granular distribution if available
             if let granularDist = results.granularDistribution, !granularDist.isEmpty {
-                print("🎯 Using stored granular distribution with \(granularDist.count) data points")
+                resultsLogger.debug("🎯 Using stored granular distribution with \(granularDist.count) data points")
                 
                 return granularDist.compactMap { (label: String, percentage: Double) -> (microns: Double, percentage: Double, label: String)? in
                     guard percentage > 0 else { return nil }
@@ -793,7 +796,7 @@ struct ResultsView: View {
             }
             // Fallback: Use granular size ranges like the original, but estimate percentages from saved data
             else if let minSize = results.minParticleSize, let maxSize = results.maxParticleSize, minSize < maxSize {
-                print("🔄 Using stored particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm for granular chart reconstruction")
+                resultsLogger.debug("🔄 Using stored particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm for granular chart reconstruction")
                 
                 // Use the same granular ranges as the original
                 let sizeRanges = createGranularSizeRanges()
@@ -806,7 +809,7 @@ struct ResultsView: View {
                     return rangeStart < maxSize && rangeEnd > minSize
                 }
                 
-                print("📊 Using \(relevantRanges.count) granular ranges within particle bounds")
+                resultsLogger.debug("📊 Using \(relevantRanges.count) granular ranges within particle bounds")
                 
                 // Estimate percentage for each granular range by interpolating from categorical data
                 return relevantRanges.compactMap { range -> (microns: Double, percentage: Double, label: String)? in
@@ -866,11 +869,11 @@ struct ResultsView: View {
     }
     
     private func debugLogChartData(_ chartData: [(microns: Double, percentage: Double, label: String)]) -> Bool {
-        print("🎨 DEBUG: Rendering chart with \(chartData.count) data points")
+        resultsLogger.debug("🎨 DEBUG: Rendering chart with \(chartData.count) data points")
         let nonZeroChart = chartData.filter { $0.percentage > 0 }
-        print("🎨 DEBUG: Non-zero chart points: \(nonZeroChart.count)")
+        resultsLogger.debug("🎨 DEBUG: Non-zero chart points: \(nonZeroChart.count)")
         for point in nonZeroChart.prefix(5) {
-            print("🎨 DEBUG: Rendering point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
+            resultsLogger.debug("🎨 DEBUG: Rendering point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
         }
         return true
     }
@@ -936,8 +939,8 @@ struct ResultsView: View {
             let upperBound = maxSize + padding
             
             let dataSource = results.particles.isEmpty ? "stored min/max" : "particles"
-            print("📊 Chart domain calculated: \(String(format: "%.1f", lowerBound))-\(String(format: "%.1f", upperBound))μm (source: \(dataSource), min: \(String(format: "%.1f", minSize)), max: \(String(format: "%.1f", maxSize)))")
-            print("📊 Particles count: \(results.particles.count), range: \(String(format: "%.1f", range))μm, padding: \(String(format: "%.1f", padding))μm")
+            resultsLogger.debug("📊 Chart domain calculated: \(String(format: "%.1f", lowerBound))-\(String(format: "%.1f", upperBound))μm (source: \(dataSource), min: \(String(format: "%.1f", minSize)), max: \(String(format: "%.1f", maxSize)))")
+            resultsLogger.debug("📊 Particles count: \(results.particles.count), range: \(String(format: "%.1f", range))μm, padding: \(String(format: "%.1f", padding))μm")
             
             return lowerBound...upperBound
         } else {

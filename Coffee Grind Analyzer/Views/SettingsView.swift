@@ -7,6 +7,9 @@
 //
 
 import SwiftUI
+import OSLog
+
+private let settingsLogger = Logger(subsystem: "com.nateking.GrindLab", category: "SettingsView")
 
 // CGRect.area extension removed - already defined elsewhere in project
 
@@ -271,7 +274,7 @@ struct SettingsView: View {
         SettingsCard(title: "Debug Tools") {
             VStack(spacing: 12) {
                 Button(action: {
-                    print("🧪 Running validation test...")
+                    settingsLogger.info("Running validation test")
                     let engine = CoffeeAnalysisEngine()
                     engine.runValidationTest()
                 }) {
@@ -284,9 +287,9 @@ struct SettingsView: View {
                 }
                 
                 Button(action: {
-                    print("🎯 Generating grid test image...")
+                    settingsLogger.debug("Generating grid test image")
                     let (_, particles) = AnalysisValidation.createGridTestImage()
-                    print("✅ Created test image with \(particles.count) particles")
+                    settingsLogger.debug("Generated grid test image with \(particles.count, privacy: .public) particles")
                 }) {
                     HStack {
                         Image(systemName: "grid")
@@ -297,9 +300,9 @@ struct SettingsView: View {
                 }
                 
                 Button(action: {
-                    print("🎲 Generating random test image...")
+                    settingsLogger.debug("Generating random test image")
                     let (_, particles) = AnalysisValidation.createTestImage()
-                    print("✅ Created test image with \(particles.count) particles")
+                    settingsLogger.debug("Generated random test image with \(particles.count, privacy: .public) particles")
                 }) {
                     HStack {
                         Image(systemName: "dice")
@@ -368,7 +371,7 @@ struct SettingsView: View {
                     }
                     
                     Button(action: {
-                        print("🔄 Reset All Settings tapped")
+                        settingsLogger.info("Reset all settings requested")
                         AnalysisSettings.resetToDefaults()
                         settings.analysisMode = .standard
                         settings.contrastThreshold = 0.3
@@ -376,7 +379,7 @@ struct SettingsView: View {
                         settings.maxParticleSize = 3000
                         settings.enableAdvancedFiltering = false
                         settings.calibrationFactor = 150.0
-                        print("✅ Settings reset complete")
+                        settingsLogger.info("Settings reset completed")
                     }) {
                         HStack {
                             Image(systemName: "arrow.clockwise")
@@ -391,9 +394,9 @@ struct SettingsView: View {
     }
     
     private func saveSettings() {
-        print("💾 saveSettings() called")
+        settingsLogger.debug("saveSettings invoked")
         settings.save()
-        print("💾 settings.save() completed")
+        settingsLogger.debug("Analysis settings persisted")
     }
 }
 
@@ -673,8 +676,7 @@ struct CalibrationView: View {
             return
         }
         
-        print("📏 Saving ruler calibration: \(newFactor) μm/pixel")
-        print("📏 1 inch = \(Int(pixelDistance)) pixels")
+        settingsLogger.info("Saved ruler calibration: \(newFactor, privacy: .public) μm/pixel (1 inch = \(Int(pixelDistance), privacy: .public) pixels)")
         
         calibrationFactor = newFactor
         dismiss()

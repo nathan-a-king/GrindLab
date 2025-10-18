@@ -10,6 +10,27 @@ import UIKit
 import Vision
 import Accelerate
 import CoreImage
+import OSLog
+
+private enum AnalysisLog {
+    static let logger = Logger(subsystem: "com.nateking.GrindLab", category: "AnalysisEngine")
+
+    static func debug(_ message: String) {
+        logger.debug("\(message, privacy: .public)")
+    }
+
+    static func info(_ message: String) {
+        logger.info("\(message, privacy: .public)")
+    }
+
+    static func warning(_ message: String) {
+        logger.warning("\(message, privacy: .public)")
+    }
+
+    static func error(_ message: String) {
+        logger.error("\(message, privacy: .public)")
+    }
+}
 
 class CoffeeAnalysisEngine {
     private let settings: AnalysisSettings
@@ -31,11 +52,11 @@ class CoffeeAnalysisEngine {
     // MARK: - Validation Testing
     
     func runValidationTest() {
-        print("\n🧪 RUNNING ANALYSIS ENGINE VALIDATION TEST")
-        print(String(repeating: "=", count: 60))
+        AnalysisLog.debug("\n🧪 RUNNING ANALYSIS ENGINE VALIDATION TEST")
+        AnalysisLog.debug(String(repeating: "=", count: 60))
         
         // Test 1: Grid pattern with known particles
-        print("\n📋 Test 1: Grid Pattern (5x5, 30px radius)")
+        AnalysisLog.debug("\n📋 Test 1: Grid Pattern (5x5, 30px radius)")
         let (gridImage, expectedGrid) = AnalysisValidation.createGridTestImage(
             width: 1000,
             height: 1000,
@@ -57,11 +78,11 @@ class CoffeeAnalysisEngine {
             )
             report.printReport()
         } catch {
-            print("❌ Grid analysis failed: \(error)")
+            AnalysisLog.error("Grid analysis failed: \(error)")
         }
         
         // Test 2: Random particles
-        print("\n📋 Test 2: Random Particles (20 particles, 20-100px)")
+        AnalysisLog.debug("\n📋 Test 2: Random Particles (20 particles, 20-100px)")
         let (randomImage, expectedRandom) = AnalysisValidation.createTestImage(
             width: 1000,
             height: 1000,
@@ -82,7 +103,7 @@ class CoffeeAnalysisEngine {
             )
             report.printReport()
         } catch {
-            print("❌ Random analysis failed: \(error)")
+            AnalysisLog.error("Random analysis failed: \(error)")
         }
     }
     
@@ -149,19 +170,19 @@ class CoffeeAnalysisEngine {
         referenceObjectDiameter: Double?
     ) throws -> CoffeeAnalysisResults {
         let startTime = CFAbsoluteTimeGetCurrent()
-        print("🔬 Starting advanced coffee analysis for \(grindType.displayName)...")
-        print("📐 Image size: \(Int(image.size.width))x\(Int(image.size.height))")
+        AnalysisLog.debug("🔬 Starting advanced coffee analysis for \(grindType.displayName)...")
+        AnalysisLog.debug("📐 Image size: \(Int(image.size.width))x\(Int(image.size.height))")
         
         guard let cgImage = image.cgImage else {
             throw CoffeeAnalysisError.imageProcessingFailed
         }
         
         // Step 1: Extract blue channel (as in Python)
-        print("🔵 Step 1: Extracting blue channel...")
+        AnalysisLog.debug("🔵 Step 1: Extracting blue channel...")
         let blueChannelData = try extractBlueChannel(from: cgImage)
         
         // Step 2: Apply adaptive thresholding based on median
-        print("🎭 Step 2: Applying adaptive thresholding...")
+        AnalysisLog.debug("🎭 Step 2: Applying adaptive thresholding...")
         let (thresholdMask, backgroundMedian) = try applyAdaptiveThreshold(
             data: blueChannelData,
             width: cgImage.width,
@@ -169,7 +190,7 @@ class CoffeeAnalysisEngine {
         )
         
         // Step 3: Detect particles using clustering algorithm
-        print("🔍 Step 3: Detecting particles with advanced clustering...")
+        AnalysisLog.debug("🔍 Step 3: Detecting particles with advanced clustering...")
         let clusters = try detectParticlesWithClustering(
             thresholdMask: thresholdMask,
             imageData: blueChannelData,
@@ -178,19 +199,19 @@ class CoffeeAnalysisEngine {
             height: cgImage.height
         )
         
-        print("📊 Found \(clusters.count) valid clusters")
+        AnalysisLog.debug("📊 Found \(clusters.count) valid clusters")
         
         if clusters.isEmpty {
             throw CoffeeAnalysisError.noParticlesDetected
         }
         
         // Step 4: Convert clusters to particles with proper calibration
-        print("📏 Step 4: Converting clusters to calibrated particles...")
+        AnalysisLog.debug("📏 Step 4: Converting clusters to calibrated particles...")
         
         // Use manual calibration from settings
         let calibrationFactor = settings.calibrationFactor
         
-        print("📏 Using manual calibration factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
+        AnalysisLog.debug("📏 Using manual calibration factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
         
         let particles = convertClustersToParticles(
             clusters: clusters,
@@ -198,14 +219,14 @@ class CoffeeAnalysisEngine {
         )
         
         // Step 5: Calculate advanced statistics
-        print("📈 Step 5: Calculating advanced statistics...")
+        AnalysisLog.debug("📈 Step 5: Calculating advanced statistics...")
         let statistics = calculateAdvancedStatistics(
             particles: particles,
             grindType: grindType
         )
         
         // Step 6: Create visualization
-        print("🎨 Step 6: Creating visualization...")
+        AnalysisLog.debug("🎨 Step 6: Creating visualization...")
         let processedImage = createVisualization(
             originalImage: image,
             particles: particles,
@@ -213,14 +234,14 @@ class CoffeeAnalysisEngine {
         )
         
         let totalTime = CFAbsoluteTimeGetCurrent() - startTime
-        print("🎯 Analysis complete in \(String(format: "%.2f", totalTime))s")
+        AnalysisLog.debug("🎯 Analysis complete in \(String(format: "%.2f", totalTime))s")
         
         // Final calibration summary
-        print("\n📊 CALIBRATION SUMMARY:")
-        print("   Source: Manual")
-        print("   Factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
-        print("   Average Particle Size: \(String(format: "%.1f", statistics.averageSize)) μm")
-        print("\n")
+        AnalysisLog.debug("\n📊 CALIBRATION SUMMARY:")
+        AnalysisLog.debug("   Source: Manual")
+        AnalysisLog.debug("   Factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
+        AnalysisLog.debug("   Average Particle Size: \(String(format: "%.1f", statistics.averageSize)) μm")
+        AnalysisLog.debug("\n")
         
         return CoffeeAnalysisResults(
             uniformityScore: statistics.uniformityScore,
@@ -288,7 +309,7 @@ class CoffeeAnalysisEngine {
             polygon: analysisPolygon
         )
         
-        print("📊 Background median: \(backgroundMedian)")
+        AnalysisLog.debug("📊 Background median: \(backgroundMedian)")
         
         // Apply threshold (defaultThreshold is percentage)
         let thresholdValue = backgroundMedian * (defaultThreshold / 100.0)
@@ -314,7 +335,7 @@ class CoffeeAnalysisEngine {
         }
         
         let thresholdPercentage = Double(thresholdMask.count) / Double(width * height) * 100.0
-        print("🎭 Thresholded \(thresholdMask.count) pixels (\(String(format: "%.1f", thresholdPercentage))%)")
+        AnalysisLog.debug("🎭 Thresholded \(thresholdMask.count) pixels (\(String(format: "%.1f", thresholdPercentage))%)")
         
         return (thresholdMask, backgroundMedian)
     }
@@ -359,12 +380,12 @@ class CoffeeAnalysisEngine {
         let minDiameterPixels = Double(settings.minParticleSize) / settings.calibrationFactor
         let minSurface = (minDiameterPixels * minDiameterPixels * Double.pi) / 4.0
         
-        print("🔬 Starting clustering with \(sortedMask.count) threshold pixels...")
+        AnalysisLog.debug("🔬 Starting clustering with \(sortedMask.count) threshold pixels...")
         
         for i in 0..<sortedMask.count {
             if i % 10000 == 0 {
                 let progress = Double(i) / Double(sortedMask.count) * 100.0
-                print("⏳ Clustering progress: \(String(format: "%.1f", progress))%")
+                AnalysisLog.debug("⏳ Clustering progress: \(String(format: "%.1f", progress))%")
             }
             
             if counted[i] { continue }
@@ -406,7 +427,7 @@ class CoffeeAnalysisEngine {
             }
         }
         
-        print("✅ Clustering complete: \(clusters.count) valid clusters found")
+        AnalysisLog.info("Clustering complete: \(clusters.count) valid clusters found")
         return clusters
     }
     
@@ -595,7 +616,7 @@ class CoffeeAnalysisEngine {
         let minSizeMicrons = Double(settings.minParticleSize)
         let maxSizeMicrons = Double(settings.maxParticleSize)
         
-        print("📏 Filtering particles: \(String(format: "%.1f", minSizeMicrons)) - \(String(format: "%.1f", maxSizeMicrons)) μm")
+        AnalysisLog.debug("📏 Filtering particles: \(String(format: "%.1f", minSizeMicrons)) - \(String(format: "%.1f", maxSizeMicrons)) μm")
         
         let allParticles = clusters.compactMap { cluster -> CoffeeParticle? in
             // Use actual measured span instead of equivalent circle diameter
@@ -625,7 +646,7 @@ class CoffeeAnalysisEngine {
             )
         }
         
-        print("✅ Filtered \(allParticles.count) particles from \(clusters.count) clusters")
+        AnalysisLog.info("Filtered \(allParticles.count) particles from \(clusters.count) clusters")
         return allParticles
     }
     
@@ -677,12 +698,12 @@ class CoffeeAnalysisEngine {
         
         // Calculate Otsu threshold
         let threshold = calculateOtsuThreshold(pixelData)
-        print("🌡️ Otsu threshold calculated: \(threshold)")
+        AnalysisLog.debug("🌡️ Otsu threshold calculated: \(threshold)")
         
         // Count pixels before thresholding for debugging
         let darkPixelsBefore = pixelData.filter { $0 < threshold }.count
         let lightPixelsBefore = pixelData.filter { $0 >= threshold }.count
-        print("📊 Before threshold: \(darkPixelsBefore) dark pixels (\(String(format: "%.1f%%", Double(darkPixelsBefore)/Double(width*height)*100))), \(lightPixelsBefore) light pixels (\(String(format: "%.1f%%", Double(lightPixelsBefore)/Double(width*height)*100)))")
+        AnalysisLog.debug("📊 Before threshold: \(darkPixelsBefore) dark pixels (\(String(format: "%.1f%%", Double(darkPixelsBefore)/Double(width*height)*100))), \(lightPixelsBefore) light pixels (\(String(format: "%.1f%%", Double(lightPixelsBefore)/Double(width*height)*100)))")
         
         // Apply threshold - pixels darker than threshold become black (0), lighter become white (255)
         // This ensures dark coffee particles remain dark for detection
@@ -693,7 +714,7 @@ class CoffeeAnalysisEngine {
         // Count pixels after thresholding
         let blackPixelsAfter = pixelData.filter { $0 == 0 }.count
         let whitePixelsAfter = pixelData.filter { $0 == 255 }.count
-        print("📊 After threshold: \(blackPixelsAfter) black pixels (particles), \(whitePixelsAfter) white pixels (background)")
+        AnalysisLog.debug("📊 After threshold: \(blackPixelsAfter) black pixels (particles), \(whitePixelsAfter) white pixels (background)")
         
         #if DEBUG
         // Save debug image of thresholding result
@@ -775,10 +796,10 @@ class CoffeeAnalysisEngine {
         assert(width == originalCGImage.width, "Binary and original image widths must match")
         assert(height == originalCGImage.height, "Binary and original image heights must match")
         
-        print("🔍 Starting particle detection on \(width)x\(height) binary image...")
-        print("📍 Detection coordinates: Using CGImage dimensions \(width)x\(height) (\(width > height ? "landscape" : "portrait"))")
-        print("📍 Display coordinates: UIImage size \(Int(originalImage.size.width))x\(Int(originalImage.size.height)) (\(originalImage.size.width > originalImage.size.height ? "landscape" : "portrait"))")
-        print("📍 Image orientation: \(originalImage.imageOrientation.rawValue)")
+        AnalysisLog.debug("🔍 Starting particle detection on \(width)x\(height) binary image...")
+        AnalysisLog.debug("📍 Detection coordinates: Using CGImage dimensions \(width)x\(height) (\(width > height ? "landscape" : "portrait"))")
+        AnalysisLog.debug("📍 Display coordinates: UIImage size \(Int(originalImage.size.width))x\(Int(originalImage.size.height)) (\(originalImage.size.width > originalImage.size.height ? "landscape" : "portrait"))")
+        AnalysisLog.debug("📍 Image orientation: \(originalImage.imageOrientation.rawValue)")
         let detectionStart = CFAbsoluteTimeGetCurrent()
         
         // Extract binary pixel data
@@ -818,7 +839,7 @@ class CoffeeAnalysisEngine {
             // Progress logging every 5% of rows for particle detection
             if y % (height / 20) == 0 && y > 0 {
                 let progress = (y * 100) / height
-                print("🔍 Particle detection progress: \(progress)% (found \(componentsFound) components, accepted \(componentsAccepted))")
+                AnalysisLog.debug("🔍 Particle detection progress: \(progress)% (found \(componentsFound) components, accepted \(componentsAccepted))")
             }
             
             for x in 0..<width {
@@ -837,7 +858,7 @@ class CoffeeAnalysisEngine {
                     
                     // Debug: log component size before creating particle
                     if componentsFound <= 5 || componentsFound % 10 == 0 {
-                        print("🔍 Component #\(componentsFound): \(component.count) pixels at (\(x), \(y))")
+                        AnalysisLog.debug("🔍 Component #\(componentsFound): \(component.count) pixels at (\(x), \(y))")
                     }
                     
                     if let particle = createParticle(from: component, cgImage: cgImage, originalImage: originalImage) {
@@ -869,17 +890,17 @@ class CoffeeAnalysisEngine {
         }
         
         let detectionTime = CFAbsoluteTimeGetCurrent() - detectionStart
-        print("✅ Particle detection complete in \(String(format: "%.2f", detectionTime))s")
-        print("📊 Processed \(pixelsProcessed) pixels, found \(componentsFound) components, accepted \(componentsAccepted) particles")
-        print("🎯 Final particle count: \(particles.count)")
+        AnalysisLog.info("Particle detection complete in \(String(format: "%.2f", detectionTime))s")
+        AnalysisLog.debug("📊 Processed \(pixelsProcessed) pixels, found \(componentsFound) components, accepted \(componentsAccepted) particles")
+        AnalysisLog.debug("🎯 Final particle count: \(particles.count)")
         
         // Log coordinate bounds for validation
         if !particles.isEmpty {
             let xPositions = particles.map { $0.position.x }
             let yPositions = particles.map { $0.position.y }
-            print("📍 Particle position ranges:")
-            print("   X: \(Int(xPositions.min() ?? 0)) to \(Int(xPositions.max() ?? 0)) (image width: \(width))")
-            print("   Y: \(Int(yPositions.min() ?? 0)) to \(Int(yPositions.max() ?? 0)) (image height: \(height))")
+            AnalysisLog.debug("📍 Particle position ranges:")
+            AnalysisLog.debug("   X: \(Int(xPositions.min() ?? 0)) to \(Int(xPositions.max() ?? 0)) (image width: \(width))")
+            AnalysisLog.debug("   Y: \(Int(yPositions.min() ?? 0)) to \(Int(yPositions.max() ?? 0)) (image height: \(height))")
         }
         
         return particles
@@ -964,8 +985,8 @@ class CoffeeAnalysisEngine {
         }
         
         // Debug logging for all particles (accepted and rejected)
-        print("🔍 Component at (\(Int(centroidX)), \(Int(centroidY))): \(component.count) pixels, diameter: \(String(format: "%.1f", actualDiameter))px, size: \(String(format: "%.0f", sizeMicrons))μm")
-        print("   📊 Circularity: \(String(format: "%.2f", circularity)), Brightness: \(String(format: "%.2f", avgBrightness))")
+        AnalysisLog.debug("🔍 Component at (\(Int(centroidX)), \(Int(centroidY))): \(component.count) pixels, diameter: \(String(format: "%.1f", actualDiameter))px, size: \(String(format: "%.0f", sizeMicrons))μm")
+        AnalysisLog.debug("   📊 Circularity: \(String(format: "%.2f", circularity)), Brightness: \(String(format: "%.2f", avgBrightness))")
         
         // Debug logging for rejected particles
         var rejectionReasons: [String] = []
@@ -990,9 +1011,9 @@ class CoffeeAnalysisEngine {
         }
         
         if !rejectionReasons.isEmpty {
-            print("   ❌ REJECTED: \(rejectionReasons.joined(separator: ", "))")
+            AnalysisLog.debug("   ❌ REJECTED: \(rejectionReasons.joined(separator: ", "))")
         } else {
-            print("   ✅ ACCEPTED")
+            AnalysisLog.debug("   ✅ ACCEPTED")
         }
         
         // Apply all filters using pre-calculated values
@@ -1023,7 +1044,7 @@ class CoffeeAnalysisEngine {
         let uiWidth = uiImage.size.width  
         let uiHeight = uiImage.size.height
         
-        print("🔄 Transforming point (\(Int(cgPoint.x)), \(Int(cgPoint.y))) from CGImage \(Int(cgWidth))x\(Int(cgHeight)) to UIImage \(Int(uiWidth))x\(Int(uiHeight)), orientation: \(uiImage.imageOrientation.rawValue)")
+        AnalysisLog.debug("🔄 Transforming point (\(Int(cgPoint.x)), \(Int(cgPoint.y))) from CGImage \(Int(cgWidth))x\(Int(cgHeight)) to UIImage \(Int(uiWidth))x\(Int(uiHeight)), orientation: \(uiImage.imageOrientation.rawValue)")
         
         // Handle different orientations properly
         let transformedPoint: CGPoint
@@ -1057,7 +1078,7 @@ class CoffeeAnalysisEngine {
             transformedPoint = cgPoint
         }
         
-        print("🎯 Transformed to (\(Int(transformedPoint.x)), \(Int(transformedPoint.y)))")
+        AnalysisLog.debug("🎯 Transformed to (\(Int(transformedPoint.x)), \(Int(transformedPoint.y)))")
         return transformedPoint
     }
     
@@ -1249,8 +1270,8 @@ class CoffeeAnalysisEngine {
     ) -> UIImage? {
         guard let cgImage = originalImage.cgImage else { return nil }
         
-        print("🎨 Creating overlay for \(particles.count) particles")
-        print("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height))")
+        AnalysisLog.debug("🎨 Creating overlay for \(particles.count) particles")
+        AnalysisLog.debug("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height))")
         
         let renderer = UIGraphicsImageRenderer(size: originalImage.size)
         
@@ -1318,14 +1339,14 @@ class CoffeeAnalysisEngine {
     
     // Keep old processed image method for validation tests
     private func createProcessedImage(originalImage: UIImage, cgImage: CGImage, particles: [CoffeeParticle], grindType: CoffeeGrindType) -> UIImage? {
-        print("🎨 Creating overlay for \(particles.count) particles on \(Int(originalImage.size.width))x\(Int(originalImage.size.height)) image")
-        print("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height)), orientation: \(originalImage.imageOrientation.rawValue)")
-        print("🔍 UIImage scale: \(originalImage.scale)")
+        AnalysisLog.debug("🎨 Creating overlay for \(particles.count) particles on \(Int(originalImage.size.width))x\(Int(originalImage.size.height)) image")
+        AnalysisLog.debug("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height)), orientation: \(originalImage.imageOrientation.rawValue)")
+        AnalysisLog.debug("🔍 UIImage scale: \(originalImage.scale)")
         
         // Verify we have valid particles
         if !particles.isEmpty {
             let firstParticle = particles[0]
-            print("📍 Sample particle CGImage position: (\(Int(firstParticle.position.x)), \(Int(firstParticle.position.y)))")
+            AnalysisLog.debug("📍 Sample particle CGImage position: (\(Int(firstParticle.position.x)), \(Int(firstParticle.position.y)))")
         }
         
         // Use UIImage size to match how it will be displayed
@@ -1393,7 +1414,7 @@ class CoffeeAnalysisEngine {
         }
         
         guard let image = generatedImage else {
-            print("⚠️ Failed to create debug image")
+            AnalysisLog.warning("Failed to create debug image")
             return
         }
         
@@ -1402,7 +1423,7 @@ class CoffeeAnalysisEngine {
             let imageURL = documentsPath.appendingPathComponent(filename)
             if let data = image.pngData() {
                 try? data.write(to: imageURL)
-                print("💾 Debug image saved: \(imageURL.path)")
+                AnalysisLog.debug("💾 Debug image saved: \(imageURL.path)")
             }
         }
     }
@@ -1476,12 +1497,11 @@ class CoffeeAnalysisEngine {
     
     func setAnalysisRegion(polygon: [CGPoint]) {
         self.analysisPolygon = polygon
-        print("📍 Analysis region set with \(polygon.count) points")
+        AnalysisLog.debug("📍 Analysis region set with \(polygon.count) points")
     }
     
     func clearAnalysisRegion() {
         self.analysisPolygon = nil
-        print("📍 Analysis region cleared")
+        AnalysisLog.debug("📍 Analysis region cleared")
     }
 }
-

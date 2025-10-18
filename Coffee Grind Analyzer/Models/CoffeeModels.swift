@@ -7,6 +7,9 @@
 
 import SwiftUI
 import Foundation
+import OSLog
+
+private let coffeeModelsLogger = Logger(subsystem: "com.nateking.GrindLab", category: "CoffeeModels")
 
 // MARK: - Coffee Grind Types
 
@@ -490,15 +493,15 @@ struct CoffeeAnalysisResults {
     }
     
     private static func computeChartDataPoints(from particles: [CoffeeParticle]) -> [ChartDataPoint] {
-        guard !particles.isEmpty else { 
-            print("🔴 DEBUG: computeChartDataPoints - No particles provided")
-            return [] 
+        guard !particles.isEmpty else {
+            coffeeModelsLogger.warning("computeChartDataPoints invoked with no particles")
+            return []
         }
         
-        print("🔵 DEBUG: computeChartDataPoints - Processing \(particles.count) particles")
+        coffeeModelsLogger.debug("Computing chart data points for \(particles.count, privacy: .public) particles")
         let minSize = particles.map { $0.size }.min() ?? 0
         let maxSize = particles.map { $0.size }.max() ?? 0
-        print("🔵 DEBUG: Particle range: \(String(format: "%.1f", minSize))-\(String(format: "%.1f", maxSize))μm")
+        coffeeModelsLogger.debug("Particle size range: \(minSize, privacy: .public)μm-\(maxSize, privacy: .public)μm")
         
         // Use EXACTLY the same logic as createGranularSizeRanges() in ResultsView
         let sizeRanges: [Range<Double>] = [
@@ -520,17 +523,17 @@ struct CoffeeAnalysisResults {
             let label = "\(Int(range.lowerBound))-\(range.upperBound == Double.infinity ? "∞" : "\(Int(range.upperBound))")μm"
             
             if particlesInRange.count > 0 {
-                print("🔵 DEBUG: Range \(label): \(particlesInRange.count) particles (\(String(format: "%.1f", percentage))%)")
+                coffeeModelsLogger.debug("Range \(label, privacy: .public): \(particlesInRange.count, privacy: .public) particles (\(percentage, privacy: .public)%)")
             }
             
             return ChartDataPoint(microns: midpoint, percentage: percentage, label: label)
         }
         
-        print("🔵 DEBUG: Generated \(chartPoints.count) chart data points")
+        coffeeModelsLogger.debug("Generated \(chartPoints.count, privacy: .public) chart data points")
         // Log first 5 non-zero points
         let nonZeroPoints = chartPoints.filter { $0.percentage > 0 }.prefix(5)
         for point in nonZeroPoints {
-            print("🔵 DEBUG: Point - \(point.label): \(String(format: "%.1f", point.percentage))% at \(String(format: "%.0f", point.microns))μm")
+            coffeeModelsLogger.debug("Point \(point.label, privacy: .public): \(point.percentage, privacy: .public)% at \(point.microns, privacy: .public)μm")
         }
         
         return chartPoints

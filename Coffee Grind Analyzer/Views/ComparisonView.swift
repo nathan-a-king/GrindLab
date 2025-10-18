@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import OSLog
 import Charts
 
 struct ComparisonView: View {
+    private static let logger = Logger(subsystem: "com.nateking.GrindLab", category: "ComparisonView")
     let comparison: AnalysisComparison
     @Environment(\.dismiss) private var dismiss
     
@@ -18,7 +20,7 @@ struct ComparisonView: View {
         return comparison.analyses.enumerated().map { index, analysis in
             let color = Color.comparisonColor(for: index)
             let data = prepareChartDataForAnalysis(analysis)
-            print("📊 Chart data for \(analysis.name): \(data.count) points, color index: \(index)")
+            Self.logger.debug("Prepared chart data for: \(analysis.name, privacy: .public) with \(data.count, privacy: .public) points (color index: \(index, privacy: .public))")
             return (analysis: analysis, color: color, data: data)
         }
     }
@@ -556,8 +558,13 @@ struct ComparisonView: View {
             let allPoints = savedChartData.map { point in
                 (microns: point.microns, percentage: point.percentage, label: point.label)
             }
-            print("📊 Data for \(analysis.name): min=\(allPoints.map{$0.microns}.min() ?? 0)μm, max=\(allPoints.map{$0.microns}.max() ?? 0)μm")
-            print("📊 First 5 points: \(allPoints.prefix(5).map { "\($0.microns)μm:\($0.percentage)%" }.joined(separator: ", "))")
+            let minMicron = allPoints.map { $0.microns }.min()
+            let maxMicron = allPoints.map { $0.microns }.max()
+            if let minMicron, let maxMicron {
+                Self.logger.debug("Chart data range for \(analysis.name, privacy: .public): \(minMicron, privacy: .public)μm - \(maxMicron, privacy: .public)μm")
+            }
+            let preview = allPoints.prefix(5).map { "\($0.microns)μm:\($0.percentage)%" }.joined(separator: ", ")
+            Self.logger.debug("Chart data preview for \(analysis.name, privacy: .public): \(preview, privacy: .public)")
             return allPoints
         }
         // Fallback to other methods...
@@ -619,8 +626,8 @@ struct ComparisonView: View {
         let lowerBound = max(0, minMicrons - padding)
         let upperBound = maxMicrons + padding
         
-        print("📊 Comparison chart domain: \(String(format: "%.0f", lowerBound))-\(String(format: "%.0f", upperBound))μm (data range: \(String(format: "%.0f", minMicrons))-\(String(format: "%.0f", maxMicrons)))")
-        
+        Self.logger.debug("Comparison chart domain: \(lowerBound, privacy: .public)μm - \(upperBound, privacy: .public)μm (data range: \(minMicrons, privacy: .public)-\(maxMicrons, privacy: .public))")
+
         return lowerBound...upperBound
     }
     

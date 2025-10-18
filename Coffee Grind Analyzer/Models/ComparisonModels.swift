@@ -8,6 +8,9 @@
 import SwiftUI
 import Foundation
 import Combine
+import OSLog
+
+private let comparisonModelsLogger = Logger(subsystem: "com.nateking.GrindLab", category: "ComparisonModels")
 
 // MARK: - Analysis Comparison Data Structure
 
@@ -145,7 +148,7 @@ struct ComparisonChartData {
         // Use granular data like individual charts for smooth curves
         if let savedChartData = analysis.results.chartDataPoints, !savedChartData.isEmpty {
             // Use exact saved chart data (best option)
-            print("📊 ComparisonChartData: Using chartDataPoints for \(analysis.name) with \(savedChartData.count) points")
+            comparisonModelsLogger.debug("Using chartDataPoints for \(analysis.name, privacy: .public) with \(savedChartData.count, privacy: .public) points")
             
             let processedData = savedChartData.compactMap { point -> ChartDataPoint? in
                 guard point.percentage > 0 else { return nil }
@@ -161,14 +164,20 @@ struct ComparisonChartData {
             let percentages = processedData.map { $0.percentage }
             let minPercentage = percentages.min() ?? 0
             let maxPercentage = percentages.max() ?? 0
-            print("📊 Data range: microns \(processedData.first?.order ?? 0)-\(processedData.last?.order ?? 0), percentages \(minPercentage)-\(maxPercentage)")
-            print("📊 First 3 points: \(processedData.prefix(3).map { "(\($0.order)μm: \($0.percentage)%)" }.joined(separator: ", "))")
+            if let firstOrder = processedData.first?.order,
+               let lastOrder = processedData.last?.order {
+                comparisonModelsLogger.debug("Processed data range: \(firstOrder, privacy: .public)-\(lastOrder, privacy: .public) μm (percentage range: \(minPercentage, privacy: .public)-\(maxPercentage, privacy: .public))")
+            } else {
+                comparisonModelsLogger.debug("Processed data percentage range: \(minPercentage, privacy: .public)-\(maxPercentage, privacy: .public)")
+            }
+            let preview = processedData.prefix(3).map { "(\($0.order)μm: \($0.percentage)%)" }.joined(separator: ", ")
+            comparisonModelsLogger.debug("First processed points: \(preview, privacy: .public)")
             
             // Generate intermediate points for smoother curves
             self.distributionData = Self.generateSmoothCurvePoints(from: processedData)
         } else if let granularDist = analysis.results.granularDistribution, !granularDist.isEmpty {
             // Use granular distribution as fallback  
-            print("📊 ComparisonChartData: Using granularDistribution for \(analysis.name) with \(granularDist.count) points")
+            comparisonModelsLogger.debug("Using granularDistribution for \(analysis.name, privacy: .public) with \(granularDist.count, privacy: .public) points")
             var dataPoints: [ChartDataPoint] = []
             for (label, percentage) in granularDist {
                 guard percentage > 0 else { continue }
@@ -205,7 +214,7 @@ struct ComparisonChartData {
             self.distributionData = dataPoints.sorted { $0.order < $1.order }
         } else {
             // Final fallback: use categorical data (least accurate)
-            print("📊 ComparisonChartData: Using categorical sizeDistribution for \(analysis.name) with \(analysis.results.sizeDistribution.count) categories")
+            comparisonModelsLogger.debug("Using categorical sizeDistribution for \(analysis.name, privacy: .public) with \(analysis.results.sizeDistribution.count, privacy: .public) categories")
             let grindCategories = analysis.results.grindType.distributionCategories
             self.distributionData = analysis.results.sizeDistribution.compactMap { key, value in
                 guard let categoryIndex = grindCategories.firstIndex(where: { $0.label == key }) else { return nil }
@@ -256,7 +265,7 @@ struct ComparisonChartData {
             }
         }
         
-        print("📊 Generated \(smoothPoints.count) smooth points from \(originalPoints.count) original points")
+        comparisonModelsLogger.debug("Generated \(smoothPoints.count, privacy: .public) smooth points from \(originalPoints.count, privacy: .public) original points")
         return smoothPoints
     }
 }

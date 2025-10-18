@@ -10,6 +10,7 @@ import Foundation
 import Combine
 import UserNotifications
 import ActivityKit
+import OSLog
 
 final class TimerVM: ObservableObject {
     @Published var recipe: Recipe?
@@ -21,6 +22,7 @@ final class TimerVM: ObservableObject {
     private var timerCancellable: AnyCancellable?
     private var targetDate: Date?
     private var brewActivity: Activity<BrewActivityAttributes>?
+    private let logger = Logger(subsystem: "com.nateking.GrindLab", category: "BrewTimer")
 
     var onBrewComplete: (() -> Void)?
 
@@ -158,7 +160,7 @@ final class TimerVM: ObservableObject {
             await refreshNotificationStatus()
             return granted
         } catch {
-            print("🔕 Notification permission request failed: \(error.localizedDescription)")
+            self.logger.error("Notification permission request failed: \(error.localizedDescription, privacy: .public)")
             return false
         }
     }
@@ -172,21 +174,21 @@ final class TimerVM: ObservableObject {
 
     private func scheduleStepNotification() {
         guard isNotificationAuthorized else { return }
-        guard let recipe = recipe,
-              recipe.steps.indices.contains(stepIndex) else { return }
-        let step = recipe.steps[stepIndex]
+        guard let recipe = self.recipe,
+              recipe.steps.indices.contains(self.stepIndex) else { return }
+        let step = recipe.steps[self.stepIndex]
         let content = UNMutableNotificationContent()
         content.title = step.title + " done"
 
         // Check if this is the final step
-        if stepIndex == recipe.steps.count - 1 {
+        if self.stepIndex == recipe.steps.count - 1 {
             content.body = "Brew complete!"
         } else {
             content.body = step.note ?? "Next step"
         }
 
         content.sound = .default
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: remaining, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: self.remaining, repeats: false)
         let req = UNNotificationRequest(identifier: "step-\(step.id)", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(req)
     }
@@ -209,94 +211,96 @@ final class TimerVM: ObservableObject {
     // MARK: Live Activity
 
     private func startOrUpdateLiveActivity() {
-        print("🔵 startOrUpdateLiveActivity called")
+        self.logger.debug("startOrUpdateLiveActivity invoked")
 
-        guard let recipe = recipe,
-              recipe.steps.indices.contains(stepIndex) else {
-            print("❌ No recipe or invalid step index")
+        guard let recipe = self.recipe,
+              recipe.steps.indices.contains(self.stepIndex) else {
+            self.logger.error("Live Activity update aborted due to missing recipe or invalid step index")
             return
         }
 
-        print("✅ Recipe: \(recipe.name), Step: \(stepIndex)")
-        let step = recipe.steps[stepIndex]
+        self.logger.debug("Preparing Live Activity for recipe: \(recipe.name, privacy: .public), step: \(self.stepIndex)")
+        let step = recipe.steps[self.stepIndex]
 
-        if brewActivity == nil {
+        if self.brewActivity == nil {
             // Start new Live Activity
-            print("🟢 Starting NEW Live Activity...")
+            self.logger.debug("Starting new Live Activity")
 
             // Check if Live Activities are supported
             if #available(iOS 16.2, *) {
-                print("✅ iOS 16.2+ available")
+                // Continue
             } else {
-                print("❌ iOS version too old for Live Activities")
+                self.logger.error("Live Activities are unavailable on this iOS version")
                 return
             }
 
-            // Check activity state
-            print("🔍 ActivityAuthorizationInfo.areActivitiesEnabled: \(ActivityAuthorizationInfo().areActivitiesEnabled)")
+            self.logger.debug("Live Activities enabled: \(ActivityAuthorizationInfo().areActivitiesEnabled)")
 
-            if targetDate == nil {
-                targetDate = Date().addingTimeInterval(remaining)
+            if self.targetDate == nil {
+                self.targetDate = Date().addingTimeInterval(self.remaining)
             }
 
-            guard let targetDate = targetDate else { return }
+            guard let targetDate = self.targetDate else { return }
 
             let attributes = BrewActivityAttributes(recipeName: recipe.name)
             let contentState = BrewActivityAttributes.ContentState(
                 currentStepTitle: step.title,
                 currentStepNote: step.note,
-                stepIndex: stepIndex,
+                stepIndex: self.stepIndex,
                 totalSteps: recipe.steps.count,
                 targetDate: targetDate,
-                remainingTime: remaining,
+                remainingTime: self.remaining,
                 stepDuration: step.duration,
-                isRunning: isRunning
+                isRunning: self.isRunning
             )
 
             do {
-                brewActivity = try Activity.request(
+                self.brewActivity = try Activity.request(
                     attributes: attributes,
                     content: .init(state: contentState, staleDate: nil)
                 )
-                print("✅ Live Activity started successfully! ID: \(brewActivity?.id ?? "unknown")")
+                if let id = self.brewActivity?.id {
+                    self.logger.info("Live Activity started (id: \(id, privacy: .public))")
+                } else {
+                    self.logger.info("Live Activity started")
+                }
             } catch {
-                print("❌ Failed to start Live Activity: \(error)")
-                print("❌ Error details: \(error.localizedDescription)")
+                self.logger.error("Failed to start Live Activity: \(error.localizedDescription, privacy: .public)")
             }
         } else {
             // Update existing Live Activity
-            print("🔄 Updating existing Live Activity...")
-            Task { await updateLiveActivityState() }
+            self.logger.debug("Updating existing Live Activity")
+            Task { await self.updateLiveActivityState() }
         }
     }
 
     @MainActor private func updateLiveActivityState() async {
-        guard let recipe = recipe,
-              recipe.steps.indices.contains(stepIndex),
-              let activity = brewActivity,
-              let targetDate = targetDate else { return }
+        guard let recipe = self.recipe,
+              recipe.steps.indices.contains(self.stepIndex),
+              let activity = self.brewActivity,
+              let targetDate = self.targetDate else { return }
 
-        let step = recipe.steps[stepIndex]
+        let step = recipe.steps[self.stepIndex]
         let contentState = BrewActivityAttributes.ContentState(
             currentStepTitle: step.title,
             currentStepNote: step.note,
-            stepIndex: stepIndex,
+            stepIndex: self.stepIndex,
             totalSteps: recipe.steps.count,
             targetDate: targetDate,
-            remainingTime: remaining,
+            remainingTime: self.remaining,
             stepDuration: step.duration,
-            isRunning: isRunning
+            isRunning: self.isRunning
         )
 
         await activity.update(.init(state: contentState, staleDate: nil))
     }
 
     private func endLiveActivity() {
-        guard let activity = brewActivity else { return }
+        guard let activity = self.brewActivity else { return }
 
         Task {
             await activity.end(nil, dismissalPolicy: .immediate)
-            brewActivity = nil
+            self.brewActivity = nil
         }
     }
 }

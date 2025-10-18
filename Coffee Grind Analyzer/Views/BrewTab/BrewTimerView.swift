@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import OSLog
 #if canImport(UIKit)
 import UIKit
 #endif
+
+private let brewTimerLogger = Logger(subsystem: "com.nateking.GrindLab", category: "BrewTimerView")
 
 struct BrewTimerView: View {
     @EnvironmentObject var brewState: BrewAppState
@@ -49,24 +52,23 @@ struct BrewTimerView: View {
 
             // Set up completion callback
             vm.onBrewComplete = {
-                print("🔔 Brew completed callback triggered")
+                brewTimerLogger.debug("Brew completion handler triggered")
                 // Only prompt for tasting notes if there's a linked analysis that exists in history
                 if let analysis = brewState.currentGrindAnalysis {
-                    print("🔔 Current grind analysis exists: \(analysis.name)")
+                    brewTimerLogger.debug("Current grind analysis exists: \(analysis.name, privacy: .public)")
                     // Check by timestamp since ID might not match if it was a temporary object
                     if let savedAnalysis = historyManager.savedAnalyses.first(where: {
                         $0.results.timestamp == analysis.results.timestamp
                     }) {
-                        print("🔔 Exists in history: true")
+                        brewTimerLogger.debug("Analysis exists in history")
                         DispatchQueue.main.async {
                             // Check if tasting notes already exist
                             hasExistingTastingNotes = savedAnalysis.results.tastingNotes != nil
-                            print("🔔 Has existing tasting notes: \(hasExistingTastingNotes)")
-                            print("🔔 Showing tasting notes prompt")
+                            brewTimerLogger.debug("Has existing tasting notes: \(hasExistingTastingNotes)")
                             showingTastingNotesPrompt = true
                         }
                     } else {
-                        print("🔔 Exists in history: false")
+                        brewTimerLogger.debug("Analysis not found in history")
                         // No grind analysis in history, reset immediately
                         DispatchQueue.main.async {
                             showingTimer = false
@@ -74,7 +76,7 @@ struct BrewTimerView: View {
                         }
                     }
                 } else {
-                    print("🔔 No current grind analysis")
+                    brewTimerLogger.debug("No current grind analysis")
                     // No grind analysis, reset immediately
                     DispatchQueue.main.async {
                         showingTimer = false
