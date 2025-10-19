@@ -7,6 +7,9 @@
 //
 
 import SwiftUI
+import OSLog
+
+private let settingsLogger = Logger(subsystem: "com.nateking.GrindLab", category: "SettingsView")
 
 // CGRect.area extension removed - already defined elsewhere in project
 
@@ -19,23 +22,28 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationView {
-            ZStack {
-                // Match History view background
-                Color.brown.opacity(0.7)
-                    .ignoresSafeArea()
+            GeometryReader { geometry in
+                let isLandscape = geometry.size.width > geometry.size.height
 
-                ScrollView {
-                    settingsContent
-                }
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                ZStack {
+                    // Match History view background
+                    Color.brown.opacity(0.7)
+                        .ignoresSafeArea()
+
+                    ScrollView {
+                        settingsContent(isLandscape: isLandscape)
+                            .frame(minHeight: geometry.size.height)
                     }
-                    .fontWeight(.semibold)
+                }
+                .navigationTitle("Settings")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
             }
         }
@@ -45,60 +53,53 @@ struct SettingsView: View {
         .sheet(isPresented: $showingHelp) {
             HelpView()
         }
-        .onChange(of: settings.analysisMode) { _ in saveSettings() }
-        .onChange(of: settings.contrastThreshold) { _ in saveSettings() }
-        .onChange(of: settings.minParticleSize) { _ in saveSettings() }
-        .onChange(of: settings.maxParticleSize) { _ in saveSettings() }
-        .onChange(of: settings.enableAdvancedFiltering) { _ in saveSettings() }
-        .onChange(of: settings.calibrationFactor) { _ in saveSettings() }
+        .onChange(of: settings.analysisMode) { saveSettings() }
+        .onChange(of: settings.contrastThreshold) { saveSettings() }
+        .onChange(of: settings.minParticleSize) { saveSettings() }
+        .onChange(of: settings.maxParticleSize) { saveSettings() }
+        .onChange(of: settings.enableAdvancedFiltering) { saveSettings() }
+        .onChange(of: settings.calibrationFactor) { saveSettings() }
     }
 
     @ViewBuilder
-    private var settingsContent: some View {
-        GeometryReader { geometry in
-            let isLandscape = geometry.size.width > geometry.size.height
+    private func settingsContent(isLandscape: Bool) -> some View {
+        if isLandscape {
+            // Landscape: 2-column grid
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                analysisSection
 
-            Group {
-                if isLandscape {
-                    // Landscape: 2-column grid
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        analysisSection
+                calibrationSection
 
-                        calibrationSection
-
-                        if settings.analysisMode == .advanced {
-                            advancedSection
-                        }
-
-                        aboutSection
-
-                        #if DEBUG
-                        debugSection
-                        #endif
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                } else {
-                    // Portrait: stacked layout
-                    VStack(spacing: 20) {
-                        analysisSection
-
-                        if settings.analysisMode == .advanced {
-                            advancedSection
-                        }
-
-                        calibrationSection
-                        aboutSection
-
-                        #if DEBUG
-                        debugSection
-                        #endif
-                    }
-                    .padding(.horizontal)
-                    .padding(.top)
+                if settings.analysisMode == .advanced {
+                    advancedSection
                 }
+
+                aboutSection
+
+                #if DEBUG
+                debugSection
+                #endif
             }
-            .frame(width: geometry.size.width)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        } else {
+            // Portrait: stacked layout
+            VStack(spacing: 20) {
+                analysisSection
+
+                if settings.analysisMode == .advanced {
+                    advancedSection
+                }
+
+                calibrationSection
+                aboutSection
+
+                #if DEBUG
+                debugSection
+                #endif
+            }
+            .padding(.horizontal)
+            .padding(.top)
         }
     }
 
@@ -273,7 +274,7 @@ struct SettingsView: View {
         SettingsCard(title: "Debug Tools") {
             VStack(spacing: 12) {
                 Button(action: {
-                    print("🧪 Running validation test...")
+                    settingsLogger.info("Running validation test")
                     let engine = CoffeeAnalysisEngine()
                     engine.runValidationTest()
                 }) {
@@ -286,9 +287,9 @@ struct SettingsView: View {
                 }
                 
                 Button(action: {
-                    print("🎯 Generating grid test image...")
-                    let (image, particles) = AnalysisValidation.createGridTestImage()
-                    print("✅ Created test image with \(particles.count) particles")
+                    settingsLogger.debug("Generating grid test image")
+                    let (_, particles) = AnalysisValidation.createGridTestImage()
+                    settingsLogger.debug("Generated grid test image with \(particles.count, privacy: .public) particles")
                 }) {
                     HStack {
                         Image(systemName: "grid")
@@ -299,9 +300,9 @@ struct SettingsView: View {
                 }
                 
                 Button(action: {
-                    print("🎲 Generating random test image...")
-                    let (image, particles) = AnalysisValidation.createTestImage()
-                    print("✅ Created test image with \(particles.count) particles")
+                    settingsLogger.debug("Generating random test image")
+                    let (_, particles) = AnalysisValidation.createTestImage()
+                    settingsLogger.debug("Generated random test image with \(particles.count, privacy: .public) particles")
                 }) {
                     HStack {
                         Image(systemName: "dice")
@@ -370,7 +371,7 @@ struct SettingsView: View {
                     }
                     
                     Button(action: {
-                        print("🔄 Reset All Settings tapped")
+                        settingsLogger.info("Reset all settings requested")
                         AnalysisSettings.resetToDefaults()
                         settings.analysisMode = .standard
                         settings.contrastThreshold = 0.3
@@ -378,7 +379,7 @@ struct SettingsView: View {
                         settings.maxParticleSize = 3000
                         settings.enableAdvancedFiltering = false
                         settings.calibrationFactor = 150.0
-                        print("✅ Settings reset complete")
+                        settingsLogger.info("Settings reset completed")
                     }) {
                         HStack {
                             Image(systemName: "arrow.clockwise")
@@ -393,9 +394,9 @@ struct SettingsView: View {
     }
     
     private func saveSettings() {
-        print("💾 saveSettings() called")
+        settingsLogger.debug("saveSettings invoked")
         settings.save()
-        print("💾 settings.save() completed")
+        settingsLogger.debug("Analysis settings persisted")
     }
 }
 
@@ -675,8 +676,7 @@ struct CalibrationView: View {
             return
         }
         
-        print("📏 Saving ruler calibration: \(newFactor) μm/pixel")
-        print("📏 1 inch = \(Int(pixelDistance)) pixels")
+        settingsLogger.info("Saved ruler calibration: \(newFactor, privacy: .public) μm/pixel (1 inch = \(Int(pixelDistance), privacy: .public) pixels)")
         
         calibrationFactor = newFactor
         dismiss()
@@ -717,56 +717,69 @@ struct SettingsCard<Content: View>: View {
 
 struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    helpSection(
-                        title: "Getting Started",
-                        items: [
-                            "Choose your grind type (Filter, Espresso, etc.)",
-                            "Place coffee on a white or contrasting surface",
-                            "Ensure good, even lighting",
-                            "Capture or select an image",
-                            "Wait for analysis to complete"
-                        ]
-                    )
-                    
-                    helpSection(
-                        title: "Best Practices",
-                        items: [
-                            "Use natural light when possible",
-                            "Avoid shadows on the coffee",
-                            "Spread coffee evenly in a thin layer",
-                            "Keep camera steady during capture",
-                            "Clean camera lens for best results"
-                        ]
-                    )
-                    
-                    helpSection(
-                        title: "Understanding Results",
-                        items: [
-                            "Uniformity Score: Higher is better (0-100%)",
-                            "Average Size: Mean particle size in microns",
-                            "Fines: Small particles that can cause over-extraction",
-                            "Boulders: Large particles that under-extract",
-                            "Confidence: Reliability of the analysis"
-                        ]
-                    )
-                    
-                    helpSection(
-                        title: "Troubleshooting",
-                        items: [
-                            "Poor results? Check lighting and contrast",
-                            "No particles detected? Use white background",
-                            "Inaccurate sizes? Calibrate the app",
-                            "App crashes? Restart and try again",
-                            "Still having issues? Check app permissions"
-                        ]
-                    )
+            ZStack {
+                // Match Settings view background
+                Color.brown.opacity(0.7)
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        helpSection(
+                            title: "Getting Started",
+                            items: [
+                                "Choose your grind type (Filter, Espresso, etc.)",
+                                "Place coffee on a white or contrasting surface",
+                                "Ensure good, even lighting",
+                                "Capture or select an image",
+                                "Wait for analysis to complete"
+                            ]
+                        )
+                        
+                        helpSection(
+                            title: "Calibration",
+                            items: [
+                                "For accurate results, all analysis photos must be taken from the same distance as the calibration photo.",
+                                "Changing the capture distance requires a new calibration to ensure consistent measurements."
+                            ]
+                        )
+
+                        helpSection(
+                            title: "Best Practices",
+                            items: [
+                                "Use natural light when possible",
+                                "Avoid shadows on the coffee",
+                                "Spread coffee evenly in a thin layer",
+                                "Keep camera steady during capture"
+                            ]
+                        )
+
+                        helpSection(
+                            title: "Understanding Results",
+                            items: [
+                                "Uniformity Score: Higher is better (0-100%)",
+                                "Average Size: Mean particle size in microns",
+                                "Fines: Small particles that can cause over-extraction",
+                                "Boulders: Large particles that under-extract",
+                                "Confidence: Reliability of the analysis"
+                            ]
+                        )
+
+                        helpSection(
+                            title: "Troubleshooting",
+                            items: [
+                                "Poor results? Check lighting and contrast",
+                                "No particles detected? Use white background",
+                                "Inaccurate sizes? Calibrate the app",
+                                "App crashes? Restart and try again",
+                                "Still having issues? Check app permissions"
+                            ]
+                        )
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Help & Tips")
             .navigationBarTitleDisplayMode(.inline)
@@ -775,36 +788,42 @@ struct HelpView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .fontWeight(.semibold)
                 }
             }
         }
     }
-    
+
     private func helpSection(title: String, items: [String]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.primary)
-            
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                     HStack(alignment: .top, spacing: 12) {
                         Text("•")
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color(red: 0.9, green: 0.7, blue: 0.4))
                             .fontWeight(.bold)
-                        
+
                         Text(item)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white)
                             .fixedSize(horizontal: false, vertical: true)
-                        
+
                         Spacer()
                     }
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.brown.opacity(0.5))
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
     }
 }
 

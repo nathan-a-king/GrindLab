@@ -1,0 +1,44 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    runs-on: macos-15
+
+    env:
+      SCHEME: GrindLab
+      CONFIGURATION: Release
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT_BASE64: ${{ secrets.ASC_KEY_CONTENT_BASE64 }}
+      # Optional (match)
+      MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_BRANCH: ${{ secrets.MATCH_BRANCH }}
+      MATCH_GIT_BASIC_AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTH }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Ruby setup
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install gems
+        run: bundle install --path vendor/bundle
+
+      - name: Signing preflight (fail fast)
+        run: bash ci/signing_preflight.sh
+
+      - name: Fastlane CI (preflight → match → build → upload)
+        run: bundle exec fastlane ios ci

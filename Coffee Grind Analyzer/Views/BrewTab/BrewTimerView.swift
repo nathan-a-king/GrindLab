@@ -6,19 +6,26 @@
 //
 
 import SwiftUI
+import OSLog
 #if canImport(UIKit)
 import UIKit
 #endif
 
+private let brewTimerLogger = Logger(subsystem: "com.nateking.GrindLab", category: "BrewTimerView")
+
 struct BrewTimerView: View {
     @EnvironmentObject var brewState: BrewAppState
     @EnvironmentObject var historyManager: CoffeeAnalysisHistoryManager
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
     @StateObject private var vm = TimerVM()
     @Binding var showingTimer: Bool
-    @State private var keepAwake = true
     @State private var showingTastingNotesPrompt = false
     @State private var showingTastingNotesDialog = false
     @State private var hasExistingTastingNotes = false
+    @State private var showingNotificationRationale = false
+    @State private var showingNotificationSettingsPrompt = false
+    @State private var isRequestingNotificationPermission = false
 
     var body: some View {
         ZStack {
@@ -34,34 +41,34 @@ struct BrewTimerView: View {
         .navigationTitle(vm.recipe?.name ?? "Timer")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            #if canImport(UIKit)
-            UIApplication.shared.isIdleTimerDisabled = keepAwake
-            #endif
+            Task {
+                await vm.refreshNotificationStatus()
+            }
             // Set recipe from brew state
             if vm.recipe?.id != brewState.selectedRecipe?.id {
                 vm.setRecipe(brewState.selectedRecipe)
             }
+            updateIdleTimer(for: vm.isRunning)
 
             // Set up completion callback
             vm.onBrewComplete = {
-                print("🔔 Brew completed callback triggered")
+                brewTimerLogger.debug("Brew completion handler triggered")
                 // Only prompt for tasting notes if there's a linked analysis that exists in history
                 if let analysis = brewState.currentGrindAnalysis {
-                    print("🔔 Current grind analysis exists: \(analysis.name)")
+                    brewTimerLogger.debug("Current grind analysis exists: \(analysis.name, privacy: .public)")
                     // Check by timestamp since ID might not match if it was a temporary object
                     if let savedAnalysis = historyManager.savedAnalyses.first(where: {
                         $0.results.timestamp == analysis.results.timestamp
                     }) {
-                        print("🔔 Exists in history: true")
+                        brewTimerLogger.debug("Analysis exists in history")
                         DispatchQueue.main.async {
                             // Check if tasting notes already exist
                             hasExistingTastingNotes = savedAnalysis.results.tastingNotes != nil
-                            print("🔔 Has existing tasting notes: \(hasExistingTastingNotes)")
-                            print("🔔 Showing tasting notes prompt")
+                            brewTimerLogger.debug("Has existing tasting notes: \(hasExistingTastingNotes)")
                             showingTastingNotesPrompt = true
                         }
                     } else {
-                        print("🔔 Exists in history: false")
+                        brewTimerLogger.debug("Analysis not found in history")
                         // No grind analysis in history, reset immediately
                         DispatchQueue.main.async {
                             showingTimer = false
@@ -69,7 +76,7 @@ struct BrewTimerView: View {
                         }
                     }
                 } else {
-                    print("🔔 No current grind analysis")
+                    brewTimerLogger.debug("No current grind analysis")
                     // No grind analysis, reset immediately
                     DispatchQueue.main.async {
                         showingTimer = false
@@ -79,12 +86,20 @@ struct BrewTimerView: View {
             }
         }
         .onDisappear {
-            #if canImport(UIKit)
-            UIApplication.shared.isIdleTimerDisabled = false
-            #endif
+            updateIdleTimer(for: false)
         }
         .onChange(of: brewState.selectedRecipe) { _, newRecipe in
             vm.setRecipe(newRecipe)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task {
+                    await vm.refreshNotificationStatus()
+                }
+            }
+        }
+        .onChange(of: vm.isRunning) { _, isRunning in
+            updateIdleTimer(for: isRunning)
         }
         .alert(hasExistingTastingNotes ? "Update Tasting Notes?" : "Add Tasting Notes?", isPresented: $showingTastingNotesPrompt) {
             Button("Yes") {
@@ -120,6 +135,35 @@ struct BrewTimerView: View {
                     }
                 }
             }
+        }
+        .alert("Enable Brew Alerts", isPresented: $showingNotificationRationale) {
+            Button("Not Now", role: .cancel) { }
+            Button("Continue") {
+                isRequestingNotificationPermission = true
+                Task {
+                    let granted = await vm.requestNotificationPermission()
+                    await MainActor.run {
+                        isRequestingNotificationPermission = false
+                        if !granted && vm.notificationStatus == .denied {
+                            showingNotificationSettingsPrompt = true
+                        }
+                    }
+                }
+            }
+        } message: {
+            Text("Enable brew alerts to get step reminders even when GrindLab is in the background.")
+        }
+        .confirmationDialog("Notifications Disabled", isPresented: $showingNotificationSettingsPrompt, titleVisibility: .visible) {
+            #if canImport(UIKit)
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    openURL(url)
+                }
+            }
+            #endif
+            Button("Not Now", role: .cancel) { }
+        } message: {
+            Text("Visit Settings > Notifications to turn brew alerts back on whenever you’re ready.")
         }
     }
 
@@ -340,19 +384,11 @@ struct BrewTimerView: View {
 
     private var settingsCard: some View {
         VStack(spacing: 12) {
-            Toggle(isOn: $keepAwake) {
-                HStack(spacing: 8) {
-                    Image(systemName: "sun.max.fill")
-                        .foregroundColor(.white.opacity(0.8))
-                    Text("Keep screen awake")
-                        .foregroundColor(.white)
-                }
-            }
-            .tint(.blue)
-            .onChange(of: keepAwake) { _, on in
-                #if canImport(UIKit)
-                UIApplication.shared.isIdleTimerDisabled = on
-                #endif
+            notificationPermissionSection
+            if isRequestingNotificationPermission {
+                Text("Look for the system prompt to allow brew alerts.")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
             }
         }
         .padding(16)
@@ -390,5 +426,98 @@ struct BrewTimerView: View {
         let m = Int(t) / 60
         let s = Int(t) % 60
         return String(format: "%d:%02d", m, s)
+    }
+
+    @ViewBuilder
+    private var notificationPermissionSection: some View {
+        if notificationsEnabled {
+            HStack(spacing: 12) {
+                Image(systemName: "bell.badge.fill")
+                    .foregroundColor(.white.opacity(0.8))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Brew alerts enabled")
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                    Text("We'll remind you when each step finishes.")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                Spacer()
+            }
+        } else if vm.notificationStatus == .denied {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: "bell.slash.fill")
+                        .foregroundColor(.white.opacity(0.8))
+                    Text("Brew alerts are off")
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                }
+                Text("Turn notifications back on from Settings to get brew reminders.")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+                Button {
+                    showingNotificationSettingsPrompt = true
+                } label: {
+                    Label("Open Settings", systemImage: "gearshape")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.15))
+                        )
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            Button {
+                showingNotificationRationale = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "bell.badge")
+                        .foregroundColor(.white.opacity(0.8))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Enable brew alerts")
+                            .foregroundColor(.white)
+                            .fontWeight(.semibold)
+                        Text("Get notified when each brew step finishes.")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white.opacity(0.5))
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.white.opacity(0.12))
+                )
+            }
+            .disabled(isRequestingNotificationPermission)
+            .opacity(isRequestingNotificationPermission ? 0.6 : 1)
+        }
+    }
+
+    private var notificationsEnabled: Bool {
+        switch vm.notificationStatus {
+        case .authorized, .provisional:
+            return true
+        default:
+            if #available(iOS 14.0, *) {
+                return vm.notificationStatus == .ephemeral
+            }
+            return false
+        }
+    }
+
+    private func updateIdleTimer(for isRunning: Bool) {
+        #if canImport(UIKit)
+        UIApplication.shared.isIdleTimerDisabled = isRunning
+        #endif
     }
 }

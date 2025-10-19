@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+import OSLog
+
+private let recommendationLogger = Logger(subsystem: "com.nateking.GrindLab", category: "RecommendationView")
 
 struct RecommendationView: View {
     let analysisResults: CoffeeAnalysisResults
@@ -19,9 +22,8 @@ struct RecommendationView: View {
         self.analysisResults = analysisResults
         self.flavorProfile = flavorProfile
         
-        print("🔵 RecommendationView INIT called")
-        print("   - Analysis median size: \(analysisResults.medianSize)")
-        print("   - Flavor profile: \(flavorProfile.overallTaste.rawValue)")
+        recommendationLogger.debug("Initialized with median size: \(analysisResults.medianSize, privacy: .public)")
+        recommendationLogger.debug("Flavor profile: \(flavorProfile.overallTaste.rawValue, privacy: .public)")
         
         // Set appearance for navigation bar
         let appearance = UINavigationBarAppearance()
@@ -32,24 +34,20 @@ struct RecommendationView: View {
     }
     
     var body: some View {
-        let _ = print("🟢 RecommendationView BODY called")
-        let _ = print("   - isLoading: \(isLoading)")
-        let _ = print("   - recommendations count: \(recommendations.count)")
-        
         NavigationView {
             ZStack {
                 // Much darker background color that's always visible
                 Color.brown.opacity(0.7)
                     .ignoresSafeArea()
                     .onAppear {
-                        print("🟤 Brown background appeared")
+                        recommendationLogger.debug("Brown background appeared")
                     }
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         headerSection
                             .onAppear {
-                                print("📝 Header section appeared")
+                                recommendationLogger.debug("Header section appeared")
                             }
                         
                         // Smart Suggestions visualization
@@ -64,7 +62,7 @@ struct RecommendationView: View {
                                 .foregroundColor(.white)
                                 .padding()
                                 .onAppear {
-                                    print("⏳ Loading spinner appeared")
+                                    recommendationLogger.debug("Loading spinner appeared")
                                 }
                         } else if !recommendations.isEmpty {
                             ForEach(Array(recommendations.enumerated()), id: \.offset) { index, recommendation in
@@ -74,7 +72,7 @@ struct RecommendationView: View {
                                 )
                             }
                             .onAppear {
-                                print("✅ Recommendations list appeared with \(recommendations.count) items")
+                                recommendationLogger.debug("Recommendations list displayed with \(recommendations.count, privacy: .public) items")
                             }
                         } else {
                             Text("No recommendations available")
@@ -82,7 +80,7 @@ struct RecommendationView: View {
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding()
                                 .onAppear {
-                                    print("❌ No recommendations text appeared")
+                                    recommendationLogger.debug("No recommendations message displayed")
                                 }
                         }
                         
@@ -103,21 +101,18 @@ struct RecommendationView: View {
             }
         }
         .onAppear {
-            print("🎯 RecommendationView onAppear triggered")
-            print("   - Current recommendations count: \(recommendations.count)")
-            // Generate recommendations immediately
+            recommendationLogger.debug("RecommendationView appeared with \(recommendations.count, privacy: .public) existing recommendations")
             if recommendations.isEmpty {
-                print("   - Generating recommendations...")
+                recommendationLogger.debug("Generating recommendations on appear")
                 generateRecommendations()
             } else {
-                print("   - Recommendations already exist, skipping generation")
+                recommendationLogger.debug("Reusing existing recommendations on appear")
             }
         }
         .task {
-            print("📌 RecommendationView task triggered")
-            // Also generate as a task to ensure it runs
+            recommendationLogger.debug("RecommendationView task triggered")
             if recommendations.isEmpty {
-                print("   - Task: Generating recommendations...")
+                recommendationLogger.debug("Generating recommendations from task")
                 generateRecommendations()
             }
         }
@@ -224,8 +219,7 @@ struct RecommendationView: View {
     // MARK: - Actions
     
     private func generateRecommendations() {
-        print("🔨 generateRecommendations() called")
-        print("   - Starting with isLoading: \(isLoading)")
+        recommendationLogger.debug("generateRecommendations started (isLoading = \(isLoading, privacy: .public))")
         
         // Generate recommendations synchronously but quickly
         let generatedRecs = CoffeeCompass.generateRecommendations(
@@ -233,13 +227,12 @@ struct RecommendationView: View {
             flavorProfile: flavorProfile
         )
         
-        print("   - Generated \(generatedRecs.count) recommendations")
+        recommendationLogger.debug("Generated \(generatedRecs.count, privacy: .public) recommendations")
         
         recommendations = generatedRecs
         isLoading = false
         
-        print("   - Finished with isLoading: \(isLoading)")
-        print("   - Final recommendations count: \(recommendations.count)")
+        recommendationLogger.debug("generateRecommendations completed (isLoading = \(isLoading, privacy: .public), total = \(recommendations.count, privacy: .public))")
     }
     
 }

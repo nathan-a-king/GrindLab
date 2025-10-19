@@ -8,6 +8,9 @@
 import Foundation
 import UIKit
 import Combine
+import OSLog
+
+private let historyManagerLogger = Logger(subsystem: "com.nateking.GrindLab", category: "HistoryManager")
 
 // MARK: - Saved Analysis Model
 
@@ -57,7 +60,7 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             try compressedData.write(to: fileURL)
             return filename
         } catch {
-            print("❌ Failed to save image: \(error)")
+            historyManagerLogger.error("Failed to save analysis image: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }
@@ -164,7 +167,7 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
         // Persist changes
         persistAnalyses()
         
-        print("✅ Updated tasting notes for analysis: \(updatedAnalysis.name)")
+        historyManagerLogger.info("Updated tasting notes for analysis: \(updatedAnalysis.name, privacy: .public)")
     }
     
     // MARK: - Delete Analysis
@@ -246,22 +249,19 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
         do {
             // Convert to data that can be stored
             let analysesToStore = savedAnalyses.map { analysis in
-                print("📝 Saving analysis: \(analysis.name)")
-                print("📝 Has tasting notes: \(analysis.results.tastingNotes != nil)")
+                historyManagerLogger.debug("Persisting analysis: \(analysis.name, privacy: .public) (has tasting notes: \(analysis.results.tastingNotes != nil, privacy: .public))")
                 
                 // Calculate min/max particle sizes for chart domain calculation
                 let minSize = analysis.results.particles.isEmpty ? nil : analysis.results.particles.map { $0.size }.min()
                 let maxSize = analysis.results.particles.isEmpty ? nil : analysis.results.particles.map { $0.size }.max()
                 
                 // DEBUG: Log what we're about to save
-                print("🟢 DEBUG: Saving analysis '\(analysis.name)'")
-                print("🟢 DEBUG: Has particles: \(!analysis.results.particles.isEmpty) (\(analysis.results.particles.count))")
-                print("🟢 DEBUG: Has chartDataPoints: \(analysis.results.chartDataPoints != nil) (\(analysis.results.chartDataPoints?.count ?? 0))")
+                historyManagerLogger.debug("Saving analysis details: particles present \(!analysis.results.particles.isEmpty, privacy: .public) (count: \(analysis.results.particles.count, privacy: .public)), chartDataPoints: \(analysis.results.chartDataPoints?.count ?? 0, privacy: .public)")
                 if let chartPoints = analysis.results.chartDataPoints {
                     let nonZero = chartPoints.filter { $0.percentage > 0 }
-                    print("🟢 DEBUG: Non-zero chart points: \(nonZero.count)")
+                    historyManagerLogger.debug("Non-zero chart points: \(nonZero.count, privacy: .public)")
                     for point in nonZero.prefix(3) {
-                        print("🟢 DEBUG: Saving point - \(point.label): \(String(format: "%.1f", point.percentage))%")
+                        historyManagerLogger.debug("Persisting chart point \(point.label, privacy: .public) -> \(point.percentage, privacy: .public)%")
                     }
                 }
                 
@@ -293,34 +293,33 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
             
             let data = try JSONEncoder().encode(analysesToStore)
             userDefaults.set(data, forKey: savedAnalysesKey)
-            
-            print("✅ Saved \(savedAnalyses.count) analyses to storage")
-            
+
+            historyManagerLogger.info("Persisted \(self.savedAnalyses.count, privacy: .public) analyses to storage")
+
         } catch {
-            print("❌ Error saving analyses: \(error)")
+            historyManagerLogger.error("Failed to persist analyses: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
     private func loadSavedAnalyses() {
         guard let data = userDefaults.data(forKey: savedAnalysesKey) else {
-            print("🔭 No saved analyses found")
+            historyManagerLogger.info("No saved analyses found in storage")
             return
         }
-        
+
         do {
             let storableAnalyses = try JSONDecoder().decode([StorableAnalysis].self, from: data)
-            
+
             // Convert back to full analysis objects
-            print("🟡 DEBUG: Loading \(storableAnalyses.count) analyses from storage")
-            
+            historyManagerLogger.debug("Loading \(storableAnalyses.count, privacy: .public) analyses from storage")
+
             savedAnalyses = storableAnalyses.compactMap { storable in
-                print("🟡 DEBUG: Loading analysis '\(storable.name)'")
-                print("🟡 DEBUG: Has chartDataPoints: \(storable.chartDataPoints != nil) (\(storable.chartDataPoints?.count ?? 0))")
+                historyManagerLogger.debug("Reconstructing analysis: \(storable.name, privacy: .public) (chart points: \(storable.chartDataPoints?.count ?? 0, privacy: .public))")
                 if let chartPoints = storable.chartDataPoints {
                     let nonZero = chartPoints.filter { $0.percentage > 0 }
-                    print("🟡 DEBUG: Loaded non-zero chart points: \(nonZero.count)")
+                    historyManagerLogger.debug("Non-zero chart points loaded: \(nonZero.count, privacy: .public)")
                     for point in nonZero.prefix(3) {
-                        print("🟡 DEBUG: Loaded point - \(point.label): \(String(format: "%.1f", point.percentage))%")
+                        historyManagerLogger.debug("Loaded chart point \(point.label, privacy: .public) -> \(point.percentage, privacy: .public)%")
                     }
                 }
                 // Check if distribution needs to be regenerated for new category system
@@ -340,7 +339,7 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                     distribution = storable.sizeDistribution
                 }
                 
-                print("📊 Loading analysis '\(storable.name)': distribution has \(distribution.count) categories")
+                historyManagerLogger.debug("Loaded granular distribution for \(storable.name, privacy: .public) with \(distribution.count, privacy: .public) categories")
                 
                 // Load images from disk if available
                 let originalImage = storable.originalImagePath.flatMap { loadImage(from: $0) }
@@ -379,10 +378,10 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
                 )
             }
             
-            print("✅ Loaded \(savedAnalyses.count) analyses from storage")
-            
+            historyManagerLogger.info("Loaded \(self.savedAnalyses.count, privacy: .public) analyses from storage")
+
         } catch {
-            print("❌ Error loading analyses: \(error)")
+            historyManagerLogger.error("Failed to load analyses: \(error.localizedDescription, privacy: .public)")
             // If loading fails, try to load legacy format or clear corrupted data
             userDefaults.removeObject(forKey: savedAnalysesKey)
         }

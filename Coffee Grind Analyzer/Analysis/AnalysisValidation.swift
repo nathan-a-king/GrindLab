@@ -7,6 +7,23 @@
 
 import UIKit
 import Foundation
+import OSLog
+
+private enum ValidationLog {
+    static let logger = Logger(subsystem: "com.nateking.GrindLab", category: "AnalysisValidation")
+
+    static func debug(_ message: String) {
+        logger.debug("\(message, privacy: .public)")
+    }
+
+    static func info(_ message: String) {
+        logger.info("\(message, privacy: .public)")
+    }
+
+    static func report(_ message: String) {
+        logger.notice("\(message, privacy: .public)")
+    }
+}
 
 class AnalysisValidation {
     
@@ -79,8 +96,8 @@ class AnalysisValidation {
             }
         }
         
-        print("🧪 Created test image: \(width)x\(height) with \(particleCount) particles")
-        print("🎯 Particle sizes: \(particleSizeRange) pixel radius")
+        ValidationLog.debug("🧪 Created test image: \(width)x\(height) with \(particleCount) particles")
+        ValidationLog.debug("🎯 Particle sizes: \(particleSizeRange) pixel radius")
         
         return (image, expectedParticles)
     }
@@ -157,7 +174,7 @@ class AnalysisValidation {
             }
         }
         
-        print("🧪 Created grid test image: \(rows)x\(cols) grid, \(particleRadius)px radius particles")
+        ValidationLog.debug("🧪 Created grid test image: \(rows)x\(cols) grid, \(particleRadius)px radius particles")
         
         return (image, expectedParticles)
     }
@@ -394,34 +411,34 @@ struct ValidationReport {
     let unmatchedExpected: [TestParticle]
     
     func printReport() {
-        print("\n" + String(repeating: "=", count: 60))
-        print("📊 VALIDATION REPORT")
-        print(String(repeating: "=", count: 60))
-        print("Expected Particles: \(totalExpected)")
-        print("Detected Particles: \(totalDetected)")
-        print("✅ Correctly Detected: \(correctlyDetected)")
-        print("❌ False Positives: \(falsePositives)")
-        print("⚠️  Missed Particles: \(falseNegatives)")
-        print(String(repeating: "-", count: 60))
-        print("📈 Metrics:")
-        print("   Precision: \(String(format: "%.1f%%", precision * 100))")
-        print("   Recall: \(String(format: "%.1f%%", recall * 100))")
-        print("   F1 Score: \(String(format: "%.3f", f1Score))")
-        print("   Avg Position Error: \(String(format: "%.2f", avgPositionError)) pixels")
-        print("   Avg Size Error: \(String(format: "%.2f", avgSizeError)) pixels")
-        print(String(repeating: "=", count: 60))
+        ValidationLog.report("\n" + String(repeating: "=", count: 60))
+        ValidationLog.report("📊 VALIDATION REPORT")
+        ValidationLog.report(String(repeating: "=", count: 60))
+        ValidationLog.report("Expected Particles: \(totalExpected)")
+        ValidationLog.report("Detected Particles: \(totalDetected)")
+        ValidationLog.report("✅ Correctly Detected: \(correctlyDetected)")
+        ValidationLog.report("❌ False Positives: \(falsePositives)")
+        ValidationLog.report("⚠️  Missed Particles: \(falseNegatives)")
+        ValidationLog.report(String(repeating: "-", count: 60))
+        ValidationLog.report("📈 Metrics:")
+        ValidationLog.report("   Precision: \(String(format: "%.1f%%", precision * 100))")
+        ValidationLog.report("   Recall: \(String(format: "%.1f%%", recall * 100))")
+        ValidationLog.report("   F1 Score: \(String(format: "%.3f", f1Score))")
+        ValidationLog.report("   Avg Position Error: \(String(format: "%.2f", avgPositionError)) pixels")
+        ValidationLog.report("   Avg Size Error: \(String(format: "%.2f", avgSizeError)) pixels")
+        ValidationLog.report(String(repeating: "=", count: 60))
         
         if !unmatchedExpected.isEmpty {
-            print("\n⚠️  Missed Particles (positions):")
+            ValidationLog.report("\n⚠️  Missed Particles (positions):")
             for particle in unmatchedExpected {
-                print("   - Position: (\(Int(particle.center.x)), \(Int(particle.center.y))), Radius: \(Int(particle.radius))")
+                ValidationLog.report("   - Position: (\(Int(particle.center.x)), \(Int(particle.center.y))), Radius: \(Int(particle.radius))")
             }
         }
         
         if !unmatchedDetected.isEmpty {
-            print("\n❌ False Positives (positions):")
+            ValidationLog.report("\n❌ False Positives (positions):")
             for particle in unmatchedDetected {
-                print("   - Position: (\(Int(particle.position.x)), \(Int(particle.position.y))), Area: \(Int(particle.area))")
+                ValidationLog.report("   - Position: (\(Int(particle.position.x)), \(Int(particle.position.y))), Area: \(Int(particle.area))")
             }
         }
     }

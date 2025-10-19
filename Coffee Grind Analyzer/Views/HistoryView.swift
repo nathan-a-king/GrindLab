@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+import OSLog
+
+private let historyLogger = Logger(subsystem: "com.nateking.GrindLab", category: "HistoryView")
 
 struct HistoryView: View {
     @EnvironmentObject private var historyManager: CoffeeAnalysisHistoryManager
@@ -173,7 +176,7 @@ struct HistoryView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if comparisonManager.canStartComparison {
                         Button("Compare (\(comparisonManager.selectedAnalyses.count))") {
-                            if let comparison = comparisonManager.createComparison(from: historyManager) {
+                            if comparisonManager.createComparison(from: historyManager) != nil {
                                 showingComparison = true
                             }
                         }
@@ -230,10 +233,10 @@ struct HistoryView: View {
                 .environmentObject(brewState)
                 .environment(\.tabSelection, tabSelection)
                 .onAppear {
-                    print("✅ History sheet appeared successfully for: \(analysis.name)")
+                    historyLogger.debug("History sheet appeared for: \(analysis.name, privacy: .public)")
                 }
                 .onDisappear {
-                    print("👋 History sheet dismissed")
+                    historyLogger.debug("History sheet dismissed")
                 }
         }
         .sheet(isPresented: $showingEditTastingNotes) {
@@ -322,9 +325,9 @@ struct HistoryView: View {
                                 comparisonManager.toggleSelection(analysis.id)
                             } else {
                                 // Normal mode - show details
-                                print("🎯 User tapped analysis: \(analysis.name)")
+                                historyLogger.debug("User tapped analysis: \(analysis.name, privacy: .public)")
                                 analysisToPresent = analysis
-                                print("🎯 Set analysisToPresent to: \(analysis.name)")
+                                historyLogger.debug("analysisToPresent updated for: \(analysis.name, privacy: .public)")
                             }
                         },
                         onDelete: {
@@ -378,7 +381,7 @@ struct HistoryView: View {
                 
                 if comparisonManager.canStartComparison {
                     Button("Compare") {
-                        if let comparison = comparisonManager.createComparison(from: historyManager) {
+                        if comparisonManager.createComparison(from: historyManager) != nil {
                             showingComparison = true
                         }
                     }
