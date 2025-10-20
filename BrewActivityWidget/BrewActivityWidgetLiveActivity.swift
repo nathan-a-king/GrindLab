@@ -28,6 +28,16 @@ struct BrewActivityAttributes: ActivityAttributes {
     var recipeName: String
 }
 
+// MARK: - Helper Functions
+
+private func shouldDisplayCountdown(for state: BrewActivityAttributes.ContentState) -> Bool {
+    state.isRunning && state.targetDate.timeIntervalSinceNow > 0
+}
+
+private func fallbackTime(for state: BrewActivityAttributes.ContentState) -> TimeInterval {
+    state.isRunning ? 0 : max(0, state.remainingTime)
+}
+
 // MARK: - Live Activity Widget
 
 struct BrewActivityWidgetLiveActivity: Widget {
@@ -66,13 +76,13 @@ struct BrewActivityWidgetLiveActivity: Widget {
                             .font(.headline)
                             .fontWeight(.semibold)
 
-                        if context.state.isRunning {
+                        if shouldDisplayCountdown(for: context.state) {
                             Text(context.state.targetDate, style: .timer)
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundColor(.brown)
                         } else {
-                            Text(timeString(context.state.remainingTime))
+                            Text(timeString(fallbackTime(for: context.state)))
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundColor(.brown)
@@ -115,14 +125,14 @@ struct BrewActivityWidgetLiveActivity: Widget {
                         .font(.caption2)
                         .foregroundColor(.secondary)
 
-                    if context.state.isRunning {
+                    if shouldDisplayCountdown(for: context.state) {
                         Text(context.state.targetDate, style: .timer)
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .monospacedDigit()
                             .foregroundColor(.brown)
                     } else {
-                        Text(timeString(context.state.remainingTime))
+                        Text(timeString(fallbackTime(for: context.state)))
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .monospacedDigit()
@@ -174,13 +184,13 @@ struct LockScreenLiveActivityView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Spacer()
-                    if context.state.isRunning {
+                    if shouldDisplayCountdown(for: context.state) {
                         Text(context.state.targetDate, style: .timer)
                             .font(.title2)
                             .fontWeight(.bold)
                             .monospacedDigit()
                     } else {
-                        Text(timeString(context.state.remainingTime))
+                        Text(timeString(fallbackTime(for: context.state)))
                             .font(.title2)
                             .fontWeight(.bold)
                             .monospacedDigit()

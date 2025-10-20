@@ -110,15 +110,16 @@ final class TimerVM: ObservableObject {
     }
 
     private func finish() async {
+        guard let recipe = recipe else { return }
+
         isRunning = false
         invalidateTimer()
         remaining = 0
+        let finalContentState = makeFinalContentState(for: recipe)
         targetDate = nil  // Clear targetDate to prevent counting up
         clearScheduledNotifications()
-        endLiveActivity()
-        if let recipe = recipe {
-            notify(title: "Brew complete", body: "\(recipe.name) is ready ☕️")
-        }
+        endLiveActivity(finalState: finalContentState)
+        notify(title: "Brew complete", body: "\(recipe.name) is ready ☕️")
         // Notify view that brewing is complete
         onBrewComplete?()
     }
@@ -295,12 +296,36 @@ final class TimerVM: ObservableObject {
         await activity.update(.init(state: contentState, staleDate: nil))
     }
 
-    private func endLiveActivity() {
+    private func endLiveActivity(finalState: BrewActivityAttributes.ContentState? = nil) {
         guard let activity = self.brewActivity else { return }
 
         Task {
-            await activity.end(nil, dismissalPolicy: .immediate)
-            self.brewActivity = nil
+            if let finalState = finalState {
+                await activity.end(.init(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
+            } else {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+            await MainActor.run {
+                self.brewActivity = nil
+            }
         }
+    }
+
+    private func makeFinalContentState(for recipe: Recipe) -> BrewActivityAttributes.ContentState? {
+        guard brewActivity != nil, !recipe.steps.isEmpty else { return nil }
+
+        let lastValidIndex = min(max(stepIndex - 1, 0), recipe.steps.count - 1)
+        let finalStep = recipe.steps[lastValidIndex]
+
+        return BrewActivityAttributes.ContentState(
+            currentStepTitle: finalStep.title,
+            currentStepNote: finalStep.note,
+            stepIndex: lastValidIndex,
+            totalSteps: recipe.steps.count,
+            targetDate: Date(),
+            remainingTime: 0,
+            stepDuration: finalStep.duration,
+            isRunning: false
+        )
     }
 }
