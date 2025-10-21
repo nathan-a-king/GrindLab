@@ -66,6 +66,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		43C0F0AC2F00000000000002 /* Exceptions for "Coffee Grind Analyzer" folder in "GrindLab" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				PrivacyInfo.xcprivacy,
+			);
+			target = 433824322E56BBDC00EC93E5 /* GrindLab */;
+		};
 		43CD56B22E9202C80083F13B /* Exceptions for "BrewActivityWidget" folder in "BrewActivityWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -78,6 +85,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		433824352E56BBDC00EC93E5 /* Coffee Grind Analyzer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				43C0F0AC2F00000000000002 /* Exceptions for "Coffee Grind Analyzer" folder in "GrindLab" target */,
+			);
 			path = "Coffee Grind Analyzer";
 			sourceTree = "<group>";
 		};
