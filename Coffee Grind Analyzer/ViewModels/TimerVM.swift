@@ -63,8 +63,7 @@ final class TimerVM: ObservableObject {
         guard let recipe = recipe,
               recipe.steps.indices.contains(stepIndex) else { return }
         isRunning = true
-        let buffer: TimeInterval = 0.05
-        targetDate = Date().addingTimeInterval(remaining + buffer)
+        targetDate = Date().addingTimeInterval(remaining)
         scheduleStepNotification()
         startOrUpdateLiveActivity()
         // If activity already exists, push an immediate update before starting timer
@@ -95,8 +94,7 @@ final class TimerVM: ObservableObject {
             invalidateTimer()
 
             // Reset targetDate before updating Live Activity
-            let buffer: TimeInterval = 0.05
-            targetDate = Date().addingTimeInterval(remaining + buffer)
+            targetDate = Date().addingTimeInterval(remaining)
             scheduleStepNotification()
             await updateLiveActivityState()
             // Restart the timer with the new targetDate
@@ -250,6 +248,7 @@ final class TimerVM: ObservableObject {
                 stepIndex: self.stepIndex,
                 totalSteps: recipe.steps.count,
                 targetDate: targetDate,
+                stepStartDate: targetDate.addingTimeInterval(-step.duration),
                 remainingTime: self.remaining,
                 stepDuration: step.duration,
                 isRunning: self.isRunning
@@ -288,6 +287,7 @@ final class TimerVM: ObservableObject {
             stepIndex: self.stepIndex,
             totalSteps: recipe.steps.count,
             targetDate: targetDate,
+            stepStartDate: targetDate.addingTimeInterval(-step.duration),
             remainingTime: self.remaining,
             stepDuration: step.duration,
             isRunning: self.isRunning
@@ -323,6 +323,7 @@ final class TimerVM: ObservableObject {
             stepIndex: lastValidIndex,
             totalSteps: recipe.steps.count,
             targetDate: Date(),
+            stepStartDate: Date().addingTimeInterval(-finalStep.duration),
             remainingTime: 0,
             stepDuration: finalStep.duration,
             isRunning: false
