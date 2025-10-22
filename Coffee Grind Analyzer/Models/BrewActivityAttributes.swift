@@ -18,6 +18,7 @@ struct BrewActivityAttributes: ActivityAttributes {
         var stepIndex: Int
         var totalSteps: Int
         var targetDate: Date
+        var stepStartDate: Date
         var remainingTime: TimeInterval  // Keep for paused state display
         var stepDuration: TimeInterval
         var isRunning: Bool
