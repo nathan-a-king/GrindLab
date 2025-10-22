@@ -1,0 +1,10 @@
+{
+  "NSPrivacyAccessedAPITypes": [
+    {
+      "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryCamera",
+      "NSPrivacyAccessedAPITypeReasons": [
+        "CAMPurposeCameraCapture"
+      ]
+    }
+  ]
+}
