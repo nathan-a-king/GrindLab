@@ -63,8 +63,7 @@ final class TimerVM: ObservableObject {
         guard let recipe = recipe,
               recipe.steps.indices.contains(stepIndex) else { return }
         isRunning = true
-        let buffer: TimeInterval = 0.05
-        targetDate = Date().addingTimeInterval(remaining + buffer)
+        targetDate = Date().addingTimeInterval(remaining)
         scheduleStepNotification()
         startOrUpdateLiveActivity()
         // If activity already exists, push an immediate update before starting timer
@@ -95,8 +94,7 @@ final class TimerVM: ObservableObject {
             invalidateTimer()
 
             // Reset targetDate before updating Live Activity
-            let buffer: TimeInterval = 0.05
-            targetDate = Date().addingTimeInterval(remaining + buffer)
+            targetDate = Date().addingTimeInterval(remaining)
             scheduleStepNotification()
             await updateLiveActivityState()
             // Restart the timer with the new targetDate
@@ -110,15 +108,16 @@ final class TimerVM: ObservableObject {
     }
 
     private func finish() async {
+        guard let recipe = recipe else { return }
+
         isRunning = false
         invalidateTimer()
         remaining = 0
+        let finalContentState = makeFinalContentState(for: recipe)
         targetDate = nil  // Clear targetDate to prevent counting up
         clearScheduledNotifications()
-        endLiveActivity()
-        if let recipe = recipe {
-            notify(title: "Brew complete", body: "\(recipe.name) is ready ☕️")
-        }
+        endLiveActivity(finalState: finalContentState)
+        notify(title: "Brew complete", body: "\(recipe.name) is ready ☕️")
         // Notify view that brewing is complete
         onBrewComplete?()
     }
@@ -249,6 +248,7 @@ final class TimerVM: ObservableObject {
                 stepIndex: self.stepIndex,
                 totalSteps: recipe.steps.count,
                 targetDate: targetDate,
+                stepStartDate: targetDate.addingTimeInterval(-step.duration),
                 remainingTime: self.remaining,
                 stepDuration: step.duration,
                 isRunning: self.isRunning
@@ -287,6 +287,7 @@ final class TimerVM: ObservableObject {
             stepIndex: self.stepIndex,
             totalSteps: recipe.steps.count,
             targetDate: targetDate,
+            stepStartDate: targetDate.addingTimeInterval(-step.duration),
             remainingTime: self.remaining,
             stepDuration: step.duration,
             isRunning: self.isRunning
@@ -295,12 +296,44 @@ final class TimerVM: ObservableObject {
         await activity.update(.init(state: contentState, staleDate: nil))
     }
 
-    private func endLiveActivity() {
+    private func endLiveActivity(finalState: BrewActivityAttributes.ContentState? = nil) {
         guard let activity = self.brewActivity else { return }
 
         Task {
-            await activity.end(nil, dismissalPolicy: .immediate)
-            self.brewActivity = nil
+            if let finalState = finalState {
+                await activity.end(.init(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
+            } else {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+            await MainActor.run {
+                self.brewActivity = nil
+            }
         }
+    }
+
+    private func makeFinalContentState(for recipe: Recipe) -> BrewActivityAttributes.ContentState? {
+        guard brewActivity != nil, !recipe.steps.isEmpty else { return nil }
+
+        let finalIndex: Int
+        if recipe.steps.indices.contains(stepIndex) {
+            finalIndex = stepIndex
+        } else if stepIndex < 0 {
+            finalIndex = 0
+        } else {
+            finalIndex = recipe.steps.count - 1
+        }
+        let finalStep = recipe.steps[finalIndex]
+
+        return BrewActivityAttributes.ContentState(
+            currentStepTitle: finalStep.title,
+            currentStepNote: finalStep.note,
+            stepIndex: finalIndex,
+            totalSteps: recipe.steps.count,
+            targetDate: Date(),
+            stepStartDate: Date().addingTimeInterval(-finalStep.duration),
+            remainingTime: 0,
+            stepDuration: finalStep.duration,
+            isRunning: false
+        )
     }
 }
