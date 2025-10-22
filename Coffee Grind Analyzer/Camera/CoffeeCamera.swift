@@ -384,9 +384,15 @@ class CoffeeCamera: NSObject, ObservableObject {
             }
             
             // Photo quality prioritization (replaces deprecated auto-stabilization)
-            // This provides better image stabilization and quality
+            // Clamp to the device's maximum supported prioritization to avoid runtime exceptions
             if #available(iOS 13.0, *) {
-                settings.photoQualityPrioritization = .quality
+                let desiredQuality: AVCapturePhotoOutput.QualityPrioritization = .quality
+                if #available(iOS 16.0, *) {
+                    let maxSupported = self.photoOutput.maxPhotoQualityPrioritization
+                    settings.photoQualityPrioritization = desiredQuality.rawValue > maxSupported.rawValue ? maxSupported : desiredQuality
+                } else {
+                    settings.photoQualityPrioritization = desiredQuality
+                }
             }
             
             self.logger.debug("Capturing photo. Video connection active: \(videoConnection.isActive)")

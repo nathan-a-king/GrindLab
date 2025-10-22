@@ -242,15 +242,12 @@ final class TimerVM: ObservableObject {
             guard let targetDate = self.targetDate else { return }
 
             let attributes = BrewActivityAttributes(recipeName: recipe.name)
-            let contentState = BrewActivityAttributes.ContentState(
-                currentStepTitle: step.title,
-                currentStepNote: step.note,
+            let contentState = makeContentState(
+                for: step,
                 stepIndex: self.stepIndex,
                 totalSteps: recipe.steps.count,
                 targetDate: targetDate,
-                stepStartDate: targetDate.addingTimeInterval(-step.duration),
                 remainingTime: self.remaining,
-                stepDuration: step.duration,
                 isRunning: self.isRunning
             )
 
@@ -281,15 +278,12 @@ final class TimerVM: ObservableObject {
               let targetDate = self.targetDate else { return }
 
         let step = recipe.steps[self.stepIndex]
-        let contentState = BrewActivityAttributes.ContentState(
-            currentStepTitle: step.title,
-            currentStepNote: step.note,
+        let contentState = makeContentState(
+            for: step,
             stepIndex: self.stepIndex,
             totalSteps: recipe.steps.count,
             targetDate: targetDate,
-            stepStartDate: targetDate.addingTimeInterval(-step.duration),
             remainingTime: self.remaining,
-            stepDuration: step.duration,
             isRunning: self.isRunning
         )
 
@@ -324,16 +318,43 @@ final class TimerVM: ObservableObject {
         }
         let finalStep = recipe.steps[finalIndex]
 
+        let finalTargetDate = Date()
         return BrewActivityAttributes.ContentState(
             currentStepTitle: finalStep.title,
             currentStepNote: finalStep.note,
             stepIndex: finalIndex,
             totalSteps: recipe.steps.count,
-            targetDate: Date(),
-            stepStartDate: Date().addingTimeInterval(-finalStep.duration),
+            targetDate: finalTargetDate,
+            stepStartDate: stepStartDate(for: finalTargetDate, stepDuration: finalStep.duration),
             remainingTime: 0,
             stepDuration: finalStep.duration,
             isRunning: false
         )
+    }
+
+    private func makeContentState(
+        for step: BrewStep,
+        stepIndex: Int,
+        totalSteps: Int,
+        targetDate: Date,
+        remainingTime: TimeInterval,
+        isRunning: Bool
+    ) -> BrewActivityAttributes.ContentState {
+        BrewActivityAttributes.ContentState(
+            currentStepTitle: step.title,
+            currentStepNote: step.note,
+            stepIndex: stepIndex,
+            totalSteps: totalSteps,
+            targetDate: targetDate,
+            stepStartDate: stepStartDate(for: targetDate, stepDuration: step.duration),
+            remainingTime: remainingTime,
+            stepDuration: step.duration,
+            isRunning: isRunning
+        )
+    }
+
+    private func stepStartDate(for targetDate: Date, stepDuration: TimeInterval) -> Date {
+        guard stepDuration > 0 else { return targetDate }
+        return targetDate.addingTimeInterval(-stepDuration)
     }
 }
