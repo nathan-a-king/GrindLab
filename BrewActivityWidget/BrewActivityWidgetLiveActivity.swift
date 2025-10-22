@@ -232,7 +232,7 @@ private struct BrewProgressView: View {
     var body: some View {
         if shouldAnimateProgress {
             ProgressView(
-                timerInterval: DateInterval(start: state.stepStartDate, end: state.targetDate),
+                timerInterval: state.stepStartDate...state.targetDate,
                 countsDown: false
             )
             .tint(.brown)
