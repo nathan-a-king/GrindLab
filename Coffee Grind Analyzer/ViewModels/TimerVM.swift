@@ -314,13 +314,20 @@ final class TimerVM: ObservableObject {
     private func makeFinalContentState(for recipe: Recipe) -> BrewActivityAttributes.ContentState? {
         guard brewActivity != nil, !recipe.steps.isEmpty else { return nil }
 
-        let lastValidIndex = min(max(stepIndex - 1, 0), recipe.steps.count - 1)
-        let finalStep = recipe.steps[lastValidIndex]
+        let finalIndex: Int
+        if recipe.steps.indices.contains(stepIndex) {
+            finalIndex = stepIndex
+        } else if stepIndex < 0 {
+            finalIndex = 0
+        } else {
+            finalIndex = recipe.steps.count - 1
+        }
+        let finalStep = recipe.steps[finalIndex]
 
         return BrewActivityAttributes.ContentState(
             currentStepTitle: finalStep.title,
             currentStepNote: finalStep.note,
-            stepIndex: lastValidIndex,
+            stepIndex: finalIndex,
             totalSteps: recipe.steps.count,
             targetDate: Date(),
             stepStartDate: Date().addingTimeInterval(-finalStep.duration),
