@@ -1,0 +1,37 @@
+{
+  "name": "single_particle",
+  "grindType": "filter",
+  "calibrationMicronsPerPixel": 5.0,
+  "pixelScale": 5.0,
+  "particles": [
+    {
+      "sizeMicrons": 600.0,
+      "areaPixels": 11309.7336,
+      "circularity": 0.98,
+      "position": { "x": 120.0, "y": 90.0 },
+      "brightness": 0.3,
+      "pixelCoordinates": [
+        [120, 90],
+        [121, 90],
+        [120, 91],
+        [121, 91]
+      ]
+    }
+  ],
+  "distributionExpectations": {
+    "d10": { "value": 600.0, "tolerance": 0.5 },
+    "d50": { "value": 600.0, "tolerance": 0.5 },
+    "d90": { "value": 600.0, "tolerance": 0.5 },
+    "span": { "value": 0.0, "tolerance": 0.05 },
+    "uniformity": { "value": 1.0, "tolerance": 0.01 }
+  },
+  "analysisExpectations": {
+    "uniformityScore": { "value": 100.0, "tolerance": 0.5 },
+    "averageSize": { "value": 600.0, "tolerance": 0.5 },
+    "medianSize": { "value": 600.0, "tolerance": 0.5 },
+    "standardDeviation": { "value": 0.0, "tolerance": 0.1 },
+    "finesPercentage": { "value": 0.0, "tolerance": 0.1 },
+    "bouldersPercentage": { "value": 0.0, "tolerance": 0.1 },
+    "confidence": { "value": 60.08, "tolerance": 0.05 }
+  }
+}

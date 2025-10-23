@@ -1,0 +1,46 @@
+{
+  "name": "multi_modal_distribution",
+  "grindType": "filter",
+  "calibrationMicronsPerPixel": 5.0,
+  "pixelScale": 5.0,
+  "particles": [
+    { "sizeMicrons": 150.0, "areaPixels": 706.8583, "circularity": 0.85, "position": { "x": 20.0, "y": 20.0 }, "brightness": 0.35, "pixelCoordinates": [[20, 20], [21, 20]] },
+    { "sizeMicrons": 180.0, "areaPixels": 1017.8760, "circularity": 0.86, "position": { "x": 24.0, "y": 22.0 }, "brightness": 0.34, "pixelCoordinates": [[24, 22], [25, 22]] },
+    { "sizeMicrons": 220.0, "areaPixels": 1520.5308, "circularity": 0.87, "position": { "x": 28.0, "y": 24.0 }, "brightness": 0.33, "pixelCoordinates": [[28, 24], [29, 24]] },
+    { "sizeMicrons": 400.0, "areaPixels": 5026.5482, "circularity": 0.88, "position": { "x": 32.0, "y": 26.0 }, "brightness": 0.32, "pixelCoordinates": [[32, 26], [33, 26]] },
+    { "sizeMicrons": 450.0, "areaPixels": 6361.7251, "circularity": 0.88, "position": { "x": 36.0, "y": 28.0 }, "brightness": 0.31, "pixelCoordinates": [[36, 28], [37, 28]] },
+    { "sizeMicrons": 500.0, "areaPixels": 7853.9816, "circularity": 0.89, "position": { "x": 40.0, "y": 30.0 }, "brightness": 0.30, "pixelCoordinates": [[40, 30], [41, 30]] },
+    { "sizeMicrons": 800.0, "areaPixels": 20106.1930, "circularity": 0.93, "position": { "x": 44.0, "y": 32.0 }, "brightness": 0.28, "pixelCoordinates": [[44, 32], [45, 32]] },
+    { "sizeMicrons": 820.0, "areaPixels": 21124.0690, "circularity": 0.93, "position": { "x": 48.0, "y": 34.0 }, "brightness": 0.27, "pixelCoordinates": [[48, 34], [49, 34]] },
+    { "sizeMicrons": 1200.0, "areaPixels": 45238.9342, "circularity": 0.94, "position": { "x": 52.0, "y": 36.0 }, "brightness": 0.26, "pixelCoordinates": [[52, 36], [53, 36]] },
+    { "sizeMicrons": 1300.0, "areaPixels": 53092.9158, "circularity": 0.94, "position": { "x": 56.0, "y": 38.0 }, "brightness": 0.25, "pixelCoordinates": [[56, 38], [57, 38]] },
+    { "sizeMicrons": 1400.0, "areaPixels": 61575.2160, "circularity": 0.95, "position": { "x": 60.0, "y": 40.0 }, "brightness": 0.24, "pixelCoordinates": [[60, 40], [61, 40]] },
+    { "sizeMicrons": 1600.0, "areaPixels": 80424.7719, "circularity": 0.95, "position": { "x": 64.0, "y": 42.0 }, "brightness": 0.23, "pixelCoordinates": [[64, 42], [65, 42]] }
+  ],
+  "distributionExpectations": {
+    "d10": { "value": 184.0, "tolerance": 1.0 },
+    "d50": { "value": 650.0, "tolerance": 1.0 },
+    "d90": { "value": 1390.0, "tolerance": 1.0 },
+    "span": { "value": 1.8554, "tolerance": 0.01 },
+    "uniformity": { "value": 0.3462, "tolerance": 0.01 }
+  },
+  "analysisExpectations": {
+    "uniformityScore": { "value": 80.1519, "tolerance": 0.1 },
+    "averageSize": { "value": 1345.5770, "tolerance": 0.5 },
+    "medianSize": { "value": 800.0, "tolerance": 0.5 },
+    "standardDeviation": { "value": 267.0711, "tolerance": 0.5 },
+    "finesPercentage": { "value": 25.0, "tolerance": 0.1 },
+    "bouldersPercentage": { "value": 25.0, "tolerance": 0.1 },
+    "confidence": { "value": 40.0056, "tolerance": 0.1 }
+  },
+  "histogramExpectations": {
+    "type": "Number vs Diameter",
+    "logScale": false,
+    "binCount": 5,
+    "normalizedCounts": {
+      "values": [0.2727, 0.2727, 0.1818, 0.0, 0.2727],
+      "tolerance": 0.02
+    },
+    "average": { "value": 23.0392, "tolerance": 0.01 }
+  }
+}

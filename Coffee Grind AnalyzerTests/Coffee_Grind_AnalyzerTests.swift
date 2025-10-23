@@ -1,17 +1,9 @@
-//
-//  Coffee_Grind_AnalyzerTests.swift
-//  Coffee Grind AnalyzerTests
-//
-//  Created by Nathan King on 8/20/25.
-//
-
-import Testing
+import XCTest
 @testable import Coffee_Grind_Analyzer
 
-struct Coffee_Grind_AnalyzerTests {
-
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+final class Coffee_Grind_AnalyzerTests: XCTestCase {
+    func testParticleAccuracySuiteIsDiscoverable() {
+        let suite = ParticleAlgorithmsAccuracyTests.defaultTestSuite
+        XCTAssertFalse(suite.tests.isEmpty, "Particle accuracy tests should be discoverable by XCTest")
     }
-
 }

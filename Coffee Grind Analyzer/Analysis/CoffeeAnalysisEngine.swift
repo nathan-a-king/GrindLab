@@ -1142,6 +1142,41 @@ class CoffeeAnalysisEngine {
     
     // MARK: - Advanced Statistics
     
+    struct SyntheticAnalysisSnapshot {
+        let distribution: AdvancedStatistics.ParticleDistribution
+        let uniformityScore: Double
+        let averageSize: Double
+        let medianSize: Double
+        let standardDeviation: Double
+        let finesPercentage: Double
+        let bouldersPercentage: Double
+        let confidence: Double
+    }
+
+    func evaluateSyntheticParticles(
+        _ particles: [CoffeeParticle],
+        grindType: CoffeeGrindType
+    ) -> SyntheticAnalysisSnapshot {
+        let statistics = calculateAdvancedStatistics(
+            particles: particles,
+            grindType: grindType
+        )
+
+        let distribution = AdvancedStatistics()
+            .analyzeDistribution(sizes: particles.map { $0.size })
+
+        return SyntheticAnalysisSnapshot(
+            distribution: distribution,
+            uniformityScore: statistics.uniformityScore,
+            averageSize: statistics.averageSize,
+            medianSize: statistics.medianSize,
+            standardDeviation: statistics.standardDeviation,
+            finesPercentage: statistics.finesPercentage,
+            bouldersPercentage: statistics.bouldersPercentage,
+            confidence: statistics.confidence
+        )
+    }
+
     private func calculateAdvancedStatistics(
         particles: [CoffeeParticle],
         grindType: CoffeeGrindType

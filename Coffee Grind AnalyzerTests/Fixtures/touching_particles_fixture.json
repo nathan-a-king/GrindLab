@@ -1,0 +1,163 @@
+{
+  "name": "touching_particles",
+  "grindType": "filter",
+  "calibrationMicronsPerPixel": 5.0,
+  "pixelScale": 5.0,
+  "particles": [
+    {
+      "sizeMicrons": 320.0,
+      "areaPixels": 3216.9909,
+      "circularity": 0.92,
+      "position": { "x": 40.0, "y": 40.0 },
+      "brightness": 0.28,
+      "pixelCoordinates": [[40, 40], [41, 40]]
+    },
+    {
+      "sizeMicrons": 340.0,
+      "areaPixels": 3631.6811,
+      "circularity": 0.90,
+      "position": { "x": 44.0, "y": 42.0 },
+      "brightness": 0.27,
+      "pixelCoordinates": [[44, 42], [45, 42]]
+    },
+    {
+      "sizeMicrons": 360.0,
+      "areaPixels": 4071.5041,
+      "circularity": 0.89,
+      "position": { "x": 48.0, "y": 43.0 },
+      "brightness": 0.26,
+      "pixelCoordinates": [[48, 43], [49, 43]]
+    },
+    {
+      "sizeMicrons": 780.0,
+      "areaPixels": 19113.4497,
+      "circularity": 0.94,
+      "position": { "x": 60.0, "y": 48.0 },
+      "brightness": 0.24,
+      "pixelCoordinates": [[60, 48], [61, 48]]
+    },
+    {
+      "sizeMicrons": 800.0,
+      "areaPixels": 20106.1930,
+      "circularity": 0.95,
+      "position": { "x": 64.0, "y": 50.0 },
+      "brightness": 0.23,
+      "pixelCoordinates": [[64, 50], [65, 50]]
+    },
+    {
+      "sizeMicrons": 820.0,
+      "areaPixels": 21124.0690,
+      "circularity": 0.95,
+      "position": { "x": 68.0, "y": 52.0 },
+      "brightness": 0.22,
+      "pixelCoordinates": [[68, 52], [69, 52]]
+    }
+  ],
+  "distributionExpectations": {
+    "d10": { "value": 330.0, "tolerance": 1.0 },
+    "d50": { "value": 570.0, "tolerance": 1.0 },
+    "d90": { "value": 810.0, "tolerance": 1.0 },
+    "span": { "value": 0.8421, "tolerance": 0.01 },
+    "uniformity": { "value": 0.5955, "tolerance": 0.01 }
+  },
+  "analysisExpectations": {
+    "uniformityScore": { "value": 84.4528, "tolerance": 0.1 },
+    "averageSize": { "value": 768.1279, "tolerance": 0.5 },
+    "medianSize": { "value": 780.0, "tolerance": 0.5 },
+    "standardDeviation": { "value": 119.4222, "tolerance": 0.5 },
+    "finesPercentage": { "value": 0.0, "tolerance": 0.1 },
+    "bouldersPercentage": { "value": 0.0, "tolerance": 0.1 },
+    "confidence": { "value": 55.8158, "tolerance": 0.1 }
+  },
+  "separationFixture": {
+    "backgroundMedian": 240.0,
+    "imageWidth": 6,
+    "imageHeight": 3,
+    "imageData": [
+      255, 255, 255, 255, 255, 255,
+      28, 30, 180, 205, 35, 34,
+      31, 33, 190, 215, 36, 38
+    ],
+    "clusterPixels": [
+      { "x": 0, "y": 1, "brightness": 28 },
+      { "x": 1, "y": 1, "brightness": 30 },
+      { "x": 0, "y": 2, "brightness": 31 },
+      { "x": 1, "y": 2, "brightness": 33 },
+      { "x": 2, "y": 1, "brightness": 180 },
+      { "x": 3, "y": 1, "brightness": 205 },
+      { "x": 2, "y": 2, "brightness": 190 },
+      { "x": 3, "y": 2, "brightness": 215 },
+      { "x": 4, "y": 1, "brightness": 35 },
+      { "x": 5, "y": 1, "brightness": 34 },
+      { "x": 4, "y": 2, "brightness": 36 },
+      { "x": 5, "y": 2, "brightness": 38 }
+    ],
+    "startPixelIndex": 0,
+    "expectedRetainedPixels": [
+      [0, 1],
+      [1, 1],
+      [0, 2],
+      [1, 2]
+    ],
+    "regressionSnapshots": [
+      {
+        "name": "high_noise",
+        "backgroundMedian": 230.0,
+        "imageData": [
+          210, 235, 200, 255, 205, 225,
+          28, 32, 188, 212, 36, 35,
+          30, 34, 196, 222, 38, 37
+        ],
+        "clusterPixels": [
+          { "x": 0, "y": 1, "brightness": 28 },
+          { "x": 1, "y": 1, "brightness": 32 },
+          { "x": 0, "y": 2, "brightness": 30 },
+          { "x": 1, "y": 2, "brightness": 34 },
+          { "x": 2, "y": 1, "brightness": 188 },
+          { "x": 3, "y": 1, "brightness": 212 },
+          { "x": 2, "y": 2, "brightness": 196 },
+          { "x": 3, "y": 2, "brightness": 222 },
+          { "x": 4, "y": 1, "brightness": 36 },
+          { "x": 5, "y": 1, "brightness": 35 },
+          { "x": 4, "y": 2, "brightness": 38 },
+          { "x": 5, "y": 2, "brightness": 37 }
+        ],
+        "expectedRetainedPixels": [
+          [0, 1],
+          [1, 1],
+          [0, 2],
+          [1, 2]
+        ]
+      },
+      {
+        "name": "variable_brightness",
+        "backgroundMedian": 180.0,
+        "imageData": [
+          200, 200, 200, 200, 200, 200,
+          26, 29, 150, 170, 34, 33,
+          29, 31, 158, 176, 35, 37
+        ],
+        "clusterPixels": [
+          { "x": 0, "y": 1, "brightness": 26 },
+          { "x": 1, "y": 1, "brightness": 29 },
+          { "x": 0, "y": 2, "brightness": 29 },
+          { "x": 1, "y": 2, "brightness": 31 },
+          { "x": 2, "y": 1, "brightness": 150 },
+          { "x": 3, "y": 1, "brightness": 170 },
+          { "x": 2, "y": 2, "brightness": 158 },
+          { "x": 3, "y": 2, "brightness": 176 },
+          { "x": 4, "y": 1, "brightness": 34 },
+          { "x": 5, "y": 1, "brightness": 33 },
+          { "x": 4, "y": 2, "brightness": 35 },
+          { "x": 5, "y": 2, "brightness": 37 }
+        ],
+        "expectedRetainedPixels": [
+          [0, 1],
+          [1, 1],
+          [0, 2],
+          [1, 2]
+        ]
+      }
+    ]
+  }
+}
