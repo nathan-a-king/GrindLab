@@ -285,7 +285,7 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.white)
                 }
-                
+
                 Button(action: {
                     settingsLogger.debug("Generating grid test image")
                     let (_, particles) = AnalysisValidation.createGridTestImage()
@@ -298,7 +298,7 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.white)
                 }
-                
+
                 Button(action: {
                     settingsLogger.debug("Generating random test image")
                     let (_, particles) = AnalysisValidation.createTestImage()

@@ -190,20 +190,28 @@ class AnalysisValidation {
         testSettings.calibrationFactor = calibrationFactor
         testSettings.minParticleSize = 10 // smaller for test images
         testSettings.maxParticleSize = 1000 // larger for test images
-        
+
         let engine = CoffeeAnalysisEngine(settings: testSettings)
-        
+
         // Since analyzeGrind is async, we need to make it synchronous for testing
         let semaphore = DispatchSemaphore(value: 0)
         var analysisResult: Result<CoffeeAnalysisResults, CoffeeAnalysisError>?
-        
-        engine.analyzeGrind(image: image, grindType: grindType) { result in
-            analysisResult = result
-            semaphore.signal()
+
+        // Use a timeout to prevent hanging
+        DispatchQueue.global(qos: .userInitiated).async {
+            engine.analyzeGrind(image: image, grindType: grindType) { result in
+                analysisResult = result
+                semaphore.signal()
+            }
         }
-        
-        semaphore.wait()
-        
+
+        // Wait with timeout (10 seconds)
+        let timeout = semaphore.wait(timeout: .now() + 10.0)
+
+        if timeout == .timedOut {
+            throw CoffeeAnalysisError.analysisError("Analysis timed out after 10 seconds")
+        }
+
         switch analysisResult! {
         case .success(let results):
             return results

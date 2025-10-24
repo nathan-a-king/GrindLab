@@ -615,12 +615,14 @@ class CoffeeAnalysisEngine {
         // Settings already store size limits in microns
         let minSizeMicrons = Double(settings.minParticleSize)
         let maxSizeMicrons = Double(settings.maxParticleSize)
-        
+
         AnalysisLog.debug("📏 Filtering particles: \(String(format: "%.1f", minSizeMicrons)) - \(String(format: "%.1f", maxSizeMicrons)) μm")
-        
+
         let allParticles = clusters.compactMap { cluster -> CoffeeParticle? in
-            // Use actual measured span instead of equivalent circle diameter
-            let diameterPixels = cluster.longAxis * 2.0
+            // Use equivalent circle diameter based on surface area for more accurate sizing
+            // This prevents overestimation from using the longest axis of irregular particles
+            let equivalentRadius = sqrt(cluster.surface / Double.pi)
+            let diameterPixels = equivalentRadius * 2.0
             let sizeMicrons = diameterPixels * calibrationFactor
             
             // Filter by size in microns
@@ -946,13 +948,12 @@ class CoffeeAnalysisEngine {
         // Calculate centroid in image pixel coordinates
         let centroidX = Double(component.map { $0.x }.reduce(0, +)) / Double(component.count)
         let centroidY = Double(component.map { $0.y }.reduce(0, +)) / Double(component.count)
-        
-        // Calculate actual span instead of equivalent circle diameter
-        let maxDistance = component.map { pixel in
-            sqrt(pow(Double(pixel.x) - centroidX, 2) + pow(Double(pixel.y) - centroidY, 2))
-        }.max() ?? 0
-        let actualDiameter = maxDistance * 2.0
-        
+
+        // Use equivalent circle diameter based on area for more accurate sizing
+        // This prevents overestimation from using the longest axis of irregular particles
+        let equivalentRadius = sqrt(area / Double.pi)
+        let actualDiameter = equivalentRadius * 2.0
+
         // Micron conversion with calibration factor
         let pixelsToMicrons: Double
         if settings.calibrationFactor > 0.1 { // If we have ruler calibration
@@ -1041,11 +1042,7 @@ class CoffeeAnalysisEngine {
     private func transformCGImageToUIImageCoordinates(cgPoint: CGPoint, cgImageSize: CGSize, uiImage: UIImage) -> CGPoint {
         let cgWidth = cgImageSize.width
         let cgHeight = cgImageSize.height
-        let uiWidth = uiImage.size.width  
-        let uiHeight = uiImage.size.height
-        
-        AnalysisLog.debug("🔄 Transforming point (\(Int(cgPoint.x)), \(Int(cgPoint.y))) from CGImage \(Int(cgWidth))x\(Int(cgHeight)) to UIImage \(Int(uiWidth))x\(Int(uiHeight)), orientation: \(uiImage.imageOrientation.rawValue)")
-        
+
         // Handle different orientations properly
         let transformedPoint: CGPoint
         switch uiImage.imageOrientation {
@@ -1077,8 +1074,7 @@ class CoffeeAnalysisEngine {
             // Fallback to no transformation
             transformedPoint = cgPoint
         }
-        
-        AnalysisLog.debug("🎯 Transformed to (\(Int(transformedPoint.x)), \(Int(transformedPoint.y)))")
+
         return transformedPoint
     }
     
@@ -1269,21 +1265,21 @@ class CoffeeAnalysisEngine {
         grindType: CoffeeGrindType
     ) -> UIImage? {
         guard let cgImage = originalImage.cgImage else { return nil }
-        
+
+        // Only log summary, not every pixel transformation
         AnalysisLog.debug("🎨 Creating overlay for \(particles.count) particles")
-        AnalysisLog.debug("🔍 CGImage size: \(cgImage.width)x\(cgImage.height), UIImage size: \(Int(originalImage.size.width))x\(Int(originalImage.size.height))")
-        
+
         let renderer = UIGraphicsImageRenderer(size: originalImage.size)
-        
+
         return renderer.image { context in
             originalImage.draw(at: .zero)
-            
+
             context.cgContext.setLineWidth(3.0)
-            
+
             for particle in particles {
                 // Create a path for all pixels in this particle
                 let path = CGMutablePath()
-                
+
                 // Transform each pixel and add to path
                 for pixel in particle.pixels {
                     let pixelPoint = CGPoint(x: pixel.x, y: pixel.y)
