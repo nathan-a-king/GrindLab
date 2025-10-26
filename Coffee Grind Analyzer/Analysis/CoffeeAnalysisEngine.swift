@@ -34,7 +34,8 @@ private enum AnalysisLog {
 
 class CoffeeAnalysisEngine {
     private let settings: AnalysisSettings
-    
+    private let advancedStatistics = AdvancedStatistics()
+
     // Python algorithm parameters
     private let referenceThreshold: Double = 0.4
     private let maxCost: Double = 0.35
@@ -1155,6 +1156,19 @@ class CoffeeAnalysisEngine {
         let sizes = sortedParticles.map { $0.size }
         let volumes = sortedParticles.map { calculateVolume(from: $0) }
 
+        // Guard against empty arrays
+        guard !sizes.isEmpty else {
+            return (
+                uniformityScore: 0,
+                averageSize: 0,
+                medianSize: 0,
+                standardDeviation: 0,
+                finesPercentage: 0,
+                bouldersPercentage: 0,
+                confidence: 0
+            )
+        }
+
         // Weight by volume for more accurate statistics
         let totalVolume = volumes.reduce(0, +)
         var weightedSum = 0.0
@@ -1162,9 +1176,9 @@ class CoffeeAnalysisEngine {
             weightedSum += sizes[i] * (volumes[i] / totalVolume)
         }
         let weightedAverage = weightedSum
-        
-        // Calculate median
-        let medianSize = sizes[sizes.count / 2]
+
+        // Calculate median using proper percentile method
+        let medianSize = advancedStatistics.percentile(sizes, p: 0.5)
         
         // Calculate weighted standard deviation
         var weightedVariance = 0.0
