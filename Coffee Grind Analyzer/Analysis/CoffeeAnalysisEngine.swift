@@ -1150,9 +1150,11 @@ class CoffeeAnalysisEngine {
         bouldersPercentage: Double,
         confidence: Double
     ) {
-        let sizes = particles.map { $0.size }.sorted()
-        let volumes = particles.map { calculateVolume(from: $0) }
-        
+        // Sort particles by size to ensure sizes and volumes arrays stay aligned
+        let sortedParticles = particles.sorted { $0.size < $1.size }
+        let sizes = sortedParticles.map { $0.size }
+        let volumes = sortedParticles.map { calculateVolume(from: $0) }
+
         // Weight by volume for more accurate statistics
         let totalVolume = volumes.reduce(0, +)
         var weightedSum = 0.0
