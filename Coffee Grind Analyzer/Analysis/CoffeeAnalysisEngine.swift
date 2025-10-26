@@ -421,8 +421,10 @@ class CoffeeAnalysisEngine {
             // Calculate cluster properties
             if let cluster = createCluster(from: filteredPixels, width: width, height: height) {
                 // Apply quality filters
+                // longAxis is the max distance from centroid (radius), so convert to diameter for comparison
+                let clusterDiameter = cluster.longAxis * 2.0
                 if cluster.roundness >= minRoundness &&
-                   cluster.longAxis <= maxClusterAxis {
+                   clusterDiameter <= maxClusterAxis {
                     clusters.append(cluster)
                 }
             }
@@ -461,11 +463,15 @@ class CoffeeAnalysisEngine {
             
             for (nx, ny) in neighbors {
                 let neighborKey = "\(nx),\(ny)"
-                
+
                 // Skip if already visited
                 if visited.contains(neighborKey) { continue }
                 visited.insert(neighborKey)
-                
+
+                // Check distance from start point to prevent unbounded cluster growth
+                let distance = sqrt(pow(Double(nx - startX), 2) + pow(Double(ny - startY), 2))
+                if distance > maxDistance { continue }
+
                 // Check if this pixel exists in our threshold mask
                 if let neighborIndex = pixelGrid[neighborKey] {
                     // Skip if already counted
@@ -533,10 +539,17 @@ class CoffeeAnalysisEngine {
         for pixel in clusterPixels {
             let index = pixel.y * width + pixel.x
             let brightness = imageData[index]
-            
+
             // Calculate cost function
-            let cost = pow(Double(brightness) - Double(startBrightness), 2) / pow(backgroundMedian, 2)
-            
+            // Guard against division by zero on very dark images
+            let cost: Double
+            if backgroundMedian > 0 {
+                cost = pow(Double(brightness) - Double(startBrightness), 2) / pow(backgroundMedian, 2)
+            } else {
+                // Fallback: accept all pixels when background median is zero
+                cost = 0
+            }
+
             // Accept pixel if cost is below threshold
             if cost < maxCost {
                 filteredPixels.append((x: pixel.x, y: pixel.y, brightness: brightness))
