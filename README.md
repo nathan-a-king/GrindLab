@@ -12,26 +12,25 @@ GrindLab is an iOS/macOS application built with SwiftUI that analyzes coffee gri
 Grind size has the largest impact on extraction quality, but measuring it consistently has always been a challenge. Most of us eyeball it or rely on grinder settings that can vary from day to day. GrindLab aims to change that by turning your iPhone's camera into a precise measurement tool, giving you the data you need to dial in the perfect cup.
 
 <div style="text-align: center;">
-  <img src="grindlab.png" alt="GrindLab UI" style="display: inline-block; width: 300px; height: auto;">
-  <img src="analysis-phone.png" alt="GrindLab UI" style="display: inline-block; width: 300px; height: auto;">
+  <img src="grindlab-web.webp" alt="GrindLab UI" style="display: inline-block;">
 </div>
 <br>
 
 ## Key Features
 
-### 📸 **Advanced Image Analysis**
+### **Advanced Image Analysis**
 - Real-time camera capture with Vision framework processing
 - Particle detection and size distribution analysis
 - Coin calibration for accurate physical measurements (μm scale)
 - Support for multiple grind types: Filter, Espresso, French Press, Cold Brew
 
-### 📊 **Detailed Metrics**
+### **Detailed Metrics**
 - Particle size distribution histograms
 - Uniformity coefficient and statistical analysis
 - Median, mean, and standard deviation calculations
 - Fines and boulders percentage tracking
 
-### ☕ **Brewing Recommendations**
+### **Brewing Recommendations**
 - Grind type-specific target ranges:
   - **Filter/Pour-Over**: 400-800μm
   - **Espresso**: 170-300μm
@@ -40,19 +39,19 @@ Grind size has the largest impact on extraction quality, but measuring it consis
 - Personalized adjustment suggestions based on analysis results
 - Extraction quality indicators
 
-### 📝 **Tasting Notes & History**
+### **Tasting Notes & History**
 - Log flavor profiles alongside grind analysis
 - Track brewing parameters and results over time
 - Compare analyses to dial in consistency
 - Export and share your data
 
-### ⏱️ **Brew Timer & Recipes**
+### **Brew Timer & Recipes**
 - Built-in timer with haptic feedback for precise brewing control
 - Pre-loaded recipes for various brewing methods
 - Step-by-step brewing guides with timing instructions
 - Custom recipe creation and management
 
-### 📲 **Live Activities**
+### **Live Activities**
 - Real-time timer updates on your Lock Screen and Dynamic Island
 - Track brewing progress without opening the app
 - At-a-glance time remaining and current brew step
@@ -61,9 +60,8 @@ Grind size has the largest impact on extraction quality, but measuring it consis
 ## Getting Started
 
 ### Requirements
-- iOS 15.0+ / macOS 12.0+
-- Xcode 14.0+
-- Swift 5.5+
+- iOS 26.0+
+- Xcode 26.0+
 
 ### Installation
 
