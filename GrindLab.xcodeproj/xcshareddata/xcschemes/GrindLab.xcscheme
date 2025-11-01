@@ -29,6 +29,28 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "4338243F2E56BBDD00EC93E5"
+               BuildableName = "GrindLabTests.xctest"
+               BlueprintName = "GrindLabTests"
+               ReferencedContainer = "container:GrindLab.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "433824492E56BBDD00EC93E5"
+               BuildableName = "GrindLabUITests.xctest"
+               BlueprintName = "GrindLabUITests"
+               ReferencedContainer = "container:GrindLab.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Release"
