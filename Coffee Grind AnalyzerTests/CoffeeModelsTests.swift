@@ -46,6 +46,55 @@ struct CoffeeModelsTests {
         #expect(grindType.displayName == "Cold Brew")
     }
 
+    @Test func testGrindType_AllTypes_HaveConsistentTargetRanges() {
+        // Verify all grind types have properly defined target ranges
+        for grindType in CoffeeGrindType.allCases {
+            // Target range string should match the numeric range
+            let numericRange = grindType.targetSizeMicrons
+            let stringRange = grindType.targetSizeRange
+
+            // Verify numeric range is valid
+            #expect(numericRange.lowerBound > 0)
+            #expect(numericRange.upperBound > numericRange.lowerBound)
+
+            // Verify string representation contains both bounds
+            #expect(stringRange.contains("\(Int(numericRange.lowerBound))"))
+            #expect(stringRange.contains("\(Int(numericRange.upperBound))"))
+            #expect(stringRange.contains("μm"))
+        }
+    }
+
+    @Test func testGrindType_TargetRanges_AreOrdered() {
+        // Verify grind types progress from fine to coarse
+        let espresso = CoffeeGrindType.espresso.targetSizeMicrons
+        let filter = CoffeeGrindType.filter.targetSizeMicrons
+        let frenchPress = CoffeeGrindType.frenchPress.targetSizeMicrons
+        let coldBrew = CoffeeGrindType.coldBrew.targetSizeMicrons
+
+        // Espresso should be finest
+        #expect(espresso.lowerBound < filter.lowerBound)
+        #expect(espresso.upperBound < filter.upperBound)
+
+        // Filter should be medium
+        #expect(filter.lowerBound < frenchPress.lowerBound)
+
+        // French press and cold brew should be coarsest
+        #expect(frenchPress.lowerBound > filter.upperBound)
+        #expect(coldBrew.lowerBound > filter.upperBound)
+    }
+
+    @Test func testGrindType_TargetRanges_MapToCorrectSizes() {
+        // Verify the target ranges map to scientifically accurate size ranges
+        #expect(CoffeeGrindType.espresso.targetSizeMicrons.contains(250.0))
+        #expect(CoffeeGrindType.filter.targetSizeMicrons.contains(600.0))
+        #expect(CoffeeGrindType.frenchPress.targetSizeMicrons.contains(850.0))
+        #expect(CoffeeGrindType.coldBrew.targetSizeMicrons.contains(1000.0))
+
+        // Verify ranges don't overlap inappropriately
+        #expect(!CoffeeGrindType.espresso.targetSizeMicrons.contains(600.0))
+        #expect(!CoffeeGrindType.frenchPress.targetSizeMicrons.contains(250.0))
+    }
+
     @Test func testGrindType_IdealFinesPercentage_ReasonableRanges() {
         // Espresso should tolerate more fines
         #expect(CoffeeGrindType.espresso.idealFinesPercentage.upperBound > 30)

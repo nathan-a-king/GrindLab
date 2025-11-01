@@ -78,6 +78,114 @@ struct HistoryManagerTests {
         }
     }
 
+    @Test func testHistoryManager_SaveMultipleImagesWithDifferentAnalyses_KeepsSeparate() async {
+        let manager = CoffeeAnalysisHistoryManager()
+        manager.clearAllAnalyses()
+
+        // Create two different test images
+        let image1 = createTestImage()
+        let image2 = createTestImage()
+
+        var results1 = createTestResults(uniformityScore: 80.0)
+        results1 = CoffeeAnalysisResults(
+            uniformityScore: results1.uniformityScore,
+            averageSize: results1.averageSize,
+            medianSize: results1.medianSize,
+            standardDeviation: results1.standardDeviation,
+            finesPercentage: results1.finesPercentage,
+            bouldersPercentage: results1.bouldersPercentage,
+            particleCount: results1.particleCount,
+            particles: results1.particles,
+            confidence: results1.confidence,
+            image: image1,
+            processedImage: image1,
+            grindType: results1.grindType,
+            timestamp: results1.timestamp,
+            calibrationFactor: results1.calibrationFactor
+        )
+
+        var results2 = createTestResults(uniformityScore: 70.0)
+        results2 = CoffeeAnalysisResults(
+            uniformityScore: results2.uniformityScore,
+            averageSize: results2.averageSize,
+            medianSize: results2.medianSize,
+            standardDeviation: results2.standardDeviation,
+            finesPercentage: results2.finesPercentage,
+            bouldersPercentage: results2.bouldersPercentage,
+            particleCount: results2.particleCount,
+            particles: results2.particles,
+            confidence: results2.confidence,
+            image: image2,
+            processedImage: image2,
+            grindType: results2.grindType,
+            timestamp: results2.timestamp,
+            calibrationFactor: results2.calibrationFactor
+        )
+
+        manager.saveAnalysis(results1, name: "Analysis 1")
+        manager.saveAnalysis(results2, name: "Analysis 2")
+
+        #expect(manager.totalAnalyses == 2)
+
+        // Verify both analyses have different image paths
+        let analysis1 = manager.savedAnalyses.first { $0.name == "Analysis 1" }
+        let analysis2 = manager.savedAnalyses.first { $0.name == "Analysis 2" }
+
+        #expect(analysis1?.originalImagePath != nil)
+        #expect(analysis2?.originalImagePath != nil)
+        #expect(analysis1?.originalImagePath != analysis2?.originalImagePath)
+
+        // Verify both images can be loaded independently
+        if let path1 = analysis1?.originalImagePath {
+            #expect(manager.loadImage(from: path1) != nil)
+        }
+        if let path2 = analysis2?.originalImagePath {
+            #expect(manager.loadImage(from: path2) != nil)
+        }
+    }
+
+    @Test func testHistoryManager_DeleteAnalysis_RemovesAssociatedImages() async {
+        let manager = CoffeeAnalysisHistoryManager()
+        manager.clearAllAnalyses()
+
+        let testImage = createTestImage()
+        var results = createTestResults()
+        results = CoffeeAnalysisResults(
+            uniformityScore: results.uniformityScore,
+            averageSize: results.averageSize,
+            medianSize: results.medianSize,
+            standardDeviation: results.standardDeviation,
+            finesPercentage: results.finesPercentage,
+            bouldersPercentage: results.bouldersPercentage,
+            particleCount: results.particleCount,
+            particles: results.particles,
+            confidence: results.confidence,
+            image: testImage,
+            processedImage: testImage,
+            grindType: results.grindType,
+            timestamp: results.timestamp,
+            calibrationFactor: results.calibrationFactor
+        )
+
+        manager.saveAnalysis(results, name: "To Delete")
+
+        guard let savedAnalysis = manager.savedAnalyses.first,
+              let imagePath = savedAnalysis.originalImagePath else {
+            Issue.record("Failed to save analysis with image")
+            return
+        }
+
+        // Verify image exists before deletion
+        #expect(manager.loadImage(from: imagePath) != nil)
+
+        // Delete the analysis
+        manager.deleteAnalysis(at: 0)
+
+        // Verify image is removed (loadImage returns nil for missing files)
+        #expect(manager.loadImage(from: imagePath) == nil)
+        #expect(manager.totalAnalyses == 0)
+    }
+
     @Test func testHistoryManager_DefaultName_IncludesGrindTypeAndScore() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()

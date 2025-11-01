@@ -48,6 +48,39 @@ struct AdvancedStatisticsTests {
         #expect(result == 0.0)
     }
 
+    @Test func testWeightedMean_HighlySkewedWeights_CorrectCalculation() {
+        let values = [100.0, 200.0, 300.0, 400.0]
+        let weights = [1.0, 1.0, 1.0, 10.0] // Last value heavily weighted
+
+        let result = stats.calculateWeightedMean(values: values, weights: weights)
+        // (100*1 + 200*1 + 300*1 + 400*10) / (1+1+1+10) = 4600/13 = 353.846...
+        let expected = 4600.0 / 13.0
+
+        #expect(abs(result - expected) < 0.001)
+    }
+
+    @Test func testWeightedMean_FractionalWeights_CorrectCalculation() {
+        let values = [50.0, 100.0, 150.0]
+        let weights = [0.5, 0.3, 0.2]
+
+        let result = stats.calculateWeightedMean(values: values, weights: weights)
+        // (50*0.5 + 100*0.3 + 150*0.2) / (0.5+0.3+0.2) = (25+30+30)/1.0 = 85.0
+        let expected = 85.0
+
+        #expect(abs(result - expected) < 0.001)
+    }
+
+    @Test func testWeightedMean_VeryLargeWeights_CorrectCalculation() {
+        let values = [10.0, 20.0, 30.0]
+        let weights = [1000.0, 2000.0, 3000.0]
+
+        let result = stats.calculateWeightedMean(values: values, weights: weights)
+        // (10*1000 + 20*2000 + 30*3000) / (1000+2000+3000) = 140000/6000 = 23.333...
+        let expected = (10.0*1000.0 + 20.0*2000.0 + 30.0*3000.0) / 6000.0
+
+        #expect(abs(result - expected) < 0.001)
+    }
+
     // MARK: - Weighted Standard Deviation Tests
 
     @Test func testWeightedStdDev_UniformData_ReturnsZero() {

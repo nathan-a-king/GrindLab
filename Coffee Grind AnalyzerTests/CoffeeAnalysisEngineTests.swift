@@ -74,6 +74,62 @@ struct CoffeeAnalysisEngineTests {
         #expect(report.precision >= 0.85)
     }
 
+    @Test func testAnalysisEngine_GridPattern10x10_HighDensity() async throws {
+        // Test with high density grid to verify clustering doesn't merge particles
+        let (testImage, expectedParticles) = AnalysisValidation.createGridTestImage(
+            width: 1200,
+            height: 1200,
+            rows: 10,
+            cols: 10,
+            particleRadius: 20
+        )
+
+        let results = try AnalysisValidation.runTestAnalysis(
+            image: testImage,
+            grindType: .filter,
+            calibrationFactor: 5.0
+        )
+
+        let report = AnalysisValidation.validateResults(
+            detected: results.particles,
+            expected: expectedParticles,
+            tolerance: 8.0
+        )
+
+        // Should detect most particles even in high density
+        #expect(report.recall >= 0.80, "Expected recall >= 80%, got \(String(format: "%.1f%%", report.recall * 100))")
+        #expect(report.precision >= 0.80, "Expected precision >= 80%, got \(String(format: "%.1f%%", report.precision * 100))")
+        #expect(results.particleCount >= 80) // At least 80% of 100 particles
+    }
+
+    @Test func testAnalysisEngine_GridPattern4x4_MediumParticles() async throws {
+        // Test with medium-sized particles in a balanced grid
+        let (testImage, expectedParticles) = AnalysisValidation.createGridTestImage(
+            width: 800,
+            height: 800,
+            rows: 4,
+            cols: 4,
+            particleRadius: 40
+        )
+
+        let results = try AnalysisValidation.runTestAnalysis(
+            image: testImage,
+            grindType: .filter,
+            calibrationFactor: 5.0
+        )
+
+        let report = AnalysisValidation.validateResults(
+            detected: results.particles,
+            expected: expectedParticles,
+            tolerance: 10.0
+        )
+
+        // Should have excellent detection for well-separated medium particles
+        #expect(report.recall >= 0.88)
+        #expect(report.precision >= 0.88)
+        #expect(report.f1Score >= 0.88)
+    }
+
     // MARK: - Random Particle Detection Tests
 
     @Test func testAnalysisEngine_RandomParticles_AccurateDetection() async throws {
@@ -285,6 +341,77 @@ struct CoffeeAnalysisEngineTests {
             Issue.record("Expected noParticlesDetected error")
         } catch CoffeeAnalysisError.noParticlesDetected {
             // Expected error
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test func testAnalysisEngine_BlackImage_HandlesGracefully() async throws {
+        // Create completely black image
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 400))
+        let blackImage = renderer.image { context in
+            UIColor.black.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 400, height: 400))
+        }
+
+        // Should throw noParticlesDetected error (no distinct particles)
+        do {
+            _ = try AnalysisValidation.runTestAnalysis(
+                image: blackImage,
+                grindType: .filter,
+                calibrationFactor: 5.0
+            )
+            Issue.record("Expected noParticlesDetected error")
+        } catch CoffeeAnalysisError.noParticlesDetected {
+            // Expected error - entire image is one blob, not individual particles
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test func testAnalysisEngine_VerySmallImage_HandlesGracefully() async throws {
+        // Create very small image (50x50)
+        let (testImage, _) = AnalysisValidation.createTestImage(
+            width: 50,
+            height: 50,
+            particleCount: 1,
+            particleSizeRange: 5...10
+        )
+
+        // Should either detect the particle or handle gracefully
+        do {
+            let results = try AnalysisValidation.runTestAnalysis(
+                image: testImage,
+                grindType: .filter,
+                calibrationFactor: 5.0
+            )
+            // If it doesn't throw, it should at least not crash
+            #expect(results.particleCount >= 0)
+        } catch CoffeeAnalysisError.noParticlesDetected {
+            // Also acceptable for very small images
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test func testAnalysisEngine_GrayImage_HandlesGracefully() async throws {
+        // Create uniform gray image (medium brightness)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 300))
+        let grayImage = renderer.image { context in
+            UIColor.gray.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 300, height: 300))
+        }
+
+        // Should throw noParticlesDetected error (no contrast)
+        do {
+            _ = try AnalysisValidation.runTestAnalysis(
+                image: grayImage,
+                grindType: .filter,
+                calibrationFactor: 5.0
+            )
+            Issue.record("Expected noParticlesDetected error")
+        } catch CoffeeAnalysisError.noParticlesDetected {
+            // Expected error - no distinct particles in uniform gray
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
