@@ -154,7 +154,7 @@ class AdvancedStatistics {
         )
     }
     
-    private func percentile(_ sorted: [Double], p: Double) -> Double {
+    public func percentile(_ sorted: [Double], p: Double) -> Double {
         guard !sorted.isEmpty else { return 0 }
         
         let index = p * Double(sorted.count - 1)

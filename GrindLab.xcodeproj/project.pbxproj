@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		43088AFD2E607011009FF6E3 /* Icon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 43088AFC2E607011009FF6E3 /* Icon.icon */; };
-		43C0F0AB2F00000000000001 /* Coffee Grind Analyzer/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 43C0F0AA2F00000000000001 /* Coffee Grind Analyzer/PrivacyInfo.xcprivacy */; };
 		43CD569D2E9202C70083F13B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43CD569C2E9202C70083F13B /* WidgetKit.framework */; };
 		43CD569F2E9202C70083F13B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43CD569E2E9202C70083F13B /* SwiftUI.framework */; };
 		43CD56AE2E9202C80083F13B /* BrewActivityWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -58,7 +57,6 @@
 		433824402E56BBDD00EC93E5 /* GrindLabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4389E9812E918EA8002A62F4 /* CountUsableLOC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountUsableLOC.swift; sourceTree = "<group>"; };
-		43C0F0AA2F00000000000001 /* Coffee Grind Analyzer/PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Coffee Grind Analyzer/PrivacyInfo.xcprivacy"; sourceTree = SOURCE_ROOT; };
 		43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BrewActivityWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		43CD569C2E9202C70083F13B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		43CD569E2E9202C70083F13B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -147,7 +145,6 @@
 				433824342E56BBDC00EC93E5 /* Products */,
 				4389E9812E918EA8002A62F4 /* CountUsableLOC.swift */,
 				43LIVE0012E918EA8002A62F4 /* GrindLab.entitlements */,
-				43C0F0AA2F00000000000001 /* Coffee Grind Analyzer/PrivacyInfo.xcprivacy */,
 			);
 			sourceTree = "<group>";
 		};
@@ -320,7 +317,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				43088AFD2E607011009FF6E3 /* Icon.icon in Resources */,
-				43C0F0AB2F00000000000001 /* Coffee Grind Analyzer/PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -690,7 +686,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = G8ZY6VN35B;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BrewActivityWidget/Info.plist;
@@ -701,7 +697,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "nateking.Coffee-Grind-Analyzer.BrewActivityWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -720,7 +716,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = G8ZY6VN35B;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BrewActivityWidget/Info.plist;
@@ -731,7 +727,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "nateking.Coffee-Grind-Analyzer.BrewActivityWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

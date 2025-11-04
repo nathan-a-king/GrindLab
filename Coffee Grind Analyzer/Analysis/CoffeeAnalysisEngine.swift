@@ -34,7 +34,8 @@ private enum AnalysisLog {
 
 class CoffeeAnalysisEngine {
     private let settings: AnalysisSettings
-    
+    private let advancedStatistics = AdvancedStatistics()
+
     // Python algorithm parameters
     private let referenceThreshold: Double = 0.4
     private let maxCost: Double = 0.35
@@ -420,8 +421,10 @@ class CoffeeAnalysisEngine {
             // Calculate cluster properties
             if let cluster = createCluster(from: filteredPixels, width: width, height: height) {
                 // Apply quality filters
+                // longAxis is the max distance from centroid (radius), so convert to diameter for comparison
+                let clusterDiameter = cluster.longAxis * 2.0
                 if cluster.roundness >= minRoundness &&
-                   cluster.longAxis <= maxClusterAxis {
+                   clusterDiameter <= maxClusterAxis {
                     clusters.append(cluster)
                 }
             }
@@ -460,11 +463,15 @@ class CoffeeAnalysisEngine {
             
             for (nx, ny) in neighbors {
                 let neighborKey = "\(nx),\(ny)"
-                
+
                 // Skip if already visited
                 if visited.contains(neighborKey) { continue }
                 visited.insert(neighborKey)
-                
+
+                // Check distance from start point to prevent unbounded cluster growth
+                let distance = sqrt(pow(Double(nx - startX), 2) + pow(Double(ny - startY), 2))
+                if distance > maxDistance { continue }
+
                 // Check if this pixel exists in our threshold mask
                 if let neighborIndex = pixelGrid[neighborKey] {
                     // Skip if already counted
@@ -532,10 +539,17 @@ class CoffeeAnalysisEngine {
         for pixel in clusterPixels {
             let index = pixel.y * width + pixel.x
             let brightness = imageData[index]
-            
+
             // Calculate cost function
-            let cost = pow(Double(brightness) - Double(startBrightness), 2) / pow(backgroundMedian, 2)
-            
+            // Guard against division by zero on very dark images
+            let cost: Double
+            if backgroundMedian > 0 {
+                cost = pow(Double(brightness) - Double(startBrightness), 2) / pow(backgroundMedian, 2)
+            } else {
+                // Fallback: accept all pixels when background median is zero
+                cost = 0
+            }
+
             // Accept pixel if cost is below threshold
             if cost < maxCost {
                 filteredPixels.append((x: pixel.x, y: pixel.y, brightness: brightness))
@@ -1150,9 +1164,24 @@ class CoffeeAnalysisEngine {
         bouldersPercentage: Double,
         confidence: Double
     ) {
-        let sizes = particles.map { $0.size }.sorted()
-        let volumes = particles.map { calculateVolume(from: $0) }
-        
+        // Sort particles by size to ensure sizes and volumes arrays stay aligned
+        let sortedParticles = particles.sorted { $0.size < $1.size }
+        let sizes = sortedParticles.map { $0.size }
+        let volumes = sortedParticles.map { calculateVolume(from: $0) }
+
+        // Guard against empty arrays
+        guard !sizes.isEmpty else {
+            return (
+                uniformityScore: 0,
+                averageSize: 0,
+                medianSize: 0,
+                standardDeviation: 0,
+                finesPercentage: 0,
+                bouldersPercentage: 0,
+                confidence: 0
+            )
+        }
+
         // Weight by volume for more accurate statistics
         let totalVolume = volumes.reduce(0, +)
         var weightedSum = 0.0
@@ -1160,9 +1189,9 @@ class CoffeeAnalysisEngine {
             weightedSum += sizes[i] * (volumes[i] / totalVolume)
         }
         let weightedAverage = weightedSum
-        
-        // Calculate median
-        let medianSize = sizes[sizes.count / 2]
+
+        // Calculate median using proper percentile method
+        let medianSize = advancedStatistics.percentile(sizes, p: 0.5)
         
         // Calculate weighted standard deviation
         var weightedVariance = 0.0
