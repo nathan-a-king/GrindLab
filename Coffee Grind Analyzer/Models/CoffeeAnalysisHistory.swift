@@ -24,6 +24,25 @@ struct SavedCoffeeAnalysis: Identifiable {
     let processedImagePath: String?
 }
 
+// MARK: - Brew Journal Linking Extension
+
+extension SavedCoffeeAnalysis {
+    /// Get brew journal entries linked to this analysis
+    var linkedBrewJournals: [BrewJournalEntry] {
+        return BrewJournalManager.shared.getEntriesLinkedTo(analysisId: self.id)
+    }
+
+    /// Check if this analysis has any linked brew journal entries
+    var hasLinkedBrewJournals: Bool {
+        return !linkedBrewJournals.isEmpty
+    }
+
+    /// Count of linked brew journal entries
+    var linkedBrewJournalCount: Int {
+        return linkedBrewJournals.count
+    }
+}
+
 // MARK: - History Manager
 
 class CoffeeAnalysisHistoryManager: ObservableObject {
@@ -209,13 +228,30 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
     }
     
     // MARK: - Search and Filter
-    
+
     func analysesForGrindType(_ grindType: CoffeeGrindType) -> [SavedCoffeeAnalysis] {
         return savedAnalyses.filter { $0.results.grindType == grindType }
     }
-    
+
     func recentAnalyses(limit: Int = 5) -> [SavedCoffeeAnalysis] {
         return Array(savedAnalyses.prefix(limit))
+    }
+
+    // MARK: - Brew Journal Linking
+
+    /// Get brew journal entries linked to a specific analysis
+    func getBrewJournalEntriesLinkedTo(analysisId: UUID) -> [BrewJournalEntry] {
+        return BrewJournalManager.shared.getEntriesLinkedTo(analysisId: analysisId)
+    }
+
+    /// Get analyses that have linked brew journal entries
+    func analysesWithLinkedBrewJournals() -> [SavedCoffeeAnalysis] {
+        return savedAnalyses.filter { $0.hasLinkedBrewJournals }
+    }
+
+    /// Get analyses without linked brew journal entries
+    func analysesWithoutLinkedBrewJournals() -> [SavedCoffeeAnalysis] {
+        return savedAnalyses.filter { !$0.hasLinkedBrewJournals }
     }
     
     // MARK: - Statistics
