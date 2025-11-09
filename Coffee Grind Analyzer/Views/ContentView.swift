@@ -90,6 +90,14 @@ struct ContentView: View {
                     Text("History")
                 }
                 .tag(2)
+
+            // Journal Tab
+            BrewJournalListView()
+                .tabItem {
+                    Image(systemName: "book.fill")
+                    Text("Journal")
+                }
+                .tag(3)
         }
         .ignoresSafeArea(.keyboard)
         .environmentObject(brewState)
