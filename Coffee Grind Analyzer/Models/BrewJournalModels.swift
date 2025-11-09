@@ -151,7 +151,6 @@ struct BrewJournalEntry: Codable, Identifiable, Equatable, Hashable {
     var coffeeBean: CoffeeBeanInfo?
     var brewParameters: BrewParameters
     var tastingNotes: TastingNotes?
-    var linkedAnalysisId: UUID? // Optional link to CoffeeAnalysisResults
     var notes: String? // General free-form notes
     var photos: [UUID]? // Photo IDs for future photo support
 
@@ -163,7 +162,6 @@ struct BrewJournalEntry: Codable, Identifiable, Equatable, Hashable {
         coffeeBean: CoffeeBeanInfo? = nil,
         brewParameters: BrewParameters,
         tastingNotes: TastingNotes? = nil,
-        linkedAnalysisId: UUID? = nil,
         notes: String? = nil,
         photos: [UUID]? = nil
     ) {
@@ -173,16 +171,11 @@ struct BrewJournalEntry: Codable, Identifiable, Equatable, Hashable {
         self.coffeeBean = coffeeBean
         self.brewParameters = brewParameters
         self.tastingNotes = tastingNotes
-        self.linkedAnalysisId = linkedAnalysisId
         self.notes = notes
         self.photos = photos
     }
 
     // MARK: - Computed Properties
-
-    var hasLinkedAnalysis: Bool {
-        linkedAnalysisId != nil
-    }
 
     var displayTitle: String {
         if let beanName = coffeeBean?.displayName, !beanName.isEmpty && beanName != "Unknown Bean" {

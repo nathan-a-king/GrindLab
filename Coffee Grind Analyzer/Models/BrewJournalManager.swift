@@ -85,11 +85,6 @@ class BrewJournalManager: ObservableObject {
         return entries.first(where: { $0.id == id })
     }
 
-    /// Get entries linked to a specific analysis
-    func getEntriesLinkedTo(analysisId: UUID) -> [BrewJournalEntry] {
-        return entries.filter { $0.linkedAnalysisId == analysisId }
-    }
-
     /// Clear all brew journal entries
     func clearAllEntries() {
         entries.removeAll()
@@ -160,16 +155,6 @@ class BrewJournalManager: ObservableObject {
     /// Get entries filtered by minimum rating
     func getEntriesFiltered(byMinimumRating minRating: Int) -> [BrewJournalEntry] {
         return entries.filter { ($0.rating ?? 0) >= minRating }
-    }
-
-    /// Get entries that have linked analyses
-    func getEntriesWithLinkedAnalysis() -> [BrewJournalEntry] {
-        return entries.filter { $0.hasLinkedAnalysis }
-    }
-
-    /// Get entries without linked analyses
-    func getEntriesWithoutLinkedAnalysis() -> [BrewJournalEntry] {
-        return entries.filter { !$0.hasLinkedAnalysis }
     }
 
     /// Get entries within a date range

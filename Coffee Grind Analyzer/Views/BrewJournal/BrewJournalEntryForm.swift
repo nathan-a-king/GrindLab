@@ -24,7 +24,6 @@ struct BrewJournalEntryForm: View {
     // Grind Info
     @State private var grindType: CoffeeGrindType
     @State private var grindSetting: String
-    @State private var linkedAnalysisId: UUID?
 
     // Brew Parameters
     @State private var brewMethod: TastingNotes.BrewMethod
@@ -43,9 +42,6 @@ struct BrewJournalEntryForm: View {
     @State private var generalNotes: String
     @State private var timestamp: Date
 
-    // UI State
-    @State private var showAnalysisPicker = false
-
     init(entry: BrewJournalEntry? = nil, onSave: @escaping (BrewJournalEntry) -> Void) {
         self.entry = entry
         self.onSave = onSave
@@ -62,7 +58,6 @@ struct BrewJournalEntryForm: View {
 
             _grindType = State(initialValue: existing.grindType)
             _grindSetting = State(initialValue: existing.brewParameters.grindSetting ?? "")
-            _linkedAnalysisId = State(initialValue: existing.linkedAnalysisId)
 
             _brewMethod = State(initialValue: existing.brewParameters.brewMethod)
             _doseIn = State(initialValue: existing.brewParameters.doseIn != nil ? String(format: "%.1f", existing.brewParameters.doseIn!) : "")
@@ -89,7 +84,6 @@ struct BrewJournalEntryForm: View {
 
             _grindType = State(initialValue: .espresso)
             _grindSetting = State(initialValue: "")
-            _linkedAnalysisId = State(initialValue: nil)
 
             _brewMethod = State(initialValue: .espresso)
             _doseIn = State(initialValue: "")
@@ -203,28 +197,6 @@ struct BrewJournalEntryForm: View {
 
             TextField("Grind Setting (e.g., 4.5, Medium-Fine)", text: $grindSetting)
                 .foregroundColor(.white)
-
-            if linkedAnalysisId != nil {
-                HStack {
-                    Text("Linked to Analysis")
-                        .foregroundColor(.white)
-                    Spacer()
-                    Button("Change") {
-                        showAnalysisPicker = true
-                    }
-                    .foregroundColor(.blue)
-                }
-            } else {
-                Button {
-                    showAnalysisPicker = true
-                } label: {
-                    HStack {
-                        Image(systemName: "link")
-                        Text("Link to Analysis")
-                    }
-                    .foregroundColor(.blue)
-                }
-            }
         } header: {
             Text("Grind")
                 .foregroundColor(.white)
@@ -319,7 +291,7 @@ struct BrewJournalEntryForm: View {
                     HStack(spacing: 4) {
                         ForEach(1...5, id: \.self) { star in
                             Image(systemName: star <= overallRating ? "star.fill" : "star")
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.white)
                                 .onTapGesture {
                                     overallRating = star
                                 }
@@ -458,7 +430,6 @@ struct BrewJournalEntryForm: View {
             coffeeBean: beanInfo,
             brewParameters: brewParams,
             tastingNotes: tastingNotes,
-            linkedAnalysisId: linkedAnalysisId,
             notes: generalNotes.isEmpty ? nil : generalNotes
         )
 

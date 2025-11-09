@@ -364,7 +364,6 @@ struct BrewJournalListView: View {
             coffeeBean: entry.coffeeBean,
             brewParameters: entry.brewParameters,
             tastingNotes: entry.tastingNotes,
-            linkedAnalysisId: entry.linkedAnalysisId,
             notes: entry.notes
         )
         manager.saveEntry(duplicate)

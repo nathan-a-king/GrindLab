@@ -56,11 +56,6 @@ struct BrewJournalDetailView: View {
                             generalNotesSection(notes)
                         }
 
-                        // Linked Analysis Section
-                        if entry.hasLinkedAnalysis, let analysisId = entry.linkedAnalysisId {
-                            linkedAnalysisSection(analysisId)
-                        }
-
                         // Metadata Footer
                         metadataFooter
                     }
@@ -209,23 +204,6 @@ struct BrewJournalDetailView: View {
                 if let grindSetting = entry.brewParameters.grindSetting, !grindSetting.isEmpty {
                     detailRow(label: "Grind Setting", value: grindSetting)
                 }
-
-                if entry.hasLinkedAnalysis {
-                    HStack {
-                        Text("Linked Analysis")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.7))
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Image(systemName: "link")
-                                .font(.caption)
-                            Text("Yes")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundColor(.blue)
-                    }
-                }
             }
         }
         .padding()
@@ -294,54 +272,6 @@ struct BrewJournalDetailView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.black.opacity(0.2))
                 )
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.brown.opacity(0.5))
-        )
-        .padding(.horizontal, 16)
-    }
-
-    // MARK: - Linked Analysis Section
-
-    private func linkedAnalysisSection(_ analysisId: UUID) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Linked Analysis")
-                .font(.headline)
-                .foregroundColor(.white)
-
-            if let analysis = historyManager.savedAnalyses.first(where: { $0.id == analysisId }) {
-                VStack(spacing: 8) {
-                    detailRow(label: "Analysis Name", value: analysis.name)
-                    detailRow(label: "Uniformity", value: String(format: "%.1f%%", analysis.results.uniformityScore))
-                    detailRow(label: "Average Size", value: String(format: "%.0fμm", analysis.results.averageSize))
-
-                    Button {
-                        // TODO: Navigate to analysis detail view
-                        detailLogger.info("View analysis tapped: \(analysis.id)")
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Image(systemName: "arrow.right.circle.fill")
-                            Text("View Analysis")
-                            Spacer()
-                        }
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.blue.opacity(0.3))
-                        )
-                        .foregroundColor(.white)
-                    }
-                    .padding(.top, 4)
-                }
-            } else {
-                Text("Analysis not found")
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.6))
-                    .italic()
-            }
         }
         .padding()
         .background(
@@ -479,7 +409,6 @@ struct BrewJournalShareSheet: UIViewControllerRepresentable {
             doseIn: 18.0,
             yieldOut: 36.0
         ),
-        linkedAnalysisId: UUID(),
         notes: "Best shot I've pulled with this bean. Perfect temperature and time."
     )
 

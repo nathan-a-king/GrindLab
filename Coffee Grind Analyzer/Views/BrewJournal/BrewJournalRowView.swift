@@ -60,29 +60,12 @@ struct BrewJournalRowView: View {
                         ForEach(1...5, id: \.self) { star in
                             Image(systemName: star <= rating ? "star.fill" : "star")
                                 .font(.caption)
-                                .foregroundColor(star <= rating ? .yellow : .white.opacity(0.3))
+                                .foregroundColor(star <= rating ? .white : .white.opacity(0.3))
                         }
                     }
                 }
 
                 Spacer()
-
-                // Link indicator (if linked to analysis)
-                if entry.hasLinkedAnalysis {
-                    HStack(spacing: 3) {
-                        Image(systemName: "link")
-                            .font(.caption2)
-                        Text("Analysis")
-                            .font(.caption2)
-                    }
-                    .foregroundColor(.blue.opacity(0.8))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.blue.opacity(0.2))
-                    )
-                }
             }
         }
         .padding(.vertical, 8)
@@ -116,8 +99,7 @@ struct BrewJournalRowView: View {
             waterTemp: nil,
             doseIn: nil,
             yieldOut: nil
-        ),
-        linkedAnalysisId: UUID()
+        )
     )
 
     return BrewJournalRowView(entry: entry)

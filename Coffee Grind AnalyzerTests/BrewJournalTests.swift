@@ -194,7 +194,6 @@ struct BrewJournalTests {
                 doseIn: nil,
                 yieldOut: nil
             ),
-            linkedAnalysisId: updated.linkedAnalysisId,
             notes: "Updated notes"
         )
 
@@ -525,75 +524,6 @@ struct BrewJournalTests {
         let pourOverMethod: TastingNotes.BrewMethod = .pourOver
         #expect(manager.entryCount(for: espressoGrind) == 2)
         #expect(manager.entryCount(for: pourOverMethod) == 2)
-    }
-
-    // MARK: - Linking Tests
-
-    @Test func testBrewJournalManager_GetEntriesLinkedToAnalysis_ReturnsMatching() async {
-        let manager = BrewJournalManager.shared
-        manager.clearAllEntries()
-
-        let analysisId = UUID()
-
-        var linked1 = createTestEntry()
-        linked1 = BrewJournalEntry(
-            id: linked1.id,
-            timestamp: linked1.timestamp,
-            grindType: linked1.grindType,
-            coffeeBean: linked1.coffeeBean,
-            brewParameters: linked1.brewParameters,
-            tastingNotes: linked1.tastingNotes,
-            linkedAnalysisId: analysisId
-        )
-
-        var linked2 = createTestEntry()
-        linked2 = BrewJournalEntry(
-            id: linked2.id,
-            timestamp: linked2.timestamp,
-            grindType: linked2.grindType,
-            coffeeBean: linked2.coffeeBean,
-            brewParameters: linked2.brewParameters,
-            tastingNotes: linked2.tastingNotes,
-            linkedAnalysisId: analysisId
-        )
-
-        let unlinked = createTestEntry()
-
-        manager.saveEntry(linked1)
-        manager.saveEntry(linked2)
-        manager.saveEntry(unlinked)
-
-        let linkedEntries = manager.getEntriesLinkedTo(analysisId: analysisId)
-
-        #expect(linkedEntries.count == 2)
-        #expect(linkedEntries.allSatisfy { $0.linkedAnalysisId == analysisId })
-    }
-
-    @Test func testBrewJournalManager_GetEntriesWithLinkedAnalysis_FiltersCorrectly() async {
-        let manager = BrewJournalManager.shared
-        manager.clearAllEntries()
-
-        var linked = createTestEntry()
-        linked = BrewJournalEntry(
-            id: linked.id,
-            timestamp: linked.timestamp,
-            grindType: linked.grindType,
-            coffeeBean: linked.coffeeBean,
-            brewParameters: linked.brewParameters,
-            tastingNotes: linked.tastingNotes,
-            linkedAnalysisId: UUID()
-        )
-
-        let unlinked = createTestEntry()
-
-        manager.saveEntry(linked)
-        manager.saveEntry(unlinked)
-
-        let withLinks = manager.getEntriesWithLinkedAnalysis()
-        let withoutLinks = manager.getEntriesWithoutLinkedAnalysis()
-
-        #expect(withLinks.count == 1)
-        #expect(withoutLinks.count == 1)
     }
 
     // MARK: - Validation Tests
