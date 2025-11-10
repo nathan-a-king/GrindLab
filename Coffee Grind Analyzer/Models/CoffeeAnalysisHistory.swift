@@ -209,15 +209,15 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
     }
     
     // MARK: - Search and Filter
-    
+
     func analysesForGrindType(_ grindType: CoffeeGrindType) -> [SavedCoffeeAnalysis] {
         return savedAnalyses.filter { $0.results.grindType == grindType }
     }
-    
+
     func recentAnalyses(limit: Int = 5) -> [SavedCoffeeAnalysis] {
         return Array(savedAnalyses.prefix(limit))
     }
-    
+
     // MARK: - Statistics
     
     var totalAnalyses: Int {
