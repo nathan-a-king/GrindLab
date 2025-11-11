@@ -210,6 +210,12 @@ struct ContentView: View {
             headerSection
                 .padding(.top, isLandscape ? 10 : 20)
 
+            if historyManager.totalAnalyses > 0 {
+                recentResultsSection
+            } else {
+                sampleAnalysisSection
+            }
+
             grindTypeCards(isLandscape: isLandscape)
 
             // Settings button at bottom
@@ -354,7 +360,7 @@ struct ContentView: View {
                     .stroke(Color.white.opacity(0.4), lineWidth: 2)
             )
     }
-    
+
     private var recentResultsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -422,7 +428,142 @@ struct ContentView: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
-    
+
+    private var sampleAnalysisSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("See GrindLab in action")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+
+                Text("Preview a real analysis result to understand what you'll see after capturing your own grind.")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button(action: presentSampleAnalysis) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "sparkles")
+                            .font(.title2)
+                            .foregroundColor(.yellow)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Try a sample photo")
+                                .font(.headline)
+                                .foregroundColor(.white)
+
+                            Text("Filter grind • 74% uniformity")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.75))
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        sampleStatPill(title: "Avg Size", value: "540μm")
+                        sampleStatPill(title: "Fines", value: "14%")
+                        sampleStatPill(title: "Boulders", value: "17%")
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.white.opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.25), radius: 12, x: 0, y: 8)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open a sample coffee grind analysis")
+        }
+        .padding(20)
+        .background(Color.white.opacity(0.08))
+        .cornerRadius(18)
+    }
+
+    private func sampleStatPill(title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.7))
+
+            Text(value)
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.08))
+        )
+    }
+
+    private func presentSampleAnalysis() {
+        detailResults = sampleAnalysisResults
+        showingResults = true
+    }
+
+    private var sampleAnalysisResults: CoffeeAnalysisResults {
+        let sizeDistribution: [String: Double] = [
+            "Fine (<300μm)": 14,
+            "Medium-Fine (300-400μm)": 18,
+            "Target (400-800μm)": 56,
+            "Coarse (800-1000μm)": 9,
+            "Extra Coarse (>1000μm)": 3
+        ]
+
+        let granularDistribution: [String: Double] = [
+            "250-300μm": 8,
+            "300-400μm": 20,
+            "400-550μm": 34,
+            "550-700μm": 22,
+            "700-850μm": 9,
+            ">850μm": 7
+        ]
+
+        let chartDataPoints: [CoffeeAnalysisResults.ChartDataPoint] = [
+            .init(microns: 280, percentage: 8, label: "280μm"),
+            .init(microns: 360, percentage: 16, label: "360μm"),
+            .init(microns: 460, percentage: 22, label: "460μm"),
+            .init(microns: 560, percentage: 20, label: "560μm"),
+            .init(microns: 660, percentage: 14, label: "660μm"),
+            .init(microns: 820, percentage: 12, label: "820μm"),
+            .init(microns: 950, percentage: 6, label: "950μm")
+        ]
+
+        return CoffeeAnalysisResults(
+            uniformityScore: 74,
+            averageSize: 540,
+            medianSize: 530,
+            standardDeviation: 92,
+            finesPercentage: 14,
+            bouldersPercentage: 17,
+            particleCount: 1285,
+            particles: [],
+            confidence: 0.86,
+            image: nil,
+            processedImage: nil,
+            grindType: .filter,
+            timestamp: Date().addingTimeInterval(-3600),
+            sizeDistribution: sizeDistribution,
+            calibrationFactor: 150,
+            tastingNotes: nil,
+            storedMinParticleSize: 240,
+            storedMaxParticleSize: 900,
+            granularDistribution: granularDistribution,
+            chartDataPoints: chartDataPoints
+        )
+    }
+
     private var settingsButton: some View {
         EmptyView() // Removed - now using toolbar button
     }
