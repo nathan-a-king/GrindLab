@@ -16,13 +16,14 @@ private let brewJournalLogger = Logger(subsystem: "com.nateking.GrindLab", categ
 class BrewJournalManager: ObservableObject {
     static let shared = BrewJournalManager()
 
-    @Published var entries: [BrewJournalEntry] = []
+    @Published private(set) var entries: [BrewJournalEntry] = []
 
-    private let userDefaults = UserDefaults.standard
-    private let storageKey = "brewJournalEntries"
     private let maxStoredEntries = 200 // Generous limit for brew logs
+    private let persistenceQueue = DispatchQueue(label: "com.nateking.GrindLab.brewJournalPersistence", qos: .utility)
+    private let repository: BrewJournalRepository
 
-    private init() {
+    private init(repository: BrewJournalRepository = BrewJournalRepository()) {
+        self.repository = repository
         loadEntries()
     }
 
@@ -30,54 +31,87 @@ class BrewJournalManager: ObservableObject {
 
     /// Save a new brew journal entry
     func saveEntry(_ entry: BrewJournalEntry) {
-        // Add to beginning of array (most recent first)
-        entries.insert(entry, at: 0)
+        if Thread.isMainThread {
+            insertEntry(entry)
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.insertEntry(entry)
+            }
+        }
+    }
 
-        // Limit storage to prevent bloat
+    private func insertEntry(_ entry: BrewJournalEntry) {
+        entries.insert(entry, at: 0)
         if entries.count > maxStoredEntries {
             let removed = entries.count - maxStoredEntries
             entries = Array(entries.prefix(maxStoredEntries))
             brewJournalLogger.warning("Removed \(removed, privacy: .public) oldest entries to maintain storage limit")
         }
-
         persistEntries()
         brewJournalLogger.info("Saved brew journal entry: \(entry.displayTitle, privacy: .public)")
     }
 
     /// Update an existing brew journal entry
     func updateEntry(_ updatedEntry: BrewJournalEntry) {
-        guard let index = entries.firstIndex(where: { $0.id == updatedEntry.id }) else {
-            brewJournalLogger.error("Attempted to update non-existent entry: \(updatedEntry.id, privacy: .public)")
-            return
+        let updateBlock = { [weak self] in
+            guard let self else { return }
+            guard let index = self.entries.firstIndex(where: { $0.id == updatedEntry.id }) else {
+                brewJournalLogger.error("Attempted to update non-existent entry: \(updatedEntry.id, privacy: .public)")
+                return
+            }
+
+            self.entries[index] = updatedEntry
+            self.persistEntries()
+            brewJournalLogger.info("Updated brew journal entry: \(updatedEntry.displayTitle, privacy: .public)")
         }
 
-        entries[index] = updatedEntry
-        persistEntries()
-        brewJournalLogger.info("Updated brew journal entry: \(updatedEntry.displayTitle, privacy: .public)")
+        if Thread.isMainThread {
+            updateBlock()
+        } else {
+            DispatchQueue.main.async(execute: updateBlock)
+        }
     }
 
     /// Delete a brew journal entry by ID
     func deleteEntry(id: UUID) {
-        guard let index = entries.firstIndex(where: { $0.id == id }) else {
-            brewJournalLogger.error("Attempted to delete non-existent entry: \(id, privacy: .public)")
-            return
+        let deleteBlock = { [weak self] in
+            guard let self else { return }
+            guard let index = self.entries.firstIndex(where: { $0.id == id }) else {
+                brewJournalLogger.error("Attempted to delete non-existent entry: \(id, privacy: .public)")
+                return
+            }
+
+            let removedEntry = self.entries.remove(at: index)
+            self.persistEntries()
+            brewJournalLogger.info("Deleted brew journal entry: \(removedEntry.displayTitle, privacy: .public)")
         }
 
-        let removedEntry = entries.remove(at: index)
-        persistEntries()
-        brewJournalLogger.info("Deleted brew journal entry: \(removedEntry.displayTitle, privacy: .public)")
+        if Thread.isMainThread {
+            deleteBlock()
+        } else {
+            DispatchQueue.main.async(execute: deleteBlock)
+        }
     }
 
     /// Delete a brew journal entry by index
     func deleteEntry(at index: Int) {
-        guard index >= 0 && index < entries.count else {
-            brewJournalLogger.error("Attempted to delete entry at invalid index: \(index, privacy: .public)")
-            return
+        let deleteBlock = { [weak self] in
+            guard let self else { return }
+            guard index >= 0 && index < self.entries.count else {
+                brewJournalLogger.error("Attempted to delete entry at invalid index: \(index, privacy: .public)")
+                return
+            }
+
+            let removedEntry = self.entries.remove(at: index)
+            self.persistEntries()
+            brewJournalLogger.info("Deleted brew journal entry: \(removedEntry.displayTitle, privacy: .public)")
         }
 
-        let removedEntry = entries.remove(at: index)
-        persistEntries()
-        brewJournalLogger.info("Deleted brew journal entry: \(removedEntry.displayTitle, privacy: .public)")
+        if Thread.isMainThread {
+            deleteBlock()
+        } else {
+            DispatchQueue.main.async(execute: deleteBlock)
+        }
     }
 
     /// Get a specific entry by ID
@@ -87,9 +121,18 @@ class BrewJournalManager: ObservableObject {
 
     /// Clear all brew journal entries
     func clearAllEntries() {
-        entries.removeAll()
-        persistEntries()
-        brewJournalLogger.warning("Cleared all brew journal entries")
+        let clearBlock = { [weak self] in
+            guard let self else { return }
+            self.entries.removeAll()
+            self.persistEntries()
+            brewJournalLogger.warning("Cleared all brew journal entries")
+        }
+
+        if Thread.isMainThread {
+            clearBlock()
+        } else {
+            DispatchQueue.main.async(execute: clearBlock)
+        }
     }
 
     // MARK: - Sorting Options
@@ -201,124 +244,33 @@ class BrewJournalManager: ObservableObject {
         return entries.count
     }
 
-    /// Average rating across all entries
+    /// Average rating for entries with ratings
     var averageRating: Double {
-        let entriesWithRatings = entries.compactMap { $0.rating }
-        guard !entriesWithRatings.isEmpty else { return 0 }
-
-        let total = entriesWithRatings.reduce(0, +)
-        return Double(total) / Double(entriesWithRatings.count)
+        let ratedEntries = entries.compactMap { $0.rating }
+        guard !ratedEntries.isEmpty else { return 0 }
+        let total = ratedEntries.reduce(0, +)
+        return Double(total) / Double(ratedEntries.count)
     }
 
-    /// Most used brew method
-    var mostUsedBrewMethod: TastingNotes.BrewMethod? {
-        let methodCounts = Dictionary(grouping: entries) { $0.brewParameters.brewMethod }
-            .mapValues { $0.count }
-
-        return methodCounts.max(by: { $0.value < $1.value })?.key
-    }
-
-    /// Most used grind type
-    var mostUsedGrindType: CoffeeGrindType? {
-        let grindTypeCounts = Dictionary(grouping: entries) { $0.grindType }
-            .mapValues { $0.count }
-
-        return grindTypeCounts.max(by: { $0.value < $1.value })?.key
-    }
-
-    /// Highest rated entry
-    var highestRatedEntry: BrewJournalEntry? {
-        return entries.max { ($0.rating ?? 0) < ($1.rating ?? 0) }
-    }
-
-    /// Entry count by grind type
-    func entryCount(for grindType: CoffeeGrindType) -> Int {
-        return entries.filter { $0.grindType == grindType }.count
-    }
-
-    /// Entry count by brew method
-    func entryCount(for brewMethod: TastingNotes.BrewMethod) -> Int {
-        return entries.filter { $0.brewParameters.brewMethod == brewMethod }.count
-    }
-
-    // MARK: - Validation
-
-    /// Validate an entry before saving
-    func validateEntry(_ entry: BrewJournalEntry) -> ValidationResult {
-        var warnings: [String] = []
-        var errors: [String] = []
-
-        // Check for unusual brew parameters
-        if entry.brewParameters.hasUnusualParameters {
-            warnings.append("Brew parameters contain unusual values that may indicate data entry errors")
+    /// Count of entries per brew method
+    var entriesByBrewMethod: [TastingNotes.BrewMethod: Int] {
+        var counts: [TastingNotes.BrewMethod: Int] = [:]
+        for entry in entries {
+            counts[entry.brewParameters.brewMethod, default: 0] += 1
         }
-
-        // Check for very old timestamp
-        let daysSinceEntry = Calendar.current.dateComponents([.day], from: entry.timestamp, to: Date()).day ?? 0
-        if daysSinceEntry > 30 {
-            warnings.append("Entry timestamp is more than 30 days old")
-        }
-
-        // Check for future timestamp
-        if entry.timestamp > Date() {
-            warnings.append("Entry timestamp is in the future")
-        }
-
-        // Check for invalid rating
-        if let rating = entry.rating, (rating < 1 || rating > 5) {
-            errors.append("Rating must be between 1 and 5")
-        }
-
-        // Check for duplicate ID
-        if entries.contains(where: { $0.id == entry.id }) {
-            errors.append("Entry with this ID already exists")
-        }
-
-        return ValidationResult(isValid: errors.isEmpty, errors: errors, warnings: warnings)
+        return counts
     }
 
-    struct ValidationResult {
-        let isValid: Bool
-        let errors: [String]
-        let warnings: [String]
-
-        var hasWarnings: Bool {
-            return !warnings.isEmpty
+    /// Count of entries per grind type
+    var entriesByGrindType: [CoffeeGrindType: Int] {
+        var counts: [CoffeeGrindType: Int] = [:]
+        for entry in entries {
+            counts[entry.grindType, default: 0] += 1
         }
+        return counts
     }
 
-    // MARK: - Private Persistence Methods
-
-    private func persistEntries() {
-        do {
-            let data = try JSONEncoder().encode(entries)
-            userDefaults.set(data, forKey: storageKey)
-
-            brewJournalLogger.debug("Persisted \(self.entries.count, privacy: .public) brew journal entries")
-        } catch {
-            brewJournalLogger.error("Failed to persist brew journal entries: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    private func loadEntries() {
-        guard let data = userDefaults.data(forKey: storageKey) else {
-            brewJournalLogger.info("No saved brew journal entries found")
-            return
-        }
-
-        do {
-            let loadedEntries = try JSONDecoder().decode([BrewJournalEntry].self, from: data)
-            entries = loadedEntries
-
-            brewJournalLogger.info("Loaded \(self.entries.count, privacy: .public) brew journal entries from storage")
-        } catch {
-            brewJournalLogger.error("Failed to load brew journal entries: \(error.localizedDescription, privacy: .public)")
-            // Clear corrupted data
-            userDefaults.removeObject(forKey: storageKey)
-        }
-    }
-
-    // MARK: - Data Export/Import (Future)
+    // MARK: - Data Export/Import
 
     /// Export all entries as JSON string
     func exportAsJSON() -> String? {
@@ -346,21 +298,23 @@ class BrewJournalManager: ObservableObject {
 
         let importedEntries = try decoder.decode([BrewJournalEntry].self, from: data)
 
-        // Merge with existing entries (avoid duplicates by ID)
-        let existingIds = Set(entries.map { $0.id })
-        let newEntries = importedEntries.filter { !existingIds.contains($0.id) }
+        DispatchQueue.main.async {
+            // Merge with existing entries (avoid duplicates by ID)
+            let existingIds = Set(self.entries.map { $0.id })
+            let newEntries = importedEntries.filter { !existingIds.contains($0.id) }
 
-        entries.append(contentsOf: newEntries)
-        entries.sort { $0.timestamp > $1.timestamp } // Re-sort by date
+            self.entries.append(contentsOf: newEntries)
+            self.entries.sort { $0.timestamp > $1.timestamp } // Re-sort by date
 
-        // Apply storage limit
-        if entries.count > maxStoredEntries {
-            entries = Array(entries.prefix(maxStoredEntries))
+            // Apply storage limit
+            if self.entries.count > self.maxStoredEntries {
+                self.entries = Array(self.entries.prefix(self.maxStoredEntries))
+            }
+
+            self.persistEntries()
+
+            brewJournalLogger.info("Imported \(newEntries.count, privacy: .public) new brew journal entries")
         }
-
-        persistEntries()
-
-        brewJournalLogger.info("Imported \(newEntries.count, privacy: .public) new brew journal entries")
     }
 
     enum ImportError: Error, LocalizedError {
@@ -374,6 +328,26 @@ class BrewJournalManager: ObservableObject {
             case .decodingFailed:
                 return "Failed to decode brew journal entries"
             }
+        }
+    }
+
+    // MARK: - Persistence
+
+    private func loadEntries() {
+        persistenceQueue.async { [weak self] in
+            guard let self else { return }
+            let loaded = self.repository.loadEntries()
+            DispatchQueue.main.async { [weak self] in
+                self?.entries = loaded
+            }
+        }
+    }
+
+    private func persistEntries() {
+        let snapshot = entries
+        persistenceQueue.async { [weak self] in
+            guard let self else { return }
+            self.repository.persist(entries: snapshot)
         }
     }
 }

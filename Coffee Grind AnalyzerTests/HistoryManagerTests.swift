@@ -12,6 +12,10 @@ import UIKit
 @MainActor
 struct HistoryManagerTests {
 
+    private func flush(_ manager: CoffeeAnalysisHistoryManager) async {
+        await manager.waitForPersistence()
+    }
+
     // MARK: - Save and Load Tests
 
     @Test func testHistoryManager_SaveAnalysis_IncreasesCount() async {
@@ -20,6 +24,7 @@ struct HistoryManagerTests {
 
         let results = createTestResults()
         manager.saveAnalysis(results, name: "Test Analysis")
+        await flush(manager)
 
         #expect(manager.totalAnalyses == initialCount + 1)
         #expect(manager.savedAnalyses.first?.name == "Test Analysis")
@@ -28,10 +33,14 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_SaveMultiple_MaintainsOrder() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses() // Start fresh
+        await flush(manager)
 
         manager.saveAnalysis(createTestResults(), name: "First")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(), name: "Second")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(), name: "Third")
+        await flush(manager)
 
         #expect(manager.totalAnalyses == 3)
 
@@ -44,6 +53,7 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_SaveWithImage_PreservesImage() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         let testImage = createTestImage()
         var results = createTestResults()
@@ -65,6 +75,7 @@ struct HistoryManagerTests {
         )
 
         manager.saveAnalysis(results, name: "With Image")
+        await flush(manager)
 
         // Verify image paths are set
         let savedAnalysis = manager.savedAnalyses.first
@@ -81,6 +92,7 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_SaveMultipleImagesWithDifferentAnalyses_KeepsSeparate() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         // Create two different test images
         let image1 = createTestImage()
@@ -123,7 +135,9 @@ struct HistoryManagerTests {
         )
 
         manager.saveAnalysis(results1, name: "Analysis 1")
+        await flush(manager)
         manager.saveAnalysis(results2, name: "Analysis 2")
+        await flush(manager)
 
         #expect(manager.totalAnalyses == 2)
 
@@ -147,6 +161,7 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_DeleteAnalysis_RemovesAssociatedImages() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         let testImage = createTestImage()
         var results = createTestResults()
@@ -168,6 +183,7 @@ struct HistoryManagerTests {
         )
 
         manager.saveAnalysis(results, name: "To Delete")
+        await flush(manager)
 
         guard let savedAnalysis = manager.savedAnalyses.first,
               let imagePath = savedAnalysis.originalImagePath else {
@@ -180,6 +196,7 @@ struct HistoryManagerTests {
 
         // Delete the analysis
         manager.deleteAnalysis(at: 0)
+        await flush(manager)
 
         // Verify image is removed (loadImage returns nil for missing files)
         #expect(manager.loadImage(from: imagePath) == nil)
@@ -189,9 +206,11 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_DefaultName_IncludesGrindTypeAndScore() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         let results = createTestResults(uniformityScore: 85.0, grindType: .espresso)
         manager.saveAnalysis(results) // No custom name
+        await flush(manager)
 
         let savedAnalysis = manager.savedAnalyses.first
         #expect(savedAnalysis?.name.contains("Espresso") == true)
@@ -203,9 +222,11 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_UpdateTastingNotes_PreservesOtherData() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         let originalResults = createTestResults()
         manager.saveAnalysis(originalResults, name: "Original")
+        await flush(manager)
 
         guard let analysisId = manager.savedAnalyses.first?.id else {
             Issue.record("Failed to get analysis ID")
@@ -224,6 +245,7 @@ struct HistoryManagerTests {
         )
 
         manager.updateAnalysisTastingNotes(analysisId: analysisId, tastingNotes: tastingNotes)
+        await flush(manager)
 
         // Verify tasting notes were added
         let updatedAnalysis = manager.savedAnalyses.first
@@ -241,13 +263,17 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_DeleteAnalysis_RemovesFromList() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         manager.saveAnalysis(createTestResults(), name: "To Delete")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(), name: "To Keep")
+        await flush(manager)
 
         #expect(manager.totalAnalyses == 2)
 
         manager.deleteAnalysis(at: 0) // Delete "To Keep" (most recent)
+        await flush(manager)
 
         #expect(manager.totalAnalyses == 1)
         #expect(manager.savedAnalyses.first?.name == "To Delete")
@@ -256,9 +282,12 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_DeleteById_RemovesCorrectAnalysis() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         manager.saveAnalysis(createTestResults(), name: "First")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(), name: "Second")
+        await flush(manager)
 
         guard let idToDelete = manager.savedAnalyses.first(where: { $0.name == "First" })?.id else {
             Issue.record("Failed to find analysis")
@@ -266,6 +295,7 @@ struct HistoryManagerTests {
         }
 
         manager.deleteAnalysis(withId: idToDelete)
+        await flush(manager)
 
         #expect(manager.totalAnalyses == 1)
         #expect(manager.savedAnalyses.first?.name == "Second")
@@ -275,12 +305,16 @@ struct HistoryManagerTests {
         let manager = CoffeeAnalysisHistoryManager()
 
         manager.saveAnalysis(createTestResults(), name: "Test 1")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(), name: "Test 2")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(), name: "Test 3")
+        await flush(manager)
 
         #expect(manager.totalAnalyses >= 3)
 
         manager.clearAllAnalyses()
+        await flush(manager)
 
         #expect(manager.totalAnalyses == 0)
         #expect(manager.savedAnalyses.isEmpty)
@@ -291,11 +325,13 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_ExceedsLimit_TrimsOldest() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         // Save 55 analyses (limit is 50)
         for i in 1...55 {
             manager.saveAnalysis(createTestResults(), name: "Analysis \(i)")
         }
+        await flush(manager)
 
         // Should only keep 50 most recent
         #expect(manager.totalAnalyses == 50)
@@ -312,10 +348,14 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_FilterByGrindType_ReturnsMatching() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         manager.saveAnalysis(createTestResults(grindType: .espresso), name: "Espresso 1")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(grindType: .filter), name: "Filter 1")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(grindType: .espresso), name: "Espresso 2")
+        await flush(manager)
 
         let espressoResults = manager.analysesForGrindType(.espresso)
 
@@ -326,10 +366,12 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_RecentAnalyses_ReturnsLimited() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         for i in 1...10 {
             manager.saveAnalysis(createTestResults(), name: "Analysis \(i)")
         }
+        await flush(manager)
 
         let recent = manager.recentAnalyses(limit: 3)
 
@@ -344,10 +386,14 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_AverageUniformityScore_CalculatesCorrectly() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         manager.saveAnalysis(createTestResults(uniformityScore: 80.0))
+        await flush(manager)
         manager.saveAnalysis(createTestResults(uniformityScore: 70.0))
+        await flush(manager)
         manager.saveAnalysis(createTestResults(uniformityScore: 90.0))
+        await flush(manager)
 
         let average = manager.averageUniformityScore
 
@@ -364,10 +410,14 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_BestResult_ReturnsHighestScore() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         manager.saveAnalysis(createTestResults(uniformityScore: 70.0), name: "Good")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(uniformityScore: 95.0), name: "Best")
+        await flush(manager)
         manager.saveAnalysis(createTestResults(uniformityScore: 80.0), name: "Better")
+        await flush(manager)
 
         let best = manager.bestResult
 
@@ -378,6 +428,7 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_BestResult_EmptyReturnsNil() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         #expect(manager.bestResult == nil)
     }
@@ -388,6 +439,7 @@ struct HistoryManagerTests {
         // Save analysis
         let manager1 = CoffeeAnalysisHistoryManager()
         manager1.clearAllAnalyses()
+        await flush(manager1)
 
         let originalResults = createTestResults(
             uniformityScore: 85.5,
@@ -395,12 +447,11 @@ struct HistoryManagerTests {
             grindType: .espresso
         )
         manager1.saveAnalysis(originalResults, name: "Persistence Test")
-
-        // Wait a moment for persistence
-        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        await flush(manager1)
 
         // Create new manager (should load from UserDefaults)
         let manager2 = CoffeeAnalysisHistoryManager()
+        await flush(manager2)
 
         // Verify data loaded
         let loaded = manager2.savedAnalyses.first { $0.name == "Persistence Test" }
@@ -413,6 +464,7 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_SaveWithTastingNotes_Persists() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         let tastingNotes = TastingNotes(
             brewMethod: .pourOver,
@@ -445,12 +497,11 @@ struct HistoryManagerTests {
         )
 
         manager.saveAnalysis(results, name: "With Tasting Notes")
-
-        // Wait for persistence
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await flush(manager)
 
         // Load in new manager
         let manager2 = CoffeeAnalysisHistoryManager()
+        await flush(manager2)
         let loaded = manager2.savedAnalyses.first { $0.name == "With Tasting Notes" }
 
         #expect(loaded?.results.tastingNotes != nil)
@@ -464,9 +515,11 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_SaveWithNotes_PreservesNotes() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         let results = createTestResults()
         manager.saveAnalysis(results, name: "Test", notes: "These are my notes")
+        await flush(manager)
 
         let saved = manager.savedAnalyses.first
         #expect(saved?.notes == "These are my notes")
@@ -475,11 +528,14 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_DeleteInvalidIndex_DoesNotCrash() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         manager.saveAnalysis(createTestResults())
+        await flush(manager)
 
         // Try to delete invalid index
         manager.deleteAnalysis(at: 999)
+        await flush(manager)
 
         // Should not crash, and analysis should still exist
         #expect(manager.totalAnalyses == 1)
@@ -488,6 +544,7 @@ struct HistoryManagerTests {
     @Test func testHistoryManager_UpdateNonexistentId_DoesNotCrash() async {
         let manager = CoffeeAnalysisHistoryManager()
         manager.clearAllAnalyses()
+        await flush(manager)
 
         let fakeId = UUID()
         let tastingNotes = TastingNotes(
@@ -503,6 +560,7 @@ struct HistoryManagerTests {
 
         // Should not crash
         manager.updateAnalysisTastingNotes(analysisId: fakeId, tastingNotes: tastingNotes)
+        await flush(manager)
     }
 
     // MARK: - Helper Methods
