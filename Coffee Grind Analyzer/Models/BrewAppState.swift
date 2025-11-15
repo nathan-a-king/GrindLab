@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import OSLog
 
 // MARK: - Brew App State
 
@@ -15,7 +16,9 @@ class BrewAppState: ObservableObject {
     @Published var selectedRecipe: Recipe?
     @Published var currentGrindAnalysis: SavedCoffeeAnalysis?
 
-    private let recipesKey = "SavedRecipes"
+    private let persistenceQueue = DispatchQueue(label: "com.nateking.GrindLab.recipesPersistence", qos: .utility)
+    private let recipeRepository = RecipeRepository()
+    private let logger = Logger(subsystem: "com.nateking.GrindLab", category: "BrewAppState")
 
     init() {
         loadRecipes()
@@ -29,7 +32,7 @@ class BrewAppState: ObservableObject {
 
     func addRecipe(_ recipe: Recipe) {
         recipes.append(recipe)
-        saveRecipes()
+        persistRecipes()
     }
 
     func updateRecipe(_ recipe: Recipe) {
@@ -38,7 +41,7 @@ class BrewAppState: ObservableObject {
             if selectedRecipe?.id == recipe.id {
                 selectedRecipe = recipe
             }
-            saveRecipes()
+            persistRecipes()
         }
     }
 
@@ -47,7 +50,7 @@ class BrewAppState: ObservableObject {
         if selectedRecipe?.id == recipe.id {
             selectedRecipe = nil
         }
-        saveRecipes()
+        persistRecipes()
     }
 
     // MARK: - Grind Context
@@ -63,17 +66,24 @@ class BrewAppState: ObservableObject {
     // MARK: - Persistence
 
     private func loadRecipes() {
-        guard let data = UserDefaults.standard.data(forKey: recipesKey),
-              let decoded = try? JSONDecoder().decode([Recipe].self, from: data) else {
-            // Load default recipes if none saved
-            recipes = Recipe.allDefaults
-            return
+        persistenceQueue.async { [weak self] in
+            guard let self else { return }
+            let loaded = self.recipeRepository.loadRecipes()
+            DispatchQueue.main.async { [weak self] in
+                self?.recipes = loaded
+                if self?.selectedRecipe == nil {
+                    self?.selectedRecipe = loaded.first
+                }
+            }
         }
-        recipes = decoded
     }
 
-    private func saveRecipes() {
-        guard let encoded = try? JSONEncoder().encode(recipes) else { return }
-        UserDefaults.standard.set(encoded, forKey: recipesKey)
+    private func persistRecipes() {
+        let snapshot = recipes
+        persistenceQueue.async { [weak self] in
+            guard let self else { return }
+            self.recipeRepository.persist(recipes: snapshot)
+            self.logger.info("Persisted \(snapshot.count, privacy: .public) recipes")
+        }
     }
 }
