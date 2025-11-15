@@ -243,8 +243,7 @@ class CoffeeAnalysisHistoryManager: ObservableObject {
     @MainActor
     func waitForPersistence() async {
         await withCheckedContinuation { continuation in
-            persistenceQueue.async { [weak self] in
-                self?.initialLoadGroup.wait()
+            initialLoadGroup.notify(queue: persistenceQueue) {
                 continuation.resume()
             }
         }
