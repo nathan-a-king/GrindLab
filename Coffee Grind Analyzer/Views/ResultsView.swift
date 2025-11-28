@@ -93,8 +93,8 @@ struct ResultsView: View {
                 } else {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: { showingEditTastingNotes = true }) {
-                            Image(systemName: results.tastingNotes != nil ? "star.fill" : "star")
-                                .foregroundColor(results.tastingNotes != nil ? .black : .gray)
+                            Image(systemName: "pencil.circle")
+                                .foregroundColor(.black)
                         }
                     }
                 }
@@ -220,6 +220,9 @@ struct ResultsView: View {
                 VStack(spacing: 16) {
                     if let tastingNotes = results.tastingNotes {
                         TastingNotesDisplayView(tastingNotes: tastingNotes)
+                            .onTapGesture {
+                                showingEditTastingNotes = true
+                            }
                             .id(tastingNotes)
                     }
                     coffeeImprovementSection
@@ -240,6 +243,9 @@ struct ResultsView: View {
                 // Add tasting notes display if available
                 if let tastingNotes = results.tastingNotes {
                     TastingNotesDisplayView(tastingNotes: tastingNotes)
+                        .onTapGesture {
+                            showingEditTastingNotes = true
+                        }
                         .onAppear { resultsLogger.debug("📊 Tasting notes section appeared") }
                         .id(tastingNotes) // Force refresh when tasting notes change
                 }
