@@ -490,6 +490,10 @@ struct ContentView: View {
             Text("Position coffee grounds in view")
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.8))
+
+            Text("Place US Quarter in bottom-left corner")
+                .font(.caption)
+                .foregroundColor(.yellow.opacity(0.9))
         }
     }
     
@@ -529,6 +533,13 @@ struct ContentView: View {
             .shadow(color: Color.black.opacity(0.3), radius: 15, x: 0, y: 5)
             .overlay(
                 GridOverlay(isVisible: camera.showGrid)
+                    .aspectRatio(3/4, contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: 400)
+                    .cornerRadius(20)
+                    .allowsHitTesting(false)
+            )
+            .overlay(
+                QuarterGuideOverlay(isVisible: true)
                     .aspectRatio(3/4, contentMode: .fill)
                     .frame(maxWidth: .infinity, maxHeight: 400)
                     .cornerRadius(20)

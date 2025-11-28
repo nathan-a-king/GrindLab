@@ -173,11 +173,26 @@ class CoffeeAnalysisEngine {
         let startTime = CFAbsoluteTimeGetCurrent()
         AnalysisLog.debug("🔬 Starting advanced coffee analysis for \(grindType.displayName)...")
         AnalysisLog.debug("📐 Image size: \(Int(image.size.width))x\(Int(image.size.height))")
-        
+
         guard let cgImage = image.cgImage else {
             throw CoffeeAnalysisError.imageProcessingFailed
         }
-        
+
+        // Step 0: Detect US Quarter and calculate calibration
+        AnalysisLog.debug("🪙 Step 0: Detecting US Quarter for calibration...")
+        let coinDetector = CoinCalibrationDetector()
+        let calibrationResult = coinDetector.detectQuarterAndCalibrate(in: image)
+
+        guard calibrationResult.success else {
+            AnalysisLog.error("❌ Quarter detection failed: \(calibrationResult.errorMessage ?? "unknown error")")
+            throw CoffeeAnalysisError.coinDetectionFailed(
+                calibrationResult.errorMessage ?? "Failed to detect calibration quarter"
+            )
+        }
+
+        let calibrationFactor = calibrationResult.calibrationFactor
+        AnalysisLog.info("✅ Quarter detected - calibration: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
+
         // Step 1: Extract blue channel (as in Python)
         AnalysisLog.debug("🔵 Step 1: Extracting blue channel...")
         let blueChannelData = try extractBlueChannel(from: cgImage)
@@ -208,12 +223,8 @@ class CoffeeAnalysisEngine {
         
         // Step 4: Convert clusters to particles with proper calibration
         AnalysisLog.debug("📏 Step 4: Converting clusters to calibrated particles...")
-        
-        // Use manual calibration from settings
-        let calibrationFactor = settings.calibrationFactor
-        
-        AnalysisLog.debug("📏 Using manual calibration factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
-        
+        AnalysisLog.debug("📏 Using automatic quarter calibration: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
+
         let particles = convertClustersToParticles(
             clusters: clusters,
             calibrationFactor: calibrationFactor
@@ -239,8 +250,9 @@ class CoffeeAnalysisEngine {
         
         // Final calibration summary
         AnalysisLog.debug("\n📊 CALIBRATION SUMMARY:")
-        AnalysisLog.debug("   Source: Manual")
+        AnalysisLog.debug("   Source: Automatic (US Quarter)")
         AnalysisLog.debug("   Factor: \(String(format: "%.2f", calibrationFactor)) μm/pixel")
+        AnalysisLog.debug("   Quarter Radius: \(String(format: "%.2f", calibrationResult.detectedCircle?.radiusPixels ?? 0))px")
         AnalysisLog.debug("   Average Particle Size: \(String(format: "%.1f", statistics.averageSize)) μm")
         AnalysisLog.debug("\n")
         
@@ -258,7 +270,8 @@ class CoffeeAnalysisEngine {
             processedImage: processedImage,
             grindType: grindType,
             timestamp: Date(),
-            calibrationFactor: calibrationFactor
+            calibrationFactor: calibrationFactor,
+            coinDetectionResult: calibrationResult
         )
     }
     

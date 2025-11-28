@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		43088AFD2E607011009FF6E3 /* Icon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 43088AFC2E607011009FF6E3 /* Icon.icon */; };
+		43BB44BE2EDA4E92002F2AAF /* opencv2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43BB44BD2EDA4E92002F2AAF /* opencv2.framework */; };
 		43CD569D2E9202C70083F13B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43CD569C2E9202C70083F13B /* WidgetKit.framework */; };
 		43CD569F2E9202C70083F13B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43CD569E2E9202C70083F13B /* SwiftUI.framework */; };
 		43CD56AE2E9202C80083F13B /* BrewActivityWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -57,6 +58,7 @@
 		433824402E56BBDD00EC93E5 /* GrindLabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4338244A2E56BBDD00EC93E5 /* GrindLabUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrindLabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4389E9812E918EA8002A62F4 /* CountUsableLOC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountUsableLOC.swift; sourceTree = "<group>"; };
+		43BB44BD2EDA4E92002F2AAF /* opencv2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = opencv2.framework; sourceTree = "<group>"; };
 		43CD569A2E9202C70083F13B /* BrewActivityWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BrewActivityWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		43CD569C2E9202C70083F13B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		43CD569E2E9202C70083F13B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -64,6 +66,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		43BB44BF2EDA5035002F2AAF /* Exceptions for "Coffee Grind Analyzer" folder in "GrindLab" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				OpenCV/OpenCVWrapper.h,
+			);
+			target = 433824322E56BBDC00EC93E5 /* GrindLab */;
+		};
 		43CD56B22E9202C80083F13B /* Exceptions for "BrewActivityWidget" folder in "BrewActivityWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -76,6 +85,12 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		433824352E56BBDC00EC93E5 /* Coffee Grind Analyzer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				43BB44BF2EDA5035002F2AAF /* Exceptions for "Coffee Grind Analyzer" folder in "GrindLab" target */,
+			);
+			explicitFileTypes = {
+				OpenCV/OpenCVWrapper.h = sourcecode.cpp.objcpp;
+			};
 			path = "Coffee Grind Analyzer";
 			sourceTree = "<group>";
 		};
@@ -104,6 +119,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				43BB44BE2EDA4E92002F2AAF /* opencv2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -164,6 +180,7 @@
 			children = (
 				43CD569C2E9202C70083F13B /* WidgetKit.framework */,
 				43CD569E2E9202C70083F13B /* SwiftUI.framework */,
+				43BB44BD2EDA4E92002F2AAF /* opencv2.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -523,12 +540,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GrindLab.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = G8ZY6VN35B;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Frameworks",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = GrindLab;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
@@ -552,6 +575,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Coffee Grind Analyzer/OpenCV/GrindLab-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -563,12 +587,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GrindLab.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = G8ZY6VN35B;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Frameworks",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = GrindLab;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
@@ -592,6 +622,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Coffee Grind Analyzer/OpenCV/GrindLab-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

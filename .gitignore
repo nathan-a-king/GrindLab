@@ -1,2 +1,5 @@
 .derived_data
 /build
+
+# OpenCV Framework (568MB - too large for git, download manually)
+opencv2.framework/

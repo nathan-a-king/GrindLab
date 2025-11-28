@@ -16,8 +16,7 @@ private let settingsLogger = Logger(subsystem: "com.nateking.GrindLab", category
 struct SettingsView: View {
     @Binding var settings: AnalysisSettings
     @Environment(\.dismiss) private var dismiss
-    
-    @State private var showingCalibration = false
+
     @State private var showingHelp = false
     
     var body: some View {
@@ -47,9 +46,6 @@ struct SettingsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingCalibration) {
-            CalibrationView(calibrationFactor: $settings.calibrationFactor)
-        }
         .sheet(isPresented: $showingHelp) {
             HelpView()
         }
@@ -67,8 +63,6 @@ struct SettingsView: View {
             // Landscape: 2-column grid
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                 analysisSection
-
-                calibrationSection
 
                 if settings.analysisMode == .advanced {
                     advancedSection
@@ -91,7 +85,6 @@ struct SettingsView: View {
                     advancedSection
                 }
 
-                calibrationSection
                 aboutSection
 
                 #if DEBUG
@@ -227,48 +220,7 @@ struct SettingsView: View {
             }
         }
     }
-    
-    private var calibrationSection: some View {
-        SettingsCard(title: "Calibration") {
-            VStack(spacing: 20) {
-                // Current Calibration Display
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Current Calibration")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                        Text(String(format: "%.2f μm/pixel", settings.calibrationFactor))
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(spacing: 8) {
-                        Button("Calibrate") {
-                            showingCalibration = true
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
-                        
-                        Button("Reset") {
-                            settings.calibrationFactor = 150.0
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.gray)
-                        .font(.caption)
-                    }
-                }
-                
-                Text("Use a ruler to measure 1 inch for accurate particle sizing")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-        }
-    }
-    
+
     #if DEBUG
     private var debugSection: some View {
         SettingsCard(title: "Debug Tools") {
@@ -400,288 +352,6 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Ruler-Based Calibration View
-struct CalibrationView: View {
-    @Binding var calibrationFactor: Double
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var showingImagePicker = false
-    @State private var calibrationImage: UIImage?
-    @State private var showingAlert = false
-    @State private var alertMessage = ""
-    
-    // Ruler measurement states
-    @State private var startPoint: CGPoint?
-    @State private var endPoint: CGPoint?
-    @State private var isDragging: Bool = false
-    
-    // Computed properties
-    private var pixelDistance: Double {
-        guard let start = startPoint, let end = endPoint else { return 0 }
-        return sqrt(pow(end.x - start.x, 2) + pow(end.y - start.y, 2))
-    }
-    
-    private var isValidMeasurement: Bool {
-        pixelDistance > 10 // At least 10 pixels
-    }
-    
-    private var calculatedFactor: Double {
-        guard isValidMeasurement else { return 0.0 }
-        // 1 inch = 25.4 mm = 25400 μm
-        return 25400 / pixelDistance
-    }
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                // Match Settings view background
-                Color.brown.opacity(0.7)
-                    .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 24) {
-                        instructionSection
-                        
-                        if let image = calibrationImage {
-                            rulerImageSection(image: image)
-                        } else {
-                            placeholderImageSection
-                        }
-                        
-                        if isValidMeasurement {
-                            calculationResultSection
-                        }
-                        
-                        Spacer(minLength: 40)
-                    }
-                    .padding()
-                }
-            }
-            .navigationTitle("Ruler Calibration")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveCalibration()
-                    }
-                    .disabled(!isValidMeasurement)
-                    .fontWeight(.semibold)
-                }
-            }
-            .alert("Calibration", isPresented: $showingAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(alertMessage)
-            }
-        }
-        .sheet(isPresented: $showingImagePicker) {
-            PhotoPickerView { image in
-                calibrationImage = image
-                // Reset measurement when new image is selected
-                startPoint = nil
-                endPoint = nil
-                isDragging = false
-            }
-        }
-    }
-    
-    // MARK: - View Components
-    
-    private var instructionSection: some View {
-        SettingsCard(title: "Instructions") {
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Take a photo of a ruler or measuring tape", systemImage: "1.circle.fill")
-                    .foregroundColor(.white)
-                
-                Label("Pinch to zoom for precise alignment", systemImage: "2.circle.fill")
-                    .foregroundColor(.white)
-                
-                Label("Drag a line over exactly 1 inch", systemImage: "3.circle.fill")
-                    .foregroundColor(.white)
-                
-                Label("The app will count pixels automatically", systemImage: "4.circle.fill")
-                    .foregroundColor(.white)
-                
-                Label("Save the calibration factor", systemImage: "5.circle.fill")
-                    .foregroundColor(.white)
-            }
-            .font(.subheadline)
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text("For best results, use a clear ruler with distinct inch markings and good lighting")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(.top, 8)
-                
-                Text("Pinch to zoom in for more precise measurements")
-                    .font(.caption)
-                    .foregroundColor(Color(red: 0.9, green: 0.7, blue: 0.4))
-            }
-        }
-    }
-    
-    private var placeholderImageSection: some View {
-        Button(action: { showingImagePicker = true }) {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.brown.opacity(0.3))
-                .frame(height: 250)
-                .overlay(
-                    VStack(spacing: 16) {
-                        Image(systemName: "ruler")
-                            .font(.system(size: 48))
-                            .foregroundColor(.white)
-                        
-                        Text("Select Ruler Photo")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                        
-                        Text("Take a photo of a ruler or measuring tape")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
-                        .foregroundColor(.white.opacity(0.4))
-                )
-                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-        }
-    }
-    
-    private func rulerImageSection(image: UIImage) -> some View {
-        VStack(spacing: 16) {
-            RulerCalibrationOverlay(
-                image: image,
-                startPoint: $startPoint,
-                endPoint: $endPoint,
-                isDragging: $isDragging
-            )
-            .frame(height: 350)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-            
-            HStack {
-                Button(action: { showingImagePicker = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "photo.on.rectangle")
-                        Text("Change Image")
-                    }
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.brown.opacity(0.6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                    )
-                }
-                
-                Spacer()
-                
-                if startPoint != nil || endPoint != nil {
-                    Button(action: {
-                        startPoint = nil
-                        endPoint = nil
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark.circle")
-                            Text("Clear")
-                        }
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.red.opacity(0.7))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                )
-                        )
-                    }
-                }
-            }
-            
-            if pixelDistance > 0 {
-                Text("Measured: \(Int(pixelDistance)) pixels")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.8))
-            }
-        }
-    }
-    
-    
-    private var calculationResultSection: some View {
-        SettingsCard(title: "Calibration Result") {
-            VStack(spacing: 12) {
-                Text(String(format: "%.2f μm/pixel", calculatedFactor))
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color(red: 0.9, green: 0.7, blue: 0.4))
-                
-                Text("Based on 1 inch = \(Int(pixelDistance)) pixels")
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                
-                Text("1 inch = 25.4 mm = 25,400 μm")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-                    .italic()
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-    
-    
-    private func saveCalibration() {
-        guard isValidMeasurement else {
-            alertMessage = "Please measure 1 inch on the ruler by dragging a line."
-            showingAlert = true
-            return
-        }
-        
-        let newFactor = calculatedFactor
-        
-        // Sanity check - reasonable calibration factors for typical cameras
-        guard newFactor > 0.1 && newFactor < 500 else {
-            alertMessage = "Calibration factor seems unreasonable (\(String(format: "%.2f", newFactor)) μm/pixel). Please ensure you measured exactly 1 inch."
-            showingAlert = true
-            return
-        }
-        
-        settingsLogger.info("Saved ruler calibration: \(newFactor, privacy: .public) μm/pixel (1 inch = \(Int(pixelDistance), privacy: .public) pixels)")
-        
-        calibrationFactor = newFactor
-        dismiss()
-    }
-}
 
 // MARK: - Settings Card Component
 

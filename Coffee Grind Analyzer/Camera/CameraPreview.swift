@@ -156,6 +156,80 @@ struct GridOverlay: View {
     }
 }
 
+// MARK: - Quarter Guide Overlay
+
+/// Visual guide showing users where to place the US Quarter for calibration
+///
+/// Usage should include the same `.aspectRatio` and `.frame` modifiers as the camera preview for perfect alignment.
+///
+/// Example:
+/// ```swift
+/// QuarterGuideOverlay(isVisible: true)
+///     .aspectRatio(3/4, contentMode: .fill)
+///     .frame(maxWidth: .infinity, maxHeight: 400)
+/// ```
+struct QuarterGuideOverlay: View {
+    let isVisible: Bool
+
+    var body: some View {
+        if isVisible {
+            GeometryReader { geometry in
+                let quarterSize: CGFloat = 100  // Visual guide size
+                let padding: CGFloat = 70  // Extra padding to clear rounded corners and move higher
+
+                ZStack {
+                    // Corner bracket in bottom-left
+                    Path { path in
+                        let cornerX = padding
+                        let cornerY = geometry.size.height - padding
+
+                        // Left vertical line
+                        path.move(to: CGPoint(x: cornerX, y: cornerY - quarterSize))
+                        path.addLine(to: CGPoint(x: cornerX, y: cornerY))
+
+                        // Bottom horizontal line
+                        path.addLine(to: CGPoint(x: cornerX + quarterSize, y: cornerY))
+                    }
+                    .stroke(Color.yellow, lineWidth: 3)
+                    .shadow(color: .black.opacity(0.5), radius: 2)
+
+                    // Dashed circle guide
+                    Circle()
+                        .stroke(
+                            Color.yellow.opacity(0.6),
+                            style: StrokeStyle(lineWidth: 2, dash: [5, 5])
+                        )
+                        .frame(width: quarterSize, height: quarterSize)
+                        .position(
+                            x: padding + quarterSize/2,
+                            y: geometry.size.height - padding - quarterSize/2
+                        )
+
+                    // Instructional label
+                    Text("Place quarter here")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.black.opacity(0.7))
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 2)
+                        .position(
+                            x: padding + quarterSize/2,
+                            y: geometry.size.height - padding - quarterSize - 20
+                        )
+                }
+            }
+            .allowsHitTesting(false)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.3), value: isVisible)
+        }
+    }
+}
+
 // MARK: - Focus Indicator
 
 struct FocusIndicator: View {

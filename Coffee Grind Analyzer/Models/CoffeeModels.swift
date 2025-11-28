@@ -255,7 +255,8 @@ struct CoffeeAnalysisResults {
     let timestamp: Date
     let tastingNotes: TastingNotes? // Add tasting notes
     let calibrationFactor: Double // microns per pixel
-    
+    let coinDetectionResult: CalibrationResult? // NEW: Per-image coin calibration
+
     // Store size distribution as computed property with backing storage
     let sizeDistribution: [String: Double]
     
@@ -293,7 +294,7 @@ struct CoffeeAnalysisResults {
     init(uniformityScore: Double, averageSize: Double, medianSize: Double, standardDeviation: Double,
          finesPercentage: Double, bouldersPercentage: Double, particleCount: Int, particles: [CoffeeParticle],
          confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType,
-         timestamp: Date, calibrationFactor: Double, tastingNotes: TastingNotes? = nil) {
+         timestamp: Date, calibrationFactor: Double, tastingNotes: TastingNotes? = nil, coinDetectionResult: CalibrationResult? = nil) {
         self.uniformityScore = uniformityScore
         self.averageSize = averageSize
         self.medianSize = medianSize
@@ -309,6 +310,7 @@ struct CoffeeAnalysisResults {
         self.timestamp = timestamp
         self.calibrationFactor = calibrationFactor
         self.tastingNotes = tastingNotes
+        self.coinDetectionResult = coinDetectionResult
         
         // Fresh analysis doesn't need stored particle sizes (particles array is populated)
         self.storedMinParticleSize = nil
@@ -328,7 +330,7 @@ struct CoffeeAnalysisResults {
          confidence: Double, image: UIImage?, processedImage: UIImage?, grindType: CoffeeGrindType,
          timestamp: Date, sizeDistribution: [String: Double], calibrationFactor: Double, tastingNotes: TastingNotes? = nil,
          storedMinParticleSize: Double? = nil, storedMaxParticleSize: Double? = nil, granularDistribution: [String: Double]? = nil,
-         chartDataPoints: [ChartDataPoint]? = nil) {
+         chartDataPoints: [ChartDataPoint]? = nil, coinDetectionResult: CalibrationResult? = nil) {
         self.uniformityScore = uniformityScore
         self.averageSize = averageSize
         self.medianSize = medianSize
@@ -349,6 +351,7 @@ struct CoffeeAnalysisResults {
         self.storedMaxParticleSize = storedMaxParticleSize
         self.granularDistribution = granularDistribution
         self.chartDataPoints = chartDataPoints
+        self.coinDetectionResult = coinDetectionResult
     }
     
     var uniformityColor: Color {
@@ -546,9 +549,11 @@ enum CoffeeAnalysisError: Error, LocalizedError {
     case imageProcessingFailed
     case noParticlesDetected
     case insufficientContrast
+    case noCoinDetected // NEW: No quarter detected in image
+    case coinDetectionFailed(String) // NEW: Quarter detection failed with details
     case analysisError(String)
     case cameraError(String)
-    
+
     var errorDescription: String? {
         switch self {
         case .imageProcessingFailed:
@@ -557,6 +562,10 @@ enum CoffeeAnalysisError: Error, LocalizedError {
             return "No coffee particles detected. Ensure the coffee is well-lit against a contrasting background."
         case .insufficientContrast:
             return "Insufficient contrast between coffee and background. Try using a white surface."
+        case .noCoinDetected:
+            return "No US Quarter detected in bottom-left corner. Please place a quarter for calibration."
+        case .coinDetectionFailed(let detail):
+            return "Coin detection failed: \(detail)"
         case .analysisError(let message):
             return "Analysis error: \(message)"
         case .cameraError(let message):
