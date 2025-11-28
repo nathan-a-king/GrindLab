@@ -48,6 +48,9 @@ struct BrewJournalDetailView: View {
                         // Tasting Notes Section
                         if let tastingNotes = entry.tastingNotes {
                             TastingNotesDisplayView(tastingNotes: tastingNotes)
+                                .onTapGesture {
+                                    showingEditForm = true
+                                }
                                 .padding(.horizontal, 16)
                         }
 
