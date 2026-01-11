@@ -88,3 +88,10 @@ swiftlint lint --path "Coffee Grind Analyzer"
 - Unit tests in Coffee_Grind_AnalyzerTests.swift
 - UI tests in Coffee_Grind_AnalyzerUITests.swift
 - Test on both iOS simulators and physical devices for camera functionality
+
+## Active Technologies
+- Swift 5.9+, Xcode 26.0+ + None (native XML file editing, no code dependencies) (001-privacy-manifest)
+- PrivacyInfo.xcprivacy XML file in app bundle (001-privacy-manifest)
+
+## Recent Changes
+- 001-privacy-manifest: Added Swift 5.9+, Xcode 26.0+ + None (native XML file editing, no code dependencies)
