@@ -29,11 +29,11 @@ description: "Implementation tasks for privacy manifest feature"
 
 **Purpose**: Verify prerequisites and prepare for implementation
 
-- [ ] T001 Verify PrivacyInfo.xcprivacy file exists at `Coffee Grind Analyzer/PrivacyInfo.xcprivacy`
-- [ ] T002 Verify PrivacyInfo.xcprivacy has Target Membership in app target (Xcode File Inspector)
-- [ ] T003 Verify current file is empty or has placeholder content (read current state)
+- [x] T001 Verify PrivacyInfo.xcprivacy file exists at `Coffee Grind Analyzer/PrivacyInfo.xcprivacy`
+- [x] T002 Verify PrivacyInfo.xcprivacy has Target Membership in app target (Xcode File Inspector)
+- [x] T003 Verify current file is empty or has placeholder content (read current state)
 
-**Checkpoint**: Prerequisites verified, ready for test-first implementation
+**Checkpoint**: Prerequisites verified, ready for test-first implementation ✅
 
 ---
 
@@ -43,12 +43,12 @@ description: "Implementation tasks for privacy manifest feature"
 
 **⚠️ CRITICAL**: Tests MUST be created before ANY XML editing per Constitution Principle II (Test-First Development)
 
-- [ ] T004 Create `Coffee Grind AnalyzerTests/PrivacyManifestTests.swift` test file
-- [ ] T005 Add test imports: `XCTest`, `@testable import Coffee_Grind_Analyzer`
-- [ ] T006 Create `PrivacyManifestTests` class inheriting from `XCTestCase`
-- [ ] T007 Add helper method `loadPrivacyManifest() -> [String: Any]?` to parse PrivacyInfo.xcprivacy from bundle
+- [x] T004 Create `Coffee Grind AnalyzerTests/PrivacyManifestTests.swift` test file
+- [x] T005 Add test imports: `Testing`, `Foundation`, `@testable import GrindLab`
+- [x] T006 Create `PrivacyManifestTests` struct (using Swift Testing framework)
+- [x] T007 Add helper method `loadPrivacyManifest() -> [String: Any]?` to parse PrivacyInfo.xcprivacy from bundle
 
-**Checkpoint**: Test framework ready - user story implementation can now begin
+**Checkpoint**: Test framework ready - user story implementation can now begin ✅
 
 ---
 
@@ -62,38 +62,38 @@ description: "Implementation tasks for privacy manifest feature"
 
 > **NOTE: Write these tests FIRST, run them (expect FAILURES), then implement**
 
-- [ ] T008 [P] [US1] Write `testPrivacyManifestFileExists()` - verify PrivacyInfo.xcprivacy loads from bundle
-- [ ] T009 [P] [US1] Write `testPrivacyManifestIsValidPlist()` - verify file parses as valid PropertyList
-- [ ] T010 [P] [US1] Write `testNSPrivacyTrackingExists()` - verify NSPrivacyTracking key exists and is boolean
-- [ ] T011 [P] [US1] Write `testNSPrivacyCollectedDataTypesExists()` - verify NSPrivacyCollectedDataTypes array exists
-- [ ] T012 [P] [US1] Write `testPhotoVideoDataCollectionDeclared()` - verify photos/videos data type is declared with correct purpose
-- [ ] T013 [P] [US1] Write `testNSPrivacyAccessedAPITypesExists()` - verify NSPrivacyAccessedAPITypes array exists
-- [ ] T014 [P] [US1] Write `testUserDefaultsAPIDeclared()` - verify UserDefaults API type with CA92.1 reason code
-- [ ] T015 [P] [US1] Write `testFileTimestampAPIDeclared()` - verify FileTimestamp API type with C617.1 reason code
+- [x] T008 [P] [US1] Write `testPrivacyManifestFileExists()` - verify PrivacyInfo.xcprivacy loads from bundle
+- [x] T009 [P] [US1] Write `testPrivacyManifestIsValidPlist()` - verify file parses as valid PropertyList
+- [x] T010 [P] [US1] Write `testNSPrivacyTrackingExists()` - verify NSPrivacyTracking key exists and is boolean
+- [x] T011 [P] [US1] Write `testNSPrivacyCollectedDataTypesExists()` - verify NSPrivacyCollectedDataTypes array exists
+- [x] T012 [P] [US1] Write `testPhotoVideoDataCollectionDeclared()` - verify photos/videos data type is declared with correct purpose
+- [x] T013 [P] [US1] Write `testNSPrivacyAccessedAPITypesExists()` - verify NSPrivacyAccessedAPITypes array exists
+- [x] T014 [P] [US1] Write `testUserDefaultsAPIDeclared()` - verify UserDefaults API type with CA92.1 reason code
+- [x] T015 [P] [US1] Write `testFileTimestampAPIDeclared()` - verify FileTimestamp API type with C617.1 reason code
 
-**Run Tests**: Execute `cmd+U` in Xcode - all tests should FAIL (Red phase complete)
+**Run Tests**: Execute `cmd+U` in Xcode - all tests should FAIL (Red phase complete) ✅
 
 ### Implementation for User Story 1 (TDD - Green Phase)
 
-- [ ] T016 [US1] Open `Coffee Grind Analyzer/PrivacyInfo.xcprivacy` in Xcode (Open As → Source Code)
-- [ ] T017 [US1] Add XML declaration and DOCTYPE to PrivacyInfo.xcprivacy (copy from `specs/001-privacy-manifest/quickstart.md` Step 3)
-- [ ] T018 [US1] Add NSPrivacyTracking key with value `<false/>` to PrivacyInfo.xcprivacy
-- [ ] T019 [US1] Add NSPrivacyCollectedDataTypes array with photos/videos declaration (NSPrivacyCollectedDataTypePhotosorVideos, linked=true, tracking=false, purpose=AppFunctionality)
-- [ ] T020 [US1] Add NSPrivacyAccessedAPITypes array to PrivacyInfo.xcprivacy
-- [ ] T021 [US1] Add UserDefaults API declaration with NSPrivacyAccessedAPICategoryUserDefaults and reason code CA92.1
-- [ ] T022 [US1] Add FileTimestamp API declaration with NSPrivacyAccessedAPICategoryFileTimestamp and reason code C617.1
-- [ ] T023 [US1] Save PrivacyInfo.xcprivacy file
+- [x] T016 [US1] Open `Coffee Grind Analyzer/PrivacyInfo.xcprivacy` in Xcode (Open As → Source Code)
+- [x] T017 [US1] Add XML declaration and DOCTYPE to PrivacyInfo.xcprivacy (copy from `specs/001-privacy-manifest/quickstart.md` Step 3)
+- [x] T018 [US1] Add NSPrivacyTracking key with value `<false/>` to PrivacyInfo.xcprivacy
+- [x] T019 [US1] Add NSPrivacyCollectedDataTypes array with photos/videos declaration (NSPrivacyCollectedDataTypePhotosorVideos, linked=true, tracking=false, purpose=AppFunctionality)
+- [x] T020 [US1] Add NSPrivacyAccessedAPITypes array to PrivacyInfo.xcprivacy
+- [x] T021 [US1] Add UserDefaults API declaration with NSPrivacyAccessedAPICategoryUserDefaults and reason code CA92.1
+- [x] T022 [US1] Add FileTimestamp API declaration with NSPrivacyAccessedAPICategoryFileTimestamp and reason code C617.1
+- [x] T023 [US1] Save PrivacyInfo.xcprivacy file
 
-**Run Tests**: Execute `cmd+U` in Xcode - all User Story 1 tests should now PASS (Green phase complete)
+**Run Tests**: Execute `cmd+U` in Xcode - all User Story 1 tests should now PASS (Green phase complete) ✅
 
 ### Validation for User Story 1
 
-- [ ] T024 [US1] Run `plutil -lint "Coffee Grind Analyzer/PrivacyInfo.xcprivacy"` - verify syntax validation passes
-- [ ] T025 [US1] Build project (cmd+B) - verify no privacy manifest warnings or errors
-- [ ] T026 [US1] Archive project (Product → Archive) and generate Privacy Report - verify report shows photos/videos, UserDefaults, FileTimestamp
-- [ ] T027 [US1] Upload archive to App Store Connect (TestFlight) - verify no ITMS-91053 or ITMS-91056 errors
+- [x] T024 [US1] Run `plutil -lint "Coffee Grind Analyzer/PrivacyInfo.xcprivacy"` - verify syntax validation passes
+- [x] T025 [US1] Build project (cmd+B) - verify no privacy manifest warnings or errors ✅ BUILD SUCCEEDED, PrivacyInfo.xcprivacy copied to app bundle
+- [ ] T026 [US1] Archive project (Product → Archive) and generate Privacy Report - verify report shows photos/videos, UserDefaults, FileTimestamp (Requires Xcode GUI)
+- [ ] T027 [US1] Upload archive to App Store Connect (TestFlight) - verify no ITMS-91053 or ITMS-91056 errors (Requires App Store Connect account)
 
-**Checkpoint**: User Story 1 complete - App Store submission passes privacy validation ✅
+**Checkpoint**: User Story 1 implementation complete - Privacy manifest fully populated and validated ✅
 
 ---
 
